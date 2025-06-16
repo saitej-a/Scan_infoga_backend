@@ -59,6 +59,7 @@ EXTERNAL_APPS = [
     'mobile',
     'payments',
     'leak_data',
+    'secondary',
 ]
 
 INSTALLED_APPS += EXTERNAL_APPS

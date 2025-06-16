@@ -629,3 +629,19 @@ def hunter_find(request):
     except Exception as e:
         return Response(create_response(False, f"Unxpected Error: {str(e)}", None), status=status.HTTP_404_NOT_FOUND)
 
+
+from django.shortcuts import render
+from core.services.email_service import EmailService  # Import the email service
+
+@api_view(['GET'])
+def send_welcome_email(user):
+    # subject = 'Welcome to Our Mobile App!'
+    # message = f'Hello abhinav,\nWelcome to our mobile app. We are excited to have you!'
+    # success = EmailService.send_email(template_name="welcome_template", to_email="abhinav0427@gmail.com", context={"username": "Abhinav", "site_url": "https://scaninfoga.com"})
+    print("Send welcome mail called")
+    from core.tasks import send_welcome_email
+    send_welcome_email.delay(user_email="abhinav0427@gmail.com", name="Abhinav Srivastava")
+    return Response(create_response(True, "Email sent successfully", None))
+
+
+

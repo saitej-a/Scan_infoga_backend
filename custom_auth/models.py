@@ -82,3 +82,23 @@ class UserSession(models.Model):
 
     def __str__(self):
         return f"{self.email} - {self.sessionStartTime}"
+
+
+
+class OTP(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    otp = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+
+    def is_expired(self):
+        return self.expires_at < timezone.now()
+
+    def generate_otp(self):
+        """Generate a new OTP, hash it, and set the expiration time to 10 minutes"""
+        otp = pyotp.random_base32()[:6]  # Generate a 6-digit OTP
+        otp_hash = hashlib.sha256(otp.encode()).hexdigest()  # Hash OTP using SHA256
+        self.otp_hash = otp_hash
+        self.expires_at = timezone.now() + timedelta(minutes=10)  # OTP expires in 10 minutes
+        self.save()
+        return otp  # Return the plain OTP for email, but we store the hash

@@ -6,7 +6,7 @@ import pyotp
 import qrcode
 import base64
 from io import BytesIO
-from .serializers import UserRegistrationSerializer, CorporateRegistrationSerializer, DeveloperRegistrationSerializer
+from .serializers import UserRegistrationSerializer, CorporateRegistrationSerializer, DeveloperRegistrationSerializer, UserSessionSerializer
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 import hashlib
@@ -23,47 +23,310 @@ from rest_framework.parsers import JSONParser, FormParser, MultiPartParser
 from rest_framework.decorators import parser_classes
 from django.http import HttpResponse
 import json
-
+from core.tasks import send_welcome_email
+from core.utils import get_token_from_header, get_user_from_token
+from core.services.email_service import EmailService
+from core.tasks import send_welcome_email, send_otp_email
+import random
+import string
+from django.core.cache import cache
 
 from .utils import fetch_map, fetch_location_map
 from payments.utils import create_wallet
+
+# @api_view(['POST'])
+# def registerUser(request):
+#     serializer = UserRegistrationSerializer(data=request.data)
+#     if serializer.is_valid():
+#         user = serializer.save()
+#         # Generate secret key and QR code after user is created
+#         secret_key = pyotp.random_base32()
+#         user.otp_secret = secret_key
+#         user.save()
+
+#         # create wallet for user after user is created 
+#         # and by default add 2000 credit
+#         create_wallet(user)
+        
+#         # Generate QR code
+#         qr_code = generate_qr_code(user.email, secret_key)
+        
+#         response_data = serializer.data
+#         response_data['qr_code'] = qr_code
+        
+#         return Response(
+#             create_response(
+#                 status=True,
+#                 message="User registered successfully. Please scan the QR code to setup 2FA.",
+#                 data=response_data
+#             ),
+#             status=status.HTTP_201_CREATED
+#         )
+#     return Response(
+#         create_response(
+#             status=False,
+#             message="Registration failed",
+#             data=serializer.errors
+#         ),
+#         status=status.HTTP_400_BAD_REQUEST
+#     )
+
+# @api_view(['POST'])
+# def registerUser(request):
+#     serializer = UserRegistrationSerializer(data=request.data)
+#     if serializer.is_valid():
+#         user = serializer.save()
+        
+#         # Generate secret key and QR code after user is created
+#         secret_key = pyotp.random_base32()
+#         user.otp_secret = secret_key
+#         user.save()
+
+#         # Generate OTP and save it to the OTP model
+#         otp_obj = OTP.objects.create(user=user)
+#         otp = otp_obj.generate_otp()  # OTP is now generated and stored hashed in DB
+        
+#         # Send OTP via Email
+#         context = {"otp": otp, "name": user.}
+#         email_sent = EmailService.send_email(template_name="otp_template", to_email=user.email, context=context)
+        
+#         if email_sent:
+#             response_data = serializer.data
+#             response_data['otp'] = otp  # Include the OTP in the response (for testing)
+            
+#             return Response(
+#                 create_response(
+#                     status=True,
+#                     message="User registered successfully. OTP sent to email.",
+#                     data=response_data
+#                 ),
+#                 status=status.HTTP_201_CREATED
+#             )
+#         else:
+#             return Response(
+#                 create_response(
+#                     status=False,
+#                     message="Failed to send OTP email",
+#                     data=None
+#                 ),
+#                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
+#             )
+#     return Response(
+#         create_response(
+#             status=False,
+#             message="Registration failed",
+#             data=serializer.errors
+#         ),
+#         status=status.HTTP_400_BAD_REQUEST
+#     )
+
 
 @api_view(['POST'])
 def registerUser(request):
     serializer = UserRegistrationSerializer(data=request.data)
     if serializer.is_valid():
-        user = serializer.save()
-        # Generate secret key and QR code after user is created
+        user_data = serializer.validated_data
+        email = user_data['email']
+
+        # Check if user already exists in DB
+        if CustomUser.objects.filter(email=email).exists():
+            return Response(
+                create_response(False, "User already exists", None),
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Generate secret and OTP
         secret_key = pyotp.random_base32()
-        user.otp_secret = secret_key
+        otp = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+        otp_hash = hashlib.sha256(otp.encode()).hexdigest()
+
+        # Save user data and otp in Redis
+        cache.set(f"user_data:{email}", {
+            "data": user_data,
+            "secret": secret_key,
+            "otp_hash": otp_hash,
+            "timestamp": timezone.now().isoformat()
+        }, timeout=3600)  # 60 minutes
+
+        # Send OTP via email
+        name = user_data["first_name"] + " " + user_data["last_name"]
+        send_otp_email.delay(name=name, otp=otp, user_email=email)
+
+        return Response(
+            create_response(True, "OTP sent to email", data=None),
+            status=status.HTTP_200_OK
+        )
+    return Response(
+        create_response(False, "Validation failed", serializer.errors),
+        status=status.HTTP_400_BAD_REQUEST
+    )
+
+@api_view(['POST'])
+def verifyOTP(request):
+    email = request.data.get("email")
+    otp = request.data.get("otp")
+
+    cached = cache.get(f"user_data:{email}")
+    if not cached:
+        return Response(
+            create_response(False, "OTP expired or not requested", None),
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    expected_hash = cached["otp_hash"]
+    otp_hash = hashlib.sha256(otp.encode()).hexdigest()
+
+    if otp_hash != expected_hash:
+        return Response(
+            create_response(False, "Invalid OTP", None),
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Save the user to the database
+    serializer = UserRegistrationSerializer(data=cached["data"])
+    if serializer.is_valid():
+        user = serializer.save()
+        user.otp_secret = cached["secret"]
         user.save()
 
-        # create wallet for user after user is created 
-        # and by default add 2000 credit
-        create_wallet(user)
-        
-        # Generate QR code
-        qr_code = generate_qr_code(user.email, secret_key)
-        
-        response_data = serializer.data
-        response_data['qr_code'] = qr_code
-        
+        # Optional: delete cache after success
+        cache.delete(f"user_data:{email}")
+
+        # Send welcome email via Celery
+        send_welcome_email.delay(user_email=email, name=user.first_name + " " + user.last_name)
+
+        qr_code = generate_qr_code(email, user.otp_secret)
+        return Response(
+            create_response(True, "OTP verified, user created", {"qr_code": qr_code}),
+            status=status.HTTP_201_CREATED
+        )
+    else:
+        return Response(
+            create_response(False, "User creation failed", serializer.errors),
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+# @api_view(['POST'])
+# def verifyOTP(request):
+#     otp = request.data.get('otp')
+#     user_email = request.data.get('email')
+    
+#     # Get the user from the email
+#     try:
+#         user = User.objects.get(email=user_email)
+#     except User.DoesNotExist:
+#         return Response(
+#             create_response(
+#                 status=False,
+#                 message="User not found",
+#                 data=None
+#             ),
+#             status=status.HTTP_400_BAD_REQUEST
+#         )
+
+#     # Fetch the OTP from the database
+#     try:
+#         otp_obj = OTP.objects.filter(user=user).latest('created_at')
+#         if otp_obj.is_expired():
+#             return Response(
+#                 create_response(
+#                     status=False,
+#                     message="OTP expired",
+#                     data=None
+#                 ),
+#                 status=status.HTTP_400_BAD_REQUEST
+#             )
+#     except OTP.DoesNotExist:
+#         return Response(
+#             create_response(
+#                 status=False,
+#                 message="OTP not found",
+#                 data=None
+#             ),
+#             status=status.HTTP_400_BAD_REQUEST
+#         )
+
+#     # Hash the entered OTP and compare with stored hash
+#     otp_hash = hashlib.sha256(otp.encode()).hexdigest()
+#     send_welcome_email.delay(user_email="abhinav0427@gmail.com", name="Abhinav Srivastava")
+#     if otp_hash == otp_obj.otp_hash:
+#         qr_code = generate_qr_code(user.email, user.otp_secret)
+#         return Response(
+#             create_response(
+#                 status=True,
+#                 message="OTP verified successfully",
+#                 data={"qr_code": qr_code}
+#             ),
+#             status=status.HTTP_200_OK
+#         )
+#     else:
+#         return Response(
+#             create_response(
+#                 status=False,
+#                 message="Invalid OTP",
+#                 data=None
+#             ),
+#             status=status.HTTP_400_BAD_REQUEST
+#         )
+
+@api_view(['POST'])
+def resendOTP(request):
+    user_email = request.data.get('email')
+    
+    # Get the user from the email
+    try:
+        user = User.objects.get(email=user_email)
+    except User.DoesNotExist:
+        return Response(
+            create_response(
+                status=False,
+                message="User not found",
+                data=None
+            ),
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Fetch the latest OTP or create a new one
+    otp_obj, created = OTP.objects.get_or_create(user=user)
+    
+    if created:
+        otp = otp_obj.generate_otp()  # Generate and save OTP if it's the first time
+    else:
+        if otp_obj.is_expired():
+            otp = otp_obj.generate_otp()  # Generate a new OTP if expired
+        else:
+            return Response(
+                create_response(
+                    status=False,
+                    message="OTP is still valid, please wait until it expires",
+                    data=None
+                ),
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    # Send OTP via Email
+    context = {"otp": otp}
+    email_sent = EmailService.send_email("otp_email", user.email, from_email="no-reply@scaninfoga.com", context=context)
+    
+    if email_sent:
         return Response(
             create_response(
                 status=True,
-                message="User registered successfully. Please scan the QR code to setup 2FA.",
-                data=response_data
+                message="OTP resent successfully",
+                data=None
             ),
-            status=status.HTTP_201_CREATED
+            status=status.HTTP_200_OK
         )
-    return Response(
-        create_response(
-            status=False,
-            message="Registration failed",
-            data=serializer.errors
-        ),
-        status=status.HTTP_400_BAD_REQUEST
-    )
+    else:
+        return Response(
+            create_response(
+                status=False,
+                message="Failed to resend OTP",
+                data=None
+            ),
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 @api_view(['POST'])
 def loginUser(request):
@@ -631,3 +894,23 @@ def get_user_location_map(request):
             ),
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_session(request):
+    token = get_token_from_header(request)
+    user = get_user_from_token(token)
+
+    session_list = UserSession.objects.filter(user=user)
+    serialized = UserSessionSerializer(session_list, many=True)
+
+    return Response(
+        create_response(
+            status=True,
+            message="User sessions fetched successfully",
+            data=serialized.data
+        ),
+        status=status.HTTP_200_OK
+    )
+
+
+

@@ -12,4 +12,5 @@ urlpatterns = [
     path('protected', views.protectedApi, name='protected'),
     path('getmap', views.get_user_map, name='get-map'),
     path('getlocation', views.get_user_location_map, name='get-location'),
+    path('getSessionDtls', views.get_user_session, name="get-user-session")
 ]

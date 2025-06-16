@@ -20,4 +20,5 @@ urlpatterns = [
     path("breachinfo", views.leak_osint, name="leakosint"),
     path("hunterfind", views.hunter_find, name="hunterfind"),
     path("hunterverify", views.hunter_verify, name="hunterverify"),
+    path('sendMail', views.send_welcome_email, name="welcome-mail")
 ]

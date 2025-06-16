@@ -177,5 +177,35 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# EMAIL CONFIGURATION
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.office365.com'  # Use Outlook SMTP server
+EMAIL_PORT = 587  # Default port for SMTP with TLS
+EMAIL_USE_TLS = True  # Use TLS to secure the connection
+EMAIL_HOST_USER = 'support@scaninfoga.com'  # Your full email address
+EMAIL_HOST_PASSWORD = 'Scaninfoga@2020'  # Your email password (or App Password if 2FA is enabled)
+DEFAULT_FROM_EMAIL = 'support@scaninfoga.com'  # This will be the sender address for outgoing emails
 
 
+# CELERY
+# Celery settings
+CELERY_BROKER_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")  # Redis URL (for EC2 Redis)
+print("REDIS URL", os.environ.get("REDIS_URL"))
+# Or for ElastiCache Redis (use the endpoint from ElastiCache)
+# CELERY_BROKER_URL = 'redis://<elasticache-redis-endpoint>:6379/0'
+
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+
+# CACHE
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": os.environ.get("REDIS_URL"),
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "SSL": True
+        }
+    }
+}

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import CustomUser, DeveloperProfile, CorporateProfile
+from .models import CustomUser, DeveloperProfile, CorporateProfile, UserSession
 import hashlib
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -81,3 +81,8 @@ class CorporateRegistrationSerializer(serializers.ModelSerializer):
             **validated_data
         )
         return corporate
+
+class UserSessionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserSession
+        fields = ['user', 'created_at', 'ipAddress', 'device', 'browser', 'latitude', 'longitude']

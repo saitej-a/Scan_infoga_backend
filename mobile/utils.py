@@ -3,6 +3,8 @@ import os
 import json
 from datetime import datetime
 from dotenv import load_dotenv
+from rest_framework.decorators import api_view
+from rest_framework.views import APIView, api_settings
 from urllib3 import response
 from urllib3.poolmanager import key_fn_by_scheme
 from .transform import transform_api_response, prepare_client_response
@@ -750,4 +752,37 @@ def fetch_hunter_find_data(email):
             'data': response.json()
         }
     raise Exception(response.json()['message'] or 'External API Error')
+
+def fetch_upi_to_account(upi_id):
+    """Fetch upi to account details for the mobile number"""
+    api_url = os.getenv('UPI_TO_ACCOUNT_DETAILS_API_URL')
+    api_key = os.getenv('UPI_TO_ACCOUNT_DETAILS_AUTH_KEY')
+    
+    payload = {
+        "digital_payment_id":upi_id,
+        "consent" :"Y",
+        "consent_text":"We confirm obtaining valid customer consent to access/process their Payment ID data. Consent remains valid, informed, and unwithdrawn."
+    }
+    
+    headers = {
+        "authkey": api_key,
+        "Content-Type": "application/json"
+    }
+    
+    response = requests.post(api_url, headers=headers, json=payload)
+    response.raise_for_status()
+
+    data = response.json()
+    
+    data.pop('txn_id') # remove txn_id becuse its unique and will cause issue in comparison
+    data["datetime"] = datetime.now().isoformat() + "Z"
+    
+    if data['status']==1:
+        return {
+            'success': True,
+            'data': data
+        }
+    raise Exception(response.json()['message'] or 'Unexpected Error')
+
+
 

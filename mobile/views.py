@@ -1,4 +1,5 @@
 # views.py
+import stat
 from venv import create
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes
@@ -27,7 +28,8 @@ from .models import (
     DigitalPaymentAnalyser,
     LeakOSINT,
     HunterFind,
-    HunterVerify
+    HunterVerify,
+    UPIToAccount
 )
 
 
@@ -48,7 +50,8 @@ from .serializers import (
     DigitalPaymentAnalyserSerializer,
     LeakOSINTSerializer,
     HunterVerifySerializer,
-    HunterFindSerializer
+    HunterFindSerializer,
+    UPIToAccountSerializer
 )
 
 from .utils import (
@@ -68,7 +71,12 @@ from .utils import (
     fetch_digital_payment_analyser_data,
     fetch_leak_osint_data,
     fetch_hunter_find_data,
-    fetch_hunter_verify_data
+    fetch_hunter_verify_data,
+    fetch_upi_to_account
+)
+
+from .tasks import (
+    fetch_and_store_upi_to_account,
 )
 
 @api_view(["POST"])
@@ -643,5 +651,142 @@ def send_welcome_email(user):
     send_welcome_email.delay(user_email="abhinav0427@gmail.com", name="Abhinav Srivastava")
     return Response(create_response(True, "Email sent successfully", None))
 
+@api_view(['POST'])
+def upi_to_account_data(request):
+    upi_id = request.data.get('upi_id')
+    realtime_data = request.data.get('realtimeData', False)
+
+    if not upi_id:
+        return Response(create_response(False, 'upi_id is required', None), status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        obj = UPIToAccount.objects.get(upi_id=upi_id)
+        full_data = obj.result
+        latest_entry = obj.result[-1] if obj.result else None
+    except UPIToAccount.DoesNotExist:
+        full_data = []
+        latest_entry = None
+        obj = None
+    
+    count = len(full_data)
+    datetime_list = [list(entry.keys())[0] for entry in full_data]
+    
+    if not realtime_data:
+        if latest_entry:
+            latest_timestamp = list(latest_entry.keys())[0]
+            return Response(
+                create_response(True, "Data fetched from database", {
+                    "count": count,
+                    "datetime_list": datetime_list,
+                    "datetime": latest_timestamp,
+                    "data": latest_entry[latest_timestamp]
+                }),
+                status=status.HTTP_200_OK
+            )
+        else:
+            pass
+    
+    if latest_entry is None:
+        result = fetch_upi_to_account(upi_id)
+        if result.get('success'):
+            ts = result["data"].pop("datetime")
+            print(result["data"])
+            data_dict = {ts: result["data"]}
+            UPIToAccount.objects.update_or_create(
+                upi_id=upi_id,
+                defaults={"result": [data_dict]}
+            )
+            return Response(
+                create_response(True, "Real-time data fetched successfully", {
+                    "count": 1,
+                    "datetime_list": [ts],
+                    "datetime": ts,
+                    "data": data_dict[ts]
+                }),
+                status=status.HTTP_200_OK
+            )
+        else:
+            return Response(
+                create_response(False, result.get("message", "Failed to fetch data"), None), 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    api_response = fetch_upi_to_account(upi_id)
+    fetch_and_store_upi_to_account.delay(upi_id, api_response)
+    print("API response:", api_response['data'])
+    
+    return Response(
+        create_response(True, "Data fetched from API, comparing in background.",{
+            "count": count,
+            "datetime_list": datetime_list,
+            "datetime": api_response['data']['datetime'],
+            "data": api_response["data"]
+        }),
+        status=status.HTTP_200_OK
+    )
+
+@api_view(['POST'])
+def upi_to_account_full_data(request):
+    upi_id = request.data.get("upi_id")
+    if not upi_id:
+        return Response(
+            create_response(False, "Missing upi_id in query parameters", None),
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        data_obj = UPIToAccount.objects.get(upi_id=upi_id)
+        full_data = [
+            {"datetime": list(entry.keys())[0], "data": list(entry.values())[0]}
+            for entry in data_obj.result
+        ]
+        return Response(
+            create_response(True, "Full data fetched successfully", full_data),
+            status=status.HTTP_200_OK
+        )
+    except UPIToAccount.DoesNotExist:
+        api_response = fetch_upi_to_account(upi_id)
+        # fetch_and_store_upi_to_account.delay(upi_id, api_response)
+        count = 1
+        datetime_list = [api_response['data']['datetime']]
+        return Response(
+            create_response(True, "Data fetched from API, comparing in background.", {
+                "count": count,
+                "datetime_list": datetime_list,
+                "datetime": api_response['data']['datetime'],
+                "data": api_response["data"]
+            }),
+            status=status.HTTP_200_OK
+        )
+    except Exception as e:
+        return Response(
+            create_response(False, str(e), None),
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 
+@api_view(['DELETE'])
+def delete_upi_to_account_data(request):
+    upi_id = request.query_params.get('upi_id')
+    if not upi_id:
+        return Response(
+            create_response(False, "Missing?upi_id parameter in query", None),
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    records = UPIToAccount.objects.filter(upi_id=upi_id)
+    count = records.count()   
+
+    if count == 0:
+        return Response(
+            create_response(False, f'No data found for upi_id: {upi_id}', None),
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    records.delete()
+    return Response(
+        create_response(True, f'Successfully deleted {count} record(s) for upi_id: {upi_id}', None),
+        status=status.HTTP_200_OK
+    )
+    
+        

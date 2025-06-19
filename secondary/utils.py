@@ -1,26 +1,23 @@
-from django.core.cache import cache
-import requests
+import datetime
 import os
-from dotenv import load_dotenv
-
+import requests
+from django.core.cache import cache
 
 def fetch_payworld_data(sender_mobile):
     """
-    Fetches data from Payworld API and returns the response.
+    Fetches data from Payworld API and adds timestamp.
     """
-    # Replace this with the actual Payworld API URL if not set in environment
     api_url = os.getenv("PAYWORLD_API_URL")
-    
-    # Construct parameters (query string) for the API request
+    retailer_mobile_no = os.getenv("RETAILER_MOBILE_NO")
+
     params = {
         "action": "/get_sender_details",
         "method": "get",
         "sender_mobile_no": sender_mobile,
         "kyc_status": "0",
-        "retailer_mobile_no": "8866739875"
+        "retailer_mobile_no": retailer_mobile_no,
     }
-    
-    # Custom headers, including cookies for authentication
+
     headers = {
         "accept": "application/json, text/plain, */*",
         "priority": "u=1, i",
@@ -28,11 +25,54 @@ def fetch_payworld_data(sender_mobile):
         "x-requested-with": "XMLHttpRequest",
         "Cookie": cache.get("cookie_payworld")["cookie"]
     }
+
+    try:
+        response = requests.get(api_url, params=params, headers=headers)
+        response.raise_for_status()
+        result = response.json()
+
+        if result.get("message") == "Sender is not registered":
+            return {
+                "status": False,
+                "message": "Sender is not registered"
+            }
+
+        if response.status_code != 200:
+            raise Exception("Failed to fetch data from Payworld API")
+
+        data = result["data"]
+        data["datetime"] = datetime.datetime.now().isoformat() + "Z"
+
+        return {
+            "status": True,
+            "data": data
+        }
+
+    except Exception as e:
+        raise Exception(f"Failed to fetch data from Payworld API: {str(e)}")
+
+def fetch_razorpay_ifsc_data(ifsc_code):
+    """
+    Fetches data from Razorpay IFSC API.
+    """
+    api_url = os.getenv("RAZORPAY_IFSC_API_URL")
     
-    # Make the GET request to fetch the data
-    response = requests.get(api_url, params=params, headers=headers)
+    api_url = f"{api_url}/{ifsc_code}"
     
-    if response.status_code == 200:
-        return response.json()
-    else:
-        raise Exception(f"Failed to fetch data from Payworld API: {response.status_code}")
+    try:
+        response = requests.get(api_url)
+        response.raise_for_status()
+        result = response.json()
+
+        if response.status_code != 200:
+            raise Exception("Failed to fetch data from Payworld API")
+
+        result["datetime"] = datetime.datetime.now().isoformat() + "Z"
+
+        return {
+            "status": True,
+            "data": result
+        }
+
+    except Exception as e:
+        raise Exception(f"Failed to fetch data from Razorpay IFSC API: {str(e)}")

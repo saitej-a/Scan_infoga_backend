@@ -20,5 +20,8 @@ urlpatterns = [
     path("breachinfo", views.leak_osint, name="leakosint"),
     path("hunterfind", views.hunter_find, name="hunterfind"),
     path("hunterverify", views.hunter_verify, name="hunterverify"),
-    path('sendMail', views.send_welcome_email, name="welcome-mail")
+    path('sendMail', views.send_welcome_email, name="welcome-mail"),
+    path('upi-to-account', views.upi_to_account_data, name="upi-to-account"),
+    path('upi-to-account-full-data', views.upi_to_account_full_data, name="upi-to-account-full-data"),
+    path('delete-upi-to-account', views.delete_upi_to_account_data, name="delete-upi-to-account"),
 ]

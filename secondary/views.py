@@ -96,63 +96,72 @@ def payworld_data(request):
         full_data = []
         latest_entry = None
 
-    count = len(full_data)
-    datetime_list = [list(entry.keys())[0] for entry in full_data]
+    
+    try:
+        count = len(full_data)
+        datetime_list = [list(entry.keys())[0] for entry in full_data]
 
-    if not realtime_data:
-        if latest_entry:
-            print(latest_entry)
-            latest_timestamp = list(latest_entry.keys())[0]
-            return Response(
-                create_response(True, "Data fetched from database", {
-                    "count": count,
-                    "datetime_list": datetime_list,
-                    "datetime": latest_timestamp,
-                    "data": latest_entry[latest_timestamp]
-                }),
-                status=status.HTTP_200_OK
-            )
-        else:
-            pass
+        if not realtime_data:
+            if latest_entry:
+                print(latest_entry)
+                latest_timestamp = list(latest_entry.keys())[0]
+                return Response(
+                    create_response(True, "Data fetched from database", {
+                        "count": count,
+                        "datetime_list": datetime_list,
+                        "datetime": latest_timestamp,
+                        "data": latest_entry[latest_timestamp]
+                    }),
+                    status=status.HTTP_200_OK
+                )
+            else:
+                pass
 
-    if latest_entry is None:
-        result = fetch_payworld_data(sender_mobile)
-        print(result)
-        if result.get("status"):
-            ts = result["data"].pop("datetime")
-            data_dict = {ts: result["data"]}
-            PayworldData.objects.update_or_create(
-                sender_mobile_number=sender_mobile,
-                defaults={"result": [data_dict]}
-            )
-            return Response(
-                create_response(True, "Real-time data fetched successfully", {
-                    "count": 1,
-                    "datetime_list": [ts],
-                    "datetime": ts,
-                    "data": data_dict[ts]
-                }),
-                status=status.HTTP_200_OK
-            )
-        else:
-            return Response(
-                create_response(False, result.get("message", "Failed to fetch data"), None),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+        if latest_entry is None:
+            result = fetch_payworld_data(sender_mobile)
+            print(result)
+            if result.get("status"):
+                ts = result["data"].pop("datetime")
+                data_dict = {ts: result["data"]}
+                PayworldData.objects.update_or_create(
+                    sender_mobile_number=sender_mobile,
+                    defaults={"result": [data_dict]}
+                )
+                return Response(
+                    create_response(True, "Real-time data fetched successfully", {
+                        "count": 1,
+                        "datetime_list": [ts],
+                        "datetime": ts,
+                        "data": data_dict[ts]
+                    }),
+                    status=status.HTTP_200_OK
+                )
+            else:
+                return Response(
+                    create_response(False, result.get("message", "Failed to fetch data"), None),
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
 
-    api_response = fetch_payworld_data(sender_mobile)
-    print(api_response)
-    fetch_and_store_payworld_data.delay(sender_mobile, api_response)
+        api_response = fetch_payworld_data(sender_mobile)
+        print(api_response)
+        fetch_and_store_payworld_data.delay(sender_mobile, api_response)
 
-    return Response(
-        create_response(True, "Data fetched from API, comparing in background.", {
-            "count": count,
-            "datetime_list": datetime_list,
-            "datetime": api_response['data']['datetime'],
-            "data": api_response["data"]
-        }),
-        status=status.HTTP_200_OK
-    )
+        return Response(
+            create_response(True, "Data fetched from API, comparing in background.", {
+                "count": count,
+                "datetime_list": datetime_list,
+                "datetime": api_response['data']['datetime'],
+                "data": api_response["data"]
+            }),
+            status=status.HTTP_200_OK
+        )
+    
+    except Exception as e:
+        print(e)
+        return Response(
+            create_response(False, str(e), None),
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 
 @api_view(['POST'])
@@ -283,63 +292,71 @@ def razorpay_ifsc_data(request):
         full_data = []
         latest_entry = None
     
-    count = len(full_data)
-    datetime_list = [list(entry.keys())[0] for entry in full_data]
+    try:
+        count = len(full_data)
+        datetime_list = [list(entry.keys())[0] for entry in full_data]
 
-    if not realtime_data:
-        if latest_entry:
-            print(latest_entry)
-            latest_timestamp = list(latest_entry.keys())[0]
-            return Response(
-                create_response(True, "Data fetched from database", {
-                    "count": count,
-                    "datetime_list": datetime_list,
-                    "datetime": latest_timestamp,
-                    "data": latest_entry[latest_timestamp]
-                }),
-                status=status.HTTP_200_OK
-            )
-        else:
-            pass
+        if not realtime_data:
+            if latest_entry:
+                print(latest_entry)
+                latest_timestamp = list(latest_entry.keys())[0]
+                return Response(
+                    create_response(True, "Data fetched from database", {
+                        "count": count,
+                        "datetime_list": datetime_list,
+                        "datetime": latest_timestamp,
+                        "data": latest_entry[latest_timestamp]
+                    }),
+                    status=status.HTTP_200_OK
+                )
+            else:
+                pass
+            
+        if latest_entry is None:
+            result = fetch_razorpay_ifsc_data(ifsc_code)
+            print(result)
+            if result.get("status"):
+                ts = result["data"].pop("datetime")
+                data_dict = {ts: result["data"]}
+                RazorpayIFSCData.objects.update_or_create(
+                    ifsc_code=ifsc_code,
+                    defaults={"result": [data_dict]}
+                )
+                return Response(
+                    create_response(True, "Real-time data fetched successfully", {
+                        "count": 1,
+                        "datetime_list": [ts],
+                        "datetime": ts,
+                        "data": data_dict[ts]
+                    }),
+                    status=status.HTTP_200_OK
+                )
+            else:
+                return Response(
+                    create_response(False, result.get("message", "Failed to fetch data"), None), 
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+            
+        api_response = fetch_razorpay_ifsc_data(ifsc_code)
+        print(api_response)
+        fetch_and_store_razorpay_data.delay(ifsc_code,api_response)
         
-    if latest_entry is None:
-        result = fetch_razorpay_ifsc_data(ifsc_code)
-        print(result)
-        if result.get("status"):
-            ts = result["data"].pop("datetime")
-            data_dict = {ts: result["data"]}
-            RazorpayIFSCData.objects.update_or_create(
-                ifsc_code=ifsc_code,
-                defaults={"result": [data_dict]}
-            )
-            return Response(
-                create_response(True, "Real-time data fetched successfully", {
-                    "count": 1,
-                    "datetime_list": [ts],
-                    "datetime": ts,
-                    "data": data_dict[ts]
-                }),
-                status=status.HTTP_200_OK
-            )
-        else:
-            return Response(
-                create_response(False, result.get("message", "Failed to fetch data"), None), 
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-        
-    api_response = fetch_razorpay_ifsc_data(ifsc_code)
-    print(api_response)
-    fetch_and_store_razorpay_data.delay(ifsc_code,api_response)
+        return Response(
+            create_response(True, "Data fetched from API, comparing in background.", {
+                "count": count,
+                "datetime_list": datetime_list,
+                "datetime": api_response['data']['datetime'],
+                "data": api_response["data"]
+            }),
+            status=status.HTTP_200_OK
+        )
     
-    return Response(
-        create_response(True, "Data fetched from API, comparing in background.", {
-            "count": count,
-            "datetime_list": datetime_list,
-            "datetime": api_response['data']['datetime'],
-            "data": api_response["data"]
-        }),
-        status=status.HTTP_200_OK
-    )
+    except Exception as e:
+        print(e)
+        return Response(
+            create_response(False, str(e), None),
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
     
 
 

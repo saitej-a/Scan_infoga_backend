@@ -30,6 +30,7 @@ def fetch_payworld_data(sender_mobile):
         response = requests.get(api_url, params=params, headers=headers)
         response.raise_for_status()
         result = response.json()
+        print("API_Response: ", result)
 
         if result.get("message") == "Sender is not registered":
             return {
@@ -63,6 +64,7 @@ def fetch_razorpay_ifsc_data(ifsc_code):
         response = requests.get(api_url)
         response.raise_for_status()
         result = response.json()
+        print("API_Response: ", result)
 
         if response.status_code != 200:
             raise Exception("Failed to fetch data from Payworld API")

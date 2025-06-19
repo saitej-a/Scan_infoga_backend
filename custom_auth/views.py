@@ -2,15 +2,18 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from django.db.models import CharField
+from django.db.models import Max
 import pyotp
 import qrcode
 import base64
 from io import BytesIO
-from .serializers import UserRegistrationSerializer, CorporateRegistrationSerializer, DeveloperRegistrationSerializer, UserSessionSerializer
+from django.db.models.functions import Coalesce
+from .serializers import UserRegistrationSerializer, CorporateRegistrationSerializer, DeveloperRegistrationSerializer, UserSessionSerializer, UserListSerializer
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 import hashlib
-from .models import UserSession, CustomUser
+from .models import UserSession, CustomUser, Bookmark
 # from .models import CustomUser
 from user_agents import parse
 from django.utils import timezone
@@ -33,6 +36,10 @@ from django.core.cache import cache
 
 from .utils import fetch_map, fetch_location_map
 from payments.utils import create_wallet
+
+
+from payments.models import WalletBalance, Transaction
+from django.db.models import Sum, F, OuterRef, Subquery, DecimalField, Q, When, Case, Value
 
 # @api_view(['POST'])
 # def registerUser(request):
@@ -126,6 +133,7 @@ def registerUser(request):
     serializer = UserRegistrationSerializer(data=request.data)
     if serializer.is_valid():
         user_data = serializer.validated_data
+        print("USER DATA: ", user_data)
         email = user_data['email']
 
         # Check if user already exists in DB
@@ -183,7 +191,14 @@ def verifyOTP(request):
         )
 
     # Save the user to the database
-    serializer = UserRegistrationSerializer(data=cached["data"])
+    data = cached['data']
+    payload = {
+        "firstName": data["first_name"],
+        "lastName": data["last_name"],
+        "email": data["email"],
+        "password": data["password"]
+    }
+    serializer = UserRegistrationSerializer(data=payload)
     if serializer.is_valid():
         user = serializer.save()
         user.otp_secret = cached["secret"]
@@ -194,7 +209,9 @@ def verifyOTP(request):
 
         # Send welcome email via Celery
         send_welcome_email.delay(user_email=email, name=user.first_name + " " + user.last_name)
-
+        # create wallet for user after user is created 
+        # and by default add 2000 credit
+        create_wallet(user)
         qr_code = generate_qr_code(email, user.otp_secret)
         return Response(
             create_response(True, "OTP verified, user created", {"qr_code": qr_code}),
@@ -912,5 +929,167 @@ def get_user_session(request):
         status=status.HTTP_200_OK
     )
 
+
+@api_view(['GET'])
+def get_all_users(request):
+    try:
+        count = int(request.query_params.get('count', 25))
+        page = int(request.query_params.get('page', 1))
+        if page < 1 or count < 1:
+            raise ValueError
+    except ValueError:
+        return Response(
+            create_response(False, "Invalid count or page number", None),
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    users = CustomUser.objects.select_related('corporate_profile', 'developer_profile', 'wallet')
+
+    # 🔍 Global Search
+    search = request.GET.get('search')
+    if search:
+        users = users.filter(
+            Q(email__icontains=search) |
+            Q(corporate_profile__first_name__icontains=search) |
+            Q(corporate_profile__last_name__icontains=search) |
+            Q(corporate_profile__company__icontains=search) |
+            Q(corporate_profile__domain__icontains=search) |
+            Q(developer_profile__first_name__icontains=search) |
+            Q(developer_profile__last_name__icontains=search)
+        )
+
+    # ✅ Dynamic filters: exact, startswith, endswith, icontains
+    dynamic_filters = {
+        'email': ['email'],
+        'first_name': ['first_name', 'corporate_profile__first_name', 'developer_profile__first_name'],
+        'last_name': ['last_name', 'corporate_profile__last_name', 'developer_profile__last_name'],
+        'company': ['corporate_profile__company'],
+        'domain': ['corporate_profile__domain'],
+        'approval_status': ['corporate_profile__approval_status', 'developer_profile__approval_status'],
+    }
+
+    for param, paths in dynamic_filters.items():
+        for suffix in ['', '__exact', '__startswith', '__endswith', '__icontains']:
+            key = f"{param}{suffix}"
+            if val := request.GET.get(key):
+                q = Q()
+                for path in paths:
+                    try:
+                        q |= Q(**{f"{path}{suffix}": val})
+                    except Exception:
+                        pass  # Avoid OneToOneRel join errors
+                users = users.filter(q)
+
+    # 🔁 Simple filters
+    simple_filters = {
+        'id': 'id',
+        'user_type': 'user_type',
+        'is_active': 'is_active',
+        'is_staff': 'is_staff',
+    }
+    for param, field in simple_filters.items():
+        if val := request.GET.get(param):
+            users = users.filter(**{field: val})
+
+    # 📆 Date filters
+    for field in ['date_joined', 'last_login']:
+        if val := request.GET.get(f'{field}__gte'):
+            users = users.filter(**{f'{field}__gte': val})
+        if val := request.GET.get(f'{field}__lte'):
+            users = users.filter(**{f'{field}__lte': val})
+
+    # 💸 Annotations
+    spent_subquery = Transaction.objects.filter(
+        user=OuterRef('pk'),
+        status='success'
+    ).values('user').annotate(total=Sum('amount')).values('total')
+
+    users = users.annotate(
+        wallet_balance=Coalesce(
+            F('wallet__balance'),
+            Value(0),
+            output_field=DecimalField(max_digits=10, decimal_places=2)
+        ),
+        total_spent=Coalesce(
+            Subquery(spent_subquery, output_field=DecimalField(max_digits=10, decimal_places=2)),
+            Value(0),
+            output_field=DecimalField(max_digits=10, decimal_places=2)
+        ),
+        profile_first_name=Case(
+            When(user_type='CORPORATE', then=F('corporate_profile__first_name')),
+            When(user_type='DEVELOPER', then=F('developer_profile__first_name')),
+            When(user_type='USER', then=F('first_name')),
+            default=Value(''),
+            output_field=CharField()
+        ),
+        profile_last_name=Case(
+            When(user_type='CORPORATE', then=F('corporate_profile__last_name')),
+            When(user_type='DEVELOPER', then=F('developer_profile__last_name')),
+            When(user_type='USER', then=F('last_name')),
+            default=Value(''),
+            output_field=CharField()
+        ),
+        session_last_login=Max('usersession__created_at')
+    )
+
+    # 🔢 Range filters
+    for field in ['wallet_balance', 'total_spent', 'session_last_login']:
+        if val := request.GET.get(f'{field}__gte'):
+            users = users.filter(**{f'{field}__gte': val})
+        if val := request.GET.get(f'{field}__lte'):
+            users = users.filter(**{f'{field}__lte': val})
+
+    # 📊 Ordering
+    ordering = request.GET.get('ordering', 'email')
+    valid_ordering_fields = [
+        'email', 'date_joined', 'session_last_login',
+        'wallet_balance', 'total_spent',
+        'profile_first_name', 'profile_last_name', 'id'
+    ]
+    if ordering.lstrip('-') in valid_ordering_fields:
+        users = users.order_by(ordering)
+
+    # 📄 Pagination
+    total_count = users.count()
+    paginated_users = users[(page - 1) * count: page * count]
+
+    serializer = UserListSerializer(paginated_users, many=True)
+    return Response(
+        create_response(
+            True,
+            "Users retrieved successfully",
+            data={
+                'users': serializer.data,
+                'total_count': total_count,
+                'page': page,
+                'count': count
+            }
+        ),
+        status=status.HTTP_200_OK
+    )
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_bookmark(request):
+    token = get_token_from_header(request=request)
+    user = get_user_from_token(token)
+
+    bookmark_page = request.data.get("bookmarkPage")
+
+    if not bookmark_page:
+        return Response(create_response(False, "bookmarkPage is required", None), status=status.HTTP_400_BAD_REQUEST)
+
+    Bookmark.objects.create(user=user, bookmark_page=bookmark_page)
+
+    return Response(create_response(True, "Bookmark added successfully", None), status=status.HTTP_200_OK)
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_bookmark_list(request):
+    token = get_token_from_header(request=request)
+    user = get_user_from_token(token)
+
+    bookmark_list = Bookmark.objects.filter(user=user)
+    serializer = BookmarkSerializer(bookmark_list, many=True)
+    return Response(create_response(True, "Bookmark list retrieved successfully", serializer.data), status=status.HTTP_200_OK)
 
 

@@ -102,3 +102,11 @@ class OTP(models.Model):
         self.expires_at = timezone.now() + timedelta(minutes=10)  # OTP expires in 10 minutes
         self.save()
         return otp  # Return the plain OTP for email, but we store the hash
+
+
+# 1: Scaninfoga Intelligence
+
+class Bookmark(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, db_index=True)
+    bookmark_page = models.IntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)

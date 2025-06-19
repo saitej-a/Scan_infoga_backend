@@ -773,6 +773,7 @@ def fetch_upi_to_account(upi_id):
     response.raise_for_status()
 
     data = response.json()
+    print(data)
     
     data.pop('txn_id') # remove txn_id becuse its unique and will cause issue in comparison
     data["datetime"] = datetime.now().isoformat() + "Z"

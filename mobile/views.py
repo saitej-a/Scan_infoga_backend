@@ -688,6 +688,7 @@ def upi_to_account_data(request):
     
     if latest_entry is None:
         result = fetch_upi_to_account(upi_id)
+        print("Latest None then real time: ",result)
         if result.get('success'):
             ts = result["data"].pop("datetime")
             print(result["data"])
@@ -712,8 +713,8 @@ def upi_to_account_data(request):
             )
     
     api_response = fetch_upi_to_account(upi_id)
-    fetch_and_store_upi_to_account.delay(upi_id, api_response)
     print("API response:", api_response['data'])
+    fetch_and_store_upi_to_account.delay(upi_id, api_response)
     
     return Response(
         create_response(True, "Data fetched from API, comparing in background.",{

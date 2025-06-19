@@ -14,7 +14,7 @@ def fetch_and_store_payworld_data(sender_mobile, api_response):
 
         obj, _ = PayworldData.objects.get_or_create(sender_mobile_number=sender_mobile)
         existing = obj.result or []
-
+        print("Existing: ",existing)
         def last_cleaned():
             if not existing:
                 return None, None
@@ -46,7 +46,7 @@ def fetch_and_store_razorpay_data(ifsc_code, api_response):
         
         obj, _ = RazorpayIFSCData.objects.get_or_create(ifsc_code=ifsc_code)
         existing = obj.result or {}
-
+        print("Existing: ",existing)
         def last_cleaned():
             if not existing:
                 return None, None

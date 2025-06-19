@@ -775,7 +775,8 @@ def fetch_upi_to_account(upi_id):
     data = response.json()
     print(data)
     
-    data.pop('txn_id') # remove txn_id becuse its unique and will cause issue in comparison
+    if 'txn_id' in data.keys():
+        data.pop('txn_id') # remove txn_id becuse its unique and will cause issue in comparison
     data["datetime"] = datetime.now().isoformat() + "Z"
     
     if data['status']==1:

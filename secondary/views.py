@@ -89,6 +89,7 @@ def payworld_data(request):
     try:
         obj = PayworldData.objects.get(sender_mobile_number=sender_mobile)
         full_data = obj.result
+        print(full_data)
         latest_entry = full_data[-1] if full_data else None
     except PayworldData.DoesNotExist:
         obj = None
@@ -100,6 +101,7 @@ def payworld_data(request):
 
     if not realtime_data:
         if latest_entry:
+            print(latest_entry)
             latest_timestamp = list(latest_entry.keys())[0]
             return Response(
                 create_response(True, "Data fetched from database", {
@@ -115,6 +117,7 @@ def payworld_data(request):
 
     if latest_entry is None:
         result = fetch_payworld_data(sender_mobile)
+        print(result)
         if result.get("status"):
             ts = result["data"].pop("datetime")
             data_dict = {ts: result["data"]}
@@ -138,6 +141,7 @@ def payworld_data(request):
             )
 
     api_response = fetch_payworld_data(sender_mobile)
+    print(api_response)
     fetch_and_store_payworld_data.delay(sender_mobile, api_response)
 
     return Response(
@@ -166,6 +170,7 @@ def get_full_payworld_data(request):
             {"datetime": list(entry.keys())[0], "data": list(entry.values())[0]}
             for entry in data_obj.result
         ]
+        print(full_data)
         return Response(
             create_response(True, "Full data fetched successfully", full_data),
             status=status.HTTP_200_OK
@@ -173,6 +178,7 @@ def get_full_payworld_data(request):
     except PayworldData.DoesNotExist:
         print("no data fetching from external")
         api_response = fetch_payworld_data(sender_mobile)
+        print(api_response)
         fetch_and_store_payworld_data.delay(sender_mobile, api_response)
         count = 1
         datetime_list = [api_response['data']['datetime']]
@@ -270,6 +276,7 @@ def razorpay_ifsc_data(request):
     try:
         obj = RazorpayIFSCData.objects.get(ifsc_code=ifsc_code)
         full_data = obj.result
+        print(full_data)
         latest_entry = obj.result[-1] if obj.result else None
     except RazorpayIFSCData.DoesNotExist:
         obj = None
@@ -281,6 +288,7 @@ def razorpay_ifsc_data(request):
 
     if not realtime_data:
         if latest_entry:
+            print(latest_entry)
             latest_timestamp = list(latest_entry.keys())[0]
             return Response(
                 create_response(True, "Data fetched from database", {
@@ -296,6 +304,7 @@ def razorpay_ifsc_data(request):
         
     if latest_entry is None:
         result = fetch_razorpay_ifsc_data(ifsc_code)
+        print(result)
         if result.get("status"):
             ts = result["data"].pop("datetime")
             data_dict = {ts: result["data"]}
@@ -319,6 +328,7 @@ def razorpay_ifsc_data(request):
             )
         
     api_response = fetch_razorpay_ifsc_data(ifsc_code)
+    print(api_response)
     fetch_and_store_razorpay_data.delay(ifsc_code,api_response)
     
     return Response(

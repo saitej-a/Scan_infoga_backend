@@ -1,6 +1,6 @@
 from celery import shared_task
 from .utils import fetch_payworld_data, fetch_razorpay_ifsc_data
-from .models import PayworldData, RazorpayIFSCData
+from .models import PayworldData2, RazorpayIFSCData
 
 @shared_task
 def fetch_and_store_payworld_data(sender_mobile, api_response):
@@ -12,7 +12,7 @@ def fetch_and_store_payworld_data(sender_mobile, api_response):
         timestamp = new_data.pop("datetime")
         new_data_dict = {timestamp: new_data}
 
-        obj, _ = PayworldData.objects.get_or_create(sender_mobile_number=sender_mobile)
+        obj, _ = PayworldData2.objects.get_or_create(sender_mobile_number=sender_mobile)
         existing = obj.result or []
         print("Existing: ",existing)
         def last_cleaned():

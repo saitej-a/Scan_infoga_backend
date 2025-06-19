@@ -109,4 +109,5 @@ class OTP(models.Model):
 class Bookmark(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, db_index=True)
     bookmark_page = models.IntegerField()
+    payload = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

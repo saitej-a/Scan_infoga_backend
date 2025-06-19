@@ -9,7 +9,7 @@ import qrcode
 import base64
 from io import BytesIO
 from django.db.models.functions import Coalesce
-from .serializers import UserRegistrationSerializer, CorporateRegistrationSerializer, DeveloperRegistrationSerializer, UserSessionSerializer, UserListSerializer
+from .serializers import UserRegistrationSerializer, CorporateRegistrationSerializer, DeveloperRegistrationSerializer, UserSessionSerializer, UserListSerializer, BookmarkSerializer
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 import hashlib
@@ -1074,11 +1074,12 @@ def add_bookmark(request):
     user = get_user_from_token(token)
 
     bookmark_page = request.data.get("bookmarkPage")
+    payload = request.data.get("payload")
 
-    if not bookmark_page:
-        return Response(create_response(False, "bookmarkPage is required", None), status=status.HTTP_400_BAD_REQUEST)
+    if not bookmark_page or not payload:
+        return Response(create_response(False, "Bookmark Page and Payload is required", None), status=status.HTTP_400_BAD_REQUEST)
 
-    Bookmark.objects.create(user=user, bookmark_page=bookmark_page)
+    Bookmark.objects.create(user=user, bookmark_page=bookmark_page, payload=payload)
 
     return Response(create_response(True, "Bookmark added successfully", None), status=status.HTTP_200_OK)
 
@@ -1087,7 +1088,7 @@ def add_bookmark(request):
 def get_bookmark_list(request):
     token = get_token_from_header(request=request)
     user = get_user_from_token(token)
-
+    
     bookmark_list = Bookmark.objects.filter(user=user)
     serializer = BookmarkSerializer(bookmark_list, many=True)
     return Response(create_response(True, "Bookmark list retrieved successfully", serializer.data), status=status.HTTP_200_OK)

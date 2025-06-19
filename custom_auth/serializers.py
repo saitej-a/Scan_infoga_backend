@@ -148,4 +148,4 @@ class UserListSerializer(serializers.ModelSerializer):
 class BookmarkSerializer(serializers.ModelSerializer):
     class Meta:
         model = Bookmark
-        fields = ['id', 'bookmark_page', 'created_at']
+        fields = ['id', 'bookmark_page', 'created_at', 'payload']

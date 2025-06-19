@@ -183,9 +183,9 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.office365.com'  # Use Outlook SMTP server
 EMAIL_PORT = 587  # Default port for SMTP with TLS
 EMAIL_USE_TLS = True  # Use TLS to secure the connection
-EMAIL_HOST_USER = 'support@scaninfoga.com'  # Your full email address
-EMAIL_HOST_PASSWORD = 'Scaninfoga@2020'  # Your email password (or App Password if 2FA is enabled)
-DEFAULT_FROM_EMAIL = 'support@scaninfoga.com'  # This will be the sender address for outgoing emails
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")  # Your full email address
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL")
 
 
 # CELERY

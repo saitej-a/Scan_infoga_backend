@@ -601,6 +601,8 @@ async def fetch_digital_payment_data_async(session, api_url, headers, payload, m
         async with session.post(api_url, headers=headers, json=payload) as response:
             response.raise_for_status()
             data = await response.json()
+            print(f"External Fetch: {data}")
+
 
             if data['status'] == 1:
                 return {
@@ -676,7 +678,7 @@ async def fetch_all_digital_payment_data_async(mobile_number, api_url, api_key):
         combined_results = {}
         for result in results:
             combined_results.update(result)
-        
+        print("Combined Results", combined_results)
         return combined_results
 
 def fetch_digital_payment_analyser_data(mobile_number):
@@ -688,6 +690,7 @@ def fetch_digital_payment_analyser_data(mobile_number):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     result = loop.run_until_complete(fetch_all_digital_payment_data_async(mobile_number, api_url, api_key))
+    print("Result", result)
     loop.close()
     
     return result

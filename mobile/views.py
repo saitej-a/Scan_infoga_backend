@@ -75,7 +75,7 @@ from .utils import (
     fetch_upi_to_account
 )
 
-from .tasks import (
+from core.tasks import (
     fetch_and_store_upi_to_account,
 )
 
@@ -667,50 +667,55 @@ def upi_to_account_data(request):
         full_data = []
         latest_entry = None
         obj = None
-    
-    count = len(full_data)
-    datetime_list = [list(entry.keys())[0] for entry in full_data]
-    
-    if not realtime_data:
-        if latest_entry:
-            latest_timestamp = list(latest_entry.keys())[0]
-            return Response(
-                create_response(True, "Data fetched from database", {
-                    "count": count,
-                    "datetime_list": datetime_list,
-                    "datetime": latest_timestamp,
-                    "data": latest_entry[latest_timestamp]
-                }),
-                status=status.HTTP_200_OK
-            )
-        else:
-            pass
-    
-    if latest_entry is None:
-        result = fetch_upi_to_account(upi_id)
-        print("Latest None then real time: ",result)
-        if result.get('success'):
-            ts = result["data"].pop("datetime")
-            print(result["data"])
-            data_dict = {ts: result["data"]}
-            UPIToAccount.objects.update_or_create(
-                upi_id=upi_id,
-                defaults={"result": [data_dict]}
-            )
-            return Response(
-                create_response(True, "Real-time data fetched successfully", {
-                    "count": 1,
-                    "datetime_list": [ts],
-                    "datetime": ts,
-                    "data": data_dict[ts]
-                }),
-                status=status.HTTP_200_OK
-            )
-        else:
-            return Response(
-                create_response(False, result.get("message", "Failed to fetch data"), None), 
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+    try:
+        count = len(full_data)
+        datetime_list = [list(entry.keys())[0] for entry in full_data]
+        
+        if not realtime_data:
+            if latest_entry:
+                latest_timestamp = list(latest_entry.keys())[0]
+                return Response(
+                    create_response(True, "Data fetched from database", {
+                        "count": count,
+                        "datetime_list": datetime_list,
+                        "datetime": latest_timestamp,
+                        "data": latest_entry[latest_timestamp]
+                    }),
+                    status=status.HTTP_200_OK
+                )
+            else:
+                pass
+        
+        if latest_entry is None:
+            result = fetch_upi_to_account(upi_id)
+            print("Latest None then real time: ",result)
+            if result.get('success'):
+                ts = result["data"].pop("datetime")
+                print(result["data"])
+                data_dict = {ts: result["data"]}
+                UPIToAccount.objects.update_or_create(
+                    upi_id=upi_id,
+                    defaults={"result": [data_dict]}
+                )
+                return Response(
+                    create_response(True, "Real-time data fetched successfully", {
+                        "count": 1,
+                        "datetime_list": [ts],
+                        "datetime": ts,
+                        "data": data_dict[ts]
+                    }),
+                    status=status.HTTP_200_OK
+                )
+            else:
+                return Response(
+                    create_response(False, result.get("message", "Failed to fetch data"), None), 
+                    status=status.HTTP_404_NOT_FOUND
+                )
+    except Exception as e:
+        return Response(
+            create_response(False, f"Unxpected Error: {str(e)}", None),
+            status=status.HTTP_404_NOT_FOUND
+        )
     
     api_response = fetch_upi_to_account(upi_id)
     print("API response:", api_response['data'])
@@ -747,16 +752,14 @@ def upi_to_account_full_data(request):
         )
     except UPIToAccount.DoesNotExist:
         api_response = fetch_upi_to_account(upi_id)
-        # fetch_and_store_upi_to_account.delay(upi_id, api_response)
-        count = 1
-        datetime_list = [api_response['data']['datetime']]
+        fetch_and_store_upi_to_account.delay(upi_id, api_response)
         return Response(
-            create_response(True, "Data fetched from API, comparing in background.", {
-                "count": count,
-                "datetime_list": datetime_list,
-                "datetime": api_response['data']['datetime'],
-                "data": api_response["data"]
-            }),
+            create_response(True, "Data fetched from API, comparing in background.", [
+                {
+                    "datetime": api_response['data']['datetime'],
+                    "data": api_response["data"]
+                }
+            ]),
             status=status.HTTP_200_OK
         )
     except Exception as e:

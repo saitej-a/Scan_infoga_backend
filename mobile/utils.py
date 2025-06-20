@@ -171,7 +171,6 @@ def fetch_esic_data(mobile_number):
     
     data = response.json()
 
-    print("Data for esic is: ",data)
     if data['status'] == 1:
         return {
             'success': True,
@@ -776,8 +775,7 @@ def fetch_upi_to_account(upi_id):
     response.raise_for_status()
 
     data = response.json()
-    print(data)
-    
+
     if 'txn_id' in data.keys():
         data.pop('txn_id') # remove txn_id becuse its unique and will cause issue in comparison
     data["datetime"] = datetime.now().isoformat() + "Z"

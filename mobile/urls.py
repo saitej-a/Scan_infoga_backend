@@ -23,5 +23,5 @@ urlpatterns = [
     path('sendMail', views.send_welcome_email, name="welcome-mail"),
     path('upi-to-account', views.upi_to_account_data, name="upi-to-account"),
     path('upi-to-account-full-data', views.upi_to_account_full_data, name="upi-to-account-full-data"),
-    path('delete-upi-to-account', views.delete_upi_to_account_data, name="delete-upi-to-account"),
+    # path('delete-upi-to-account', views.delete_upi_to_account_data, name="delete-upi-to-account"),
 ]

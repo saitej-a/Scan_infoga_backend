@@ -7,7 +7,7 @@ from core.utils import create_response
 from django.core.cache import cache
 
 from .models import PayworldData2, RazorpayIFSCData
-from .tasks import fetch_and_store_payworld_data, fetch_and_store_razorpay_data
+from core.tasks import fetch_and_store_payworld_data, fetch_and_store_razorpay_data
 from .utils import fetch_payworld_data, fetch_razorpay_ifsc_data
 from core.utils import create_response
 
@@ -181,15 +181,13 @@ def get_full_payworld_data(request):
     except PayworldData2.DoesNotExist:
         api_response = fetch_payworld_data(sender_mobile)
         fetch_and_store_payworld_data.delay(sender_mobile, api_response)
-        count = 1
-        datetime_list = [api_response['data']['datetime']]
         return Response(
-            create_response(True, "Data fetched from API, comparing in background.", {
-                "count": count,
-                "datetime_list": datetime_list,
-                "datetime": api_response['data']['datetime'],
-                "data": api_response["data"]
-            }),
+            create_response(True, "Data fetched from API, comparing in background.", [
+                {
+                    "datetime": api_response['data']['datetime'],
+                    "data": api_response["data"]
+                }
+            ]),
             status=status.HTTP_200_OK
         )
 
@@ -370,15 +368,11 @@ def get_full_razorpay_ifsc_data(request):
         print("no data fetching from external")
         api_response = fetch_razorpay_ifsc_data(ifsc_code)
         fetch_and_store_razorpay_data.delay(ifsc_code, api_response)
-        count = 1
-        datetime_list = [api_response['data']['datetime']]
         return Response(
-            create_response(True, "Data fetched from API, comparing in background.", {
-                "count": count,
-                "datetime_list": datetime_list,
+            create_response(True, "Data fetched from API, comparing in background.", [{
                 "datetime": api_response['data']['datetime'],
                 "data": api_response["data"]
-            }),
+            }]),
             status=status.HTTP_200_OK
         )
 

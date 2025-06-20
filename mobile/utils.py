@@ -872,7 +872,7 @@ async def fetch_all_digital_payment_data_async(mobile_number, api_url, api_key):
     combined_results = {}
 
     async with aiohttp.ClientSession() as session:
-        for batch_number, batch in enumerate(chunked_iterable(upi_handle_pairs, 80), start=1):
+        for batch_number, batch in enumerate(chunked_iterable(upi_handle_pairs, 30), start=1):
             print(f"🔄 Processing batch {batch_number} with {len(batch)} handles")
 
             tasks = []
@@ -911,8 +911,8 @@ async def fetch_all_digital_payment_data_async(mobile_number, api_url, api_key):
                 print(f"Unexpected error in batch {batch_number}: {str(e)} — returning results so far.")
                 return combined_results
 
-            # print(f"Waiting 10 seconds before next batch...\n")
-            # await asyncio.sleep(10)
+            print(f"Waiting 10 seconds before next batch...\n")
+            await asyncio.sleep(10)
 
     print("✅ All batches complete. Combined Results:", combined_results)
     return combined_results

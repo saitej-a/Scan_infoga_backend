@@ -342,16 +342,65 @@ def update_txn_status_to_failed(request):
         status=status.HTTP_200_OK
     )
 
+# @api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+# def get_wallet_balance(request):
+#     token = get_token_from_header(request)
+#     user = get_user_from_token(token)
+#     try:
+#         wallet = WalletBalance.objects.get(user=user)
+#         last_success_txn = Transaction.objects.filter(user = user, status = Transaction.Status.SUCCESS).order_by('-created_at').first()
+
+#     except WalletBalance.DoesNotExist:
+#         return Response(
+#             create_response(
+#                 status=False,
+#                 message="Wallet balance not found for user",
+#                 data=None
+#             ),
+#             status=status.HTTP_404_NOT_FOUND
+#         )
+#     return Response(
+#         create_response(
+#             status=True,
+#             message="Wallet balance retrieved successfully",
+#             data={"balance": wallet.balance}
+#         ),
+#         status=status.HTTP_200_OK
+#     )
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_wallet_balance(request):
     token = get_token_from_header(request)
-    print("TOKEN: ", token)
     user = get_user_from_token(token)
-    print("USER: ", user)
-    # wallet = WalletBalance.objects.get(user=user)
+    
     try:
         wallet = WalletBalance.objects.get(user=user)
+        last_success_txn = Transaction.objects.filter(
+            user=user, status=Transaction.Status.SUCCESS
+        ).order_by('-created_at').first()
+        
+        txn_data = {
+            "txn_id": last_success_txn.txn_id,
+            "amount": str(last_success_txn.amount),
+            "status": last_success_txn.status,
+            "created_at": last_success_txn.created_at.isoformat()
+        } if last_success_txn else None
+        
+        return Response(
+            create_response(
+                status=True,
+                message="Wallet balance retrieved successfully",
+                data={
+                    "balance": str(wallet.balance),
+                    "last_successful_transaction": txn_data
+                }
+            ),
+            status=status.HTTP_200_OK
+        )
+    
     except WalletBalance.DoesNotExist:
         return Response(
             create_response(
@@ -361,15 +410,6 @@ def get_wallet_balance(request):
             ),
             status=status.HTTP_404_NOT_FOUND
         )
-    print("WALLET: ", wallet.balance)
-    return Response(
-        create_response(
-            status=True,
-            message="Wallet balance retrieved successfully",
-            data={"balance": wallet.balance}
-        ),
-        status=status.HTTP_200_OK
-    )
 
 
 

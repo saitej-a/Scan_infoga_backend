@@ -1075,11 +1075,13 @@ def add_bookmark(request):
 
     bookmark_page = request.data.get("bookmarkPage")
     payload = request.data.get("payload")
+    latitude = request.data.get("latitude")
+    longitude = request.data.get("longitude")
 
-    if not bookmark_page or not payload:
-        return Response(create_response(False, "Bookmark Page and Payload is required", None), status=status.HTTP_400_BAD_REQUEST)
+    if not bookmark_page or not payload or not latitude or not longitude:
+        return Response(create_response(False, "Bookmark Page, Payload, Latitude, Longitude is required", None), status=status.HTTP_400_BAD_REQUEST)
 
-    Bookmark.objects.create(user=user, bookmark_page=bookmark_page, payload=payload)
+    Bookmark.objects.create(user=user, bookmark_page=bookmark_page, payload=payload, latitude=latitude, longitude=longitude)
 
     return Response(create_response(True, "Bookmark added successfully", None), status=status.HTTP_200_OK)
 

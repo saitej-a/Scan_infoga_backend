@@ -752,9 +752,16 @@ def upi_to_account_full_data(request):
         )
     except UPIToAccount.DoesNotExist:
         api_response = fetch_upi_to_account(upi_id)
-        fetch_and_store_upi_to_account.delay(upi_id, api_response)
-        return Response(
-            create_response(True, "Data fetched from API, comparing in background.", [
+        if api_response.get('success'):
+            ts = api_response["data"].pop("datetime")
+            print(api_response["data"])
+            data_dict = {ts: api_response["data"]}
+            UPIToAccount.objects.update_or_create(
+                upi_id=upi_id,
+                defaults={"result": [data_dict]}
+            )
+            return Response(
+        create_response(True, "Data fetched from API, comparing in background.", [
                 {
                     "datetime": api_response['data']['datetime'],
                     "data": api_response["data"]
@@ -762,6 +769,13 @@ def upi_to_account_full_data(request):
             ]),
             status=status.HTTP_200_OK
         )
+        else:
+            return Response(
+                create_response(False, api_response.get("message", "Failed to fetch data"), None), 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        
     except Exception as e:
         return Response(
             create_response(False, str(e), None),

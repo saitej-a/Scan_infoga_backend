@@ -136,7 +136,7 @@ def payworld_data(request):
             else:
                 return Response(
                     create_response(False, result.get("message", "Failed to fetch data"), None),
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    status=status.HTTP_404_NOT_FOUND
                 )
 
         api_response = fetch_payworld_data(sender_mobile)
@@ -179,17 +179,26 @@ def get_full_payworld_data(request):
             status=status.HTTP_200_OK
         )
     except PayworldData2.DoesNotExist:
-        api_response = fetch_payworld_data(sender_mobile)
-        fetch_and_store_payworld_data.delay(sender_mobile, api_response)
-        return Response(
-            create_response(True, "Data fetched from API, comparing in background.", [
-                {
-                    "datetime": api_response['data']['datetime'],
-                    "data": api_response["data"]
-                }
-            ]),
-            status=status.HTTP_200_OK
-        )
+        result = fetch_payworld_data(sender_mobile)
+        if result.get("status"):
+            ts = result["data"].pop("datetime")
+            data_dict = {ts: result["data"]}
+            PayworldData2.objects.update_or_create(
+                sender_mobile_number=sender_mobile,
+                defaults={"result": [data_dict]}
+            )
+            return Response(
+                create_response(True, "Real-time data fetched successfully", [{
+                    "datetime": ts,
+                    "data": data_dict[ts]
+                }]),
+                status=status.HTTP_200_OK
+            )
+        else:
+            return Response(
+                create_response(False, result.get("message", "Failed to fetch data"), None),
+                status=status.HTTP_404_NOT_FOUND
+            )
 
 # @api_view(['DELETE'])
 # def delete_payworld_data(request):
@@ -321,7 +330,7 @@ def razorpay_ifsc_data(request):
             else:
                 return Response(
                     create_response(False, result.get("message", "Failed to fetch data"), None), 
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    status=status.HTTP_404_NOT_FOUND
                 )
             
         api_response = fetch_razorpay_ifsc_data(ifsc_code)
@@ -366,14 +375,31 @@ def get_full_razorpay_ifsc_data(request):
         )
     except RazorpayIFSCData.DoesNotExist:
         print("no data fetching from external")
-        api_response = fetch_razorpay_ifsc_data(ifsc_code)
-        fetch_and_store_razorpay_data.delay(ifsc_code, api_response)
+        result = fetch_razorpay_ifsc_data(ifsc_code)
+        if result.get("status"):
+                ts = result["data"].pop("datetime")
+                data_dict = {ts: result["data"]}
+                RazorpayIFSCData.objects.update_or_create(
+                    ifsc_code=ifsc_code,
+                    defaults={"result": [data_dict]}
+                )
+                return Response(
+                    create_response(True, "Real-time data fetched successfully", [{
+                        "datetime": ts,
+                        "data": data_dict[ts]
+                    }]),
+                    status=status.HTTP_200_OK
+                )
+        else:
+            return Response(
+                create_response(False, result.get("message", "Failed to fetch data"), None), 
+                status=status.HTTP_404_NOT_FOUND
+            )
+            
+    except Exception as e:
         return Response(
-            create_response(True, "Data fetched from API, comparing in background.", [{
-                "datetime": api_response['data']['datetime'],
-                "data": api_response["data"]
-            }]),
-            status=status.HTTP_200_OK
+            create_response(False, str(e), None),
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
 

@@ -826,7 +826,7 @@ async def fetch_digital_payment_data_async(session, api_url, headers, payload, m
         async with session.post(api_url, headers=headers, json=payload) as response:
             response.raise_for_status()
             data = await response.json()
-            # print(f"External Fetch: {data}")
+            print(f"External Fetch: {data}")
 
             if data.get("status") == 1:
                 return {

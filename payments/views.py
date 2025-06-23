@@ -62,6 +62,14 @@ def post_txn(request):
             ),
             status=status.HTTP_400_BAD_REQUEST
         )
+
+        # Check if a pending transaction already exists
+    if Transaction.objects.filter(user=user, status=Transaction.Status.PENDING).exists():
+        return Response(
+            create_response(False, "A pending transaction already exists", None),
+            status=status.HTTP_409_CONFLICT
+        )
+
     Transaction.objects.create(
         user=user,
         txn_id=txn_id,
@@ -411,6 +419,20 @@ def get_wallet_balance(request):
             status=status.HTTP_404_NOT_FOUND
         )
 
+@api_view(['GET'])
+def is_txn_pending(request):
+    token = get_token_from_header(request)
+    user = get_user_from_token(token)
+    is_pending = Transaction.objects.filter(user=user, status=Transaction.Status.PENDING).exists()
+
+    return Response(
+        create_response(
+            status=True,
+            message="Pending txn api call succesful",
+            data={"isPendingTxn": is_pending}
+        ),
+        status=status.HTTP_200_OK
+    )
 
 
 

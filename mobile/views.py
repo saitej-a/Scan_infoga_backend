@@ -1,15 +1,16 @@
 # views.py
-import stat
+import json
 from venv import create
+from aiohttp import payload
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-import requests
-import json
-
-from core.utils import create_response
+from payments.utils import get_amount_after_api_call, update_user_balance
+from user_activities.utils import is_called_by_user_previously
+from core.utils import create_response, get_token_from_header, get_user_from_token
+from django.db import transaction
 
 from .models import (
     Mobile360Report,
@@ -79,39 +80,131 @@ from core.tasks import (
     fetch_and_store_upi_to_account,
 )
 
+
 @api_view(["POST"])
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated])
 def mobile_360_search(request):
+    token = get_token_from_header(request)
+    user = get_user_from_token(token)
     mobile_number = request.data.get("mobile_number")
     realtime_data = request.data.get("realtimeData", False)
 
     if not mobile_number:
         return Response(create_response(False, "mobile_number is required", None), status=status.HTTP_400_BAD_REQUEST)
 
+    payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+    is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
+
+    print("IS CALLED: ", is_called)
+
+    # Try fetching from cache/database if realtime is not requested
     if not realtime_data:
-        try:
-            report = Mobile360Report.objects.get(mobile_number=mobile_number)
+        report = Mobile360Report.objects.filter(mobile_number=mobile_number).first()
+        if report:
+            # Deduct balance if first time call
+            if not is_called:
+                balance_after_deduction = get_amount_after_api_call(api_name="mobile360", user=user)
+                if balance_after_deduction < 0.0:
+                    return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                print("UPDATING")
+                update_user_balance(user=user, amount=balance_after_deduction)
+
             serialized = Mobile360ReportSerializer(report).data
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
 
-        except Mobile360Report.DoesNotExist:
-            pass
-
     try:
+        # Balance check and deduction only if realtime call or new fetch
+        if realtime_data or not report:
+            balance_after_deduction = get_amount_after_api_call(api_name="mobile360", user=user)
+            if balance_after_deduction < 0.0:
+                return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+
+        # Fetch from external API
         result_data = fetch_mobile360_data(mobile_number)
 
-        # if result_data['success']:
-        Mobile360Report.objects.update_or_create(
-            mobile_number=mobile_number,
-            defaults={"result": result_data['data']}
-        )
+        # Save or update the report
+        with transaction.atomic():
+            Mobile360Report.objects.update_or_create(
+                mobile_number=mobile_number,
+                defaults={"result": result_data['data']}
+            )
+
+            # Deduct balance only for realtime or first time external call
+            if realtime_data or not is_called:
+                update_user_balance(user=user, amount=balance_after_deduction)
 
         return Response(create_response(True, "Data fetched from external API", result_data['data']), status=status.HTTP_200_OK)
-        
+
     except Exception as e:
-            return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_404_NOT_FOUND)
+        return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
+# def uan_history_search(request):
+#     uan_no_list = request.data.get("uanNoList", [])
+#     realtime_data = request.data.get("realtimeData", False)
+
+#     if not uan_no_list or not isinstance(uan_no_list, list):
+#         return Response(create_response(False, "uanNoList must be a non-empty list", None), status=status.HTTP_400_BAD_REQUEST)
+
+#     results = []
+#     for uan_no in uan_no_list:
+#         if not realtime_data:
+#             try:
+#                 report = UANHistoryReport.objects.get(uan=uan_no)
+#                 results.append({
+#                     "uan": uan_no,
+#                     "source": "database",
+#                     "data": UANHistoryReportSerializer(report).data['result']
+#                 })
+#                 continue
+#             except UANHistoryReport.DoesNotExist:
+#                 pass
+
+#         # realtime_data = True or fallback to API
+
+#         token = get_token_from_header(request)
+#         user = get_user_from_token(token)
+#         is_called = is_called_by_user_previously(user=user, api_name=request.path)
+#         if not is_called or realtime_data:
+#             balance_after_deduction = get_amount_after_api_call(api_name="uan_history", user=user)
+#             if(balance_after_deduction < 0.0):
+#                 raise ValidationError("Insufficient balance.")
+
+#         api_response = fetch_uan_history_data(uan_no)
+#         if api_response.get("success"):
+#             if not is_called or realtime_data:
+#                 update_user_balance(user = user, amount = balance_after_deduction)
+#             data = api_response["data"]
+#             report, _ = UANHistoryReport.objects.update_or_create(
+#                 uan=uan_no,
+#                 defaults={
+#                     "result": data.get("result", {})
+#                 }
+#             )
+#             results.append({
+#                 "uan": uan_no,
+#                 "source": "external_api",
+#                 "data": api_response["data"]['result']
+#             })
+#         else:
+#             results.append({
+#                 "uan": uan_no,
+#                 "source": "external_api",
+#                 "error": "External API did not respond or returned an error."
+#             })
+#     return Response(create_response(True, "External API did not respond or returned an error." if not api_response.get('success') else  "Data fetched from external API" if realtime_data else "Data fetched from database", results), status=status.HTTP_200_OK if api_response.get("success") else status.HTTP_404_NOT_FOUND)
+
+from django.db import transaction
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.exceptions import ValidationError
 
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def uan_history_search(request):
     uan_no_list = request.data.get("uanNoList", [])
     realtime_data = request.data.get("realtimeData", False)
@@ -119,76 +212,190 @@ def uan_history_search(request):
     if not uan_no_list or not isinstance(uan_no_list, list):
         return Response(create_response(False, "uanNoList must be a non-empty list", None), status=status.HTTP_400_BAD_REQUEST)
 
+    token = get_token_from_header(request)
+    user = get_user_from_token(token)
+    api_name = request.path
+
     results = []
+
+
     for uan_no in uan_no_list:
+        is_called = is_called_by_user_previously(user=user, api_name=api_name, payload=uan_no, full_payload=False)  # unique per UAN if needed
+        fetched_from_db = False
+
+        # Try database first if realtime is not required
         if not realtime_data:
-            try:
-                report = UANHistoryReport.objects.get(uan=uan_no)
+            report = UANHistoryReport.objects.filter(uan=uan_no).first()
+            if report:
                 results.append({
                     "uan": uan_no,
                     "source": "database",
                     "data": UANHistoryReportSerializer(report).data['result']
                 })
-                continue
-            except UANHistoryReport.DoesNotExist:
-                pass
+                fetched_from_db = True
 
-        # realtime_data = True or fallback to API
-        api_response = fetch_uan_history_data(uan_no)
-        if api_response.get("success"):
-            data = api_response["data"]
-            report, _ = UANHistoryReport.objects.update_or_create(
-                uan=uan_no,
-                defaults={
-                    "result": data.get("result", {})
-                }
-            )
+                # Deduct balance if first time call
+                if not is_called:
+                    balance_after_deduction = get_amount_after_api_call(api_name="uan_history", user=user)
+                    if balance_after_deduction < 0.0:
+                        return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                    update_user_balance(user=user, amount=balance_after_deduction)
+
+        if fetched_from_db and not realtime_data:
+            continue  # Skip external API if fetched from DB and not requesting real-time data
+
+        try:
+            balance_after_deduction = get_amount_after_api_call(api_name="uan_history", user=user)
+            if balance_after_deduction < 0.0:
+                return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+
+            api_response = fetch_uan_history_data(uan_no)
+
+            if api_response.get("success"):
+                with transaction.atomic():
+                    UANHistoryReport.objects.update_or_create(
+                        uan=uan_no,
+                        defaults={"result": api_response["data"].get("result", {})}
+                    )
+                    update_user_balance(user=user, amount=balance_after_deduction)
+
+                results.append({
+                    "uan": uan_no,
+                    "source": "external_api",
+                    "data": api_response["data"]["result"]
+                })
+            else:
+                results.append({
+                    "uan": uan_no,
+                    "source": "external_api",
+                    "error": "External API did not respond or returned an error."
+                })
+
+        except Exception as e:
             results.append({
                 "uan": uan_no,
                 "source": "external_api",
-                "data": api_response["data"]['result']
+                "error": f"Unexpected error: {str(e)}"
             })
-        else:
-            results.append({
-                "uan": uan_no,
-                "source": "external_api",
-                "error": "External API did not respond or returned an error."
-            })
-    return Response(create_response(True, "External API did not respond or returned an error." if not api_response.get('success') else  "Data fetched from external API" if realtime_data else "Data fetched from database", results), status=status.HTTP_200_OK if api_response.get("success") else status.HTTP_404_NOT_FOUND)
+
+    overall_status = status.HTTP_200_OK
+    if all('error' in item for item in results):
+        overall_status = status.HTTP_404_NOT_FOUND
+
+    return Response(
+        create_response(True, "UAN history search completed.", results),
+        status=overall_status
+    )
+
+
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
+# def uan_employment_search(request):
+#     uan_no_list = request.data.get("uanNoList", [])
+#     realtime_data = request.data.get("realtimeData", False)
+
+#     if not uan_no_list:
+#         return Response(create_response(False, "uanNoList is required", None), status=status.HTTP_400_BAD_REQUEST)
+
+#     results = []
+
+
+#     for uan in uan_no_list:
+#         if not realtime_data:
+#             try:
+#                 report = UANEmploymentReport.objects.get(uan=uan)
+#                 serialized = UANEmploymentReportSerializer(report).data
+#                 results.append({"uan": uan, "source": "db", "data": serialized['result']})
+#                 continue
+#             except UANEmploymentReport.DoesNotExist:
+#                 pass
+#         else:
+#             # Real-time or fallback if DB not found
+#             token = get_token_from_header(request)
+#             user = get_user_from_token(token)
+#             is_called = is_called_by_user_previously(user=user, api_name=request.path)
+#             if not is_called or realtime_data:
+#                 balance_after_deduction = get_amount_after_api_call(api_name="uan_history_v2", user=user)
+#                 if(balance_after_deduction < 0.0):
+#                     raise ValidationError("Insufficient balance.")
+#             api_response = fetch_uan_employment_data(uan)
+
+#             if api_response.get("success"):
+#                 if not is_called or realtime_data:
+#                     update_user_balance(user = user, amount = balance_after_deduction)
+#                 data = api_response["data"]
+#                 report, _ = UANEmploymentReport.objects.update_or_create(
+#                     uan=uan,
+#                     defaults={
+#                         "result": data.get("result", {})
+#                     }
+#                 )
+#                 serialized = UANEmploymentReportSerializer(report).data
+#                 results.append({"uan": uan, "source": "api", "data": serialized['result']})
+#             else:
+#                 results.append({
+#                     "uan": uan,
+#                     "source": "api",
+#                     "error": "API did not respond or returned an error."
+#                 })
+
+#     return Response(create_response(True, "Data processed successfully", results), status=status.HTTP_200_OK)
 
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def uan_employment_search(request):
     uan_no_list = request.data.get("uanNoList", [])
     realtime_data = request.data.get("realtimeData", False)
 
-    if not uan_no_list:
-        return Response(create_response(False, "uanNoList is required", None), status=status.HTTP_400_BAD_REQUEST)
+    if not uan_no_list or not isinstance(uan_no_list, list):
+        return Response(create_response(False, "uanNoList must be a non-empty list", None), status=status.HTTP_400_BAD_REQUEST)
+
+    token = get_token_from_header(request)
+    user = get_user_from_token(token)
+    api_name = request.path
 
     results = []
 
     for uan in uan_no_list:
+        is_called = is_called_by_user_previously(user=user, api_name=api_name, payload=uan, full_payload=False)  # Optional: per UAN tracking
+        fetched_from_db = False
+
         if not realtime_data:
-            try:
-                report = UANEmploymentReport.objects.get(uan=uan)
+            report = UANEmploymentReport.objects.filter(uan=uan).first()
+            if report:
                 serialized = UANEmploymentReportSerializer(report).data
                 results.append({"uan": uan, "source": "db", "data": serialized['result']})
-                continue
-            except UANEmploymentReport.DoesNotExist:
-                pass
-        else:
-            # Real-time or fallback if DB not found
+                fetched_from_db = True
+
+                if not is_called:
+                    balance_after_deduction = get_amount_after_api_call(api_name="uan_history_v2", user=user)
+                    if balance_after_deduction < 0.0:
+                        return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                    update_user_balance(user=user, amount=balance_after_deduction)
+
+        if fetched_from_db and not realtime_data:
+            continue  # Skip API if already fetched from DB and not requesting real-time data
+
+        try:
+            balance_after_deduction = get_amount_after_api_call(api_name="uan_history_v2", user=user)
+            if balance_after_deduction < 0.0:
+                return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+
             api_response = fetch_uan_employment_data(uan)
 
             if api_response.get("success"):
-                data = api_response["data"]
-                report, _ = UANEmploymentReport.objects.update_or_create(
-                    uan=uan,
-                    defaults={
-                        "result": data.get("result", {})
-                    }
-                )
-                serialized = UANEmploymentReportSerializer(report).data
-                results.append({"uan": uan, "source": "api", "data": serialized['result']})
+                with transaction.atomic():
+                    UANEmploymentReport.objects.update_or_create(
+                        uan=uan,
+                        defaults={"result": api_response["data"].get("result", {})}
+                    )
+                    update_user_balance(user=user, amount=balance_after_deduction)
+
+                results.append({
+                    "uan": uan,
+                    "source": "api",
+                    "data": api_response["data"]["result"]
+                })
             else:
                 results.append({
                     "uan": uan,
@@ -196,9 +403,64 @@ def uan_employment_search(request):
                     "error": "API did not respond or returned an error."
                 })
 
-    return Response(create_response(True, "Data processed successfully", results), status=status.HTTP_200_OK)
+        except Exception as e:
+            results.append({
+                "uan": uan,
+                "source": "api",
+                "error": f"Unexpected error: {str(e)}"
+            })
+
+    overall_status = status.HTTP_200_OK
+    if all('error' in item for item in results):
+        overall_status = status.HTTP_404_NOT_FOUND
+
+    return Response(create_response(True, "UAN employment search completed.", results), status=overall_status)
+
+
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def esic_search(request):
+#     esic_number = request.data.get("esic_number")
+#     realtime = request.data.get("realtimeData", False)
+
+#     if not esic_number:
+#         return Response(create_response(False, "Missing 'esic_number'", None), status=status.HTTP_400_BAD_REQUEST)
+
+#     if not realtime:
+#         try:
+#             report = ESICReport.objects.get(esic_number=esic_number)
+#             serialized = ESICReportSerializer(report).data
+#             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
+        
+#         except ESICReport.DoesNotExist:
+#             pass
+    
+#     try:
+
+#         token = get_token_from_header(request)
+#         user = get_user_from_token(token)
+#         is_called = is_called_by_user_previously(user=user, api_name=request.path)
+#         if not is_called or realtime_data:
+#             balance_after_deduction = get_amount_after_api_call(api_name="esic_details", user=user)
+#             if(balance_after_deduction < 0.0):
+#                 raise ValidationError("Insufficient balance.")
+
+#         fetch_result = fetch_esic_data(esic_number)
+#         if not is_called or realtime_data:
+#             update_user_balance(user = user, amount = balance_after_deduction)
+
+#         # if fetch_result['success']:
+#         result_data = fetch_result["data"]
+#         ESICReport.objects.update_or_create(
+#             esic_number=esic_number,
+#             defaults={"result": result_data}
+#         )
+#         return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
+#     except Exception as e:
+#         return Response(create_response(False,f"Unexpected error: {str(e)}", None), status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def esic_search(request):
     esic_number = request.data.get("esic_number")
     realtime = request.data.get("realtimeData", False)
@@ -206,29 +468,96 @@ def esic_search(request):
     if not esic_number:
         return Response(create_response(False, "Missing 'esic_number'", None), status=status.HTTP_400_BAD_REQUEST)
 
-    if not realtime:
-        try:
-            report = ESICReport.objects.get(esic_number=esic_number)
-            serialized = ESICReportSerializer(report).data
-            return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
-        
-        except ESICReport.DoesNotExist:
-            pass
+    token = get_token_from_header(request)
+    user = get_user_from_token(token)
+    api_name = request.path
     
+    payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+    is_called = is_called_by_user_previously(user=user, api_name=api_name, payload=payload)
+
+    # Step 1: Try fetching from database if real-time is not required
+    if not realtime:
+        report = ESICReport.objects.filter(esic_number=esic_number).first()
+        if report:
+            serialized = ESICReportSerializer(report).data
+            if not is_called:
+                balance_after_deduction = get_amount_after_api_call(api_name="esic_details", user=user)
+                if balance_after_deduction < 0.0:
+                    return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                update_user_balance(user=user, amount=balance_after_deduction)
+
+            return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
+
+    # Step 2: Fallback to external API
     try:
+        balance_after_deduction = get_amount_after_api_call(api_name="esic_details", user=user)
+        if balance_after_deduction < 0.0:
+            return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+
         fetch_result = fetch_esic_data(esic_number)
 
-        # if fetch_result['success']:
-        result_data = fetch_result["data"]
-        ESICReport.objects.update_or_create(
-            esic_number=esic_number,
-            defaults={"result": result_data}
-        )
-        return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
+        if fetch_result.get('success'):
+            result_data = fetch_result["data"]
+            with transaction.atomic():
+                ESICReport.objects.update_or_create(
+                    esic_number=esic_number,
+                    defaults={"result": result_data}
+                )
+                update_user_balance(user=user, amount=balance_after_deduction)
+
+            return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
+        else:
+            return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
+
     except Exception as e:
-        return Response(create_response(False,f"Unexpected error: {str(e)}", None), status=status.HTTP_404_NOT_FOUND)
+        return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
+# def gst_verification_search(request):
+#     gst_no = request.data.get("gst_no")
+#     realtime_data = request.data.get("realtimeData", False)
+
+#     if not gst_no:
+#         return Response(create_response(False, "gst_no is required", None), status=status.HTTP_400_BAD_REQUEST)
+
+#     if not realtime_data:
+#         try:
+#             report = GSTVerificationReport.objects.get(gst_no=gst_no)
+#             serialized = GSTVerificationReportSerializer(report).data
+#             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
+        
+#         except GSTVerificationReport.DoesNotExist:
+#             pass
+        
+#     try:
+
+#         token = get_token_from_header(request)
+#         user = get_user_from_token(token)
+#         is_called = is_called_by_user_previously(user=user, api_name=request.path)
+#         if not is_called or realtime_data:
+#             balance_after_deduction = get_amount_after_api_call(api_name="gst_advance", user=user)
+#             if(balance_after_deduction < 0.0):
+#                 raise ValidationError("Insufficient balance.")
+
+#         api_response = fetch_gst_data(gst_no)
+#         if not is_called or realtime_data:
+#             update_user_balance(user = user, amount = balance_after_deduction)
+
+#         # if api_response['success']:
+#         result_data = api_response["data"]
+
+#         GSTVerificationReport.objects.update_or_create(
+#             gst_no=gst_no,
+#             defaults={"result": result_data}
+#         )
+#         return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
+#     except Exception as e:
+#         return Response(create_response(False, str(e), None), status=status.HTTP_404_NOT_FOUND)
 
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def gst_verification_search(request):
     gst_no = request.data.get("gst_no")
     realtime_data = request.data.get("realtimeData", False)
@@ -236,30 +565,98 @@ def gst_verification_search(request):
     if not gst_no:
         return Response(create_response(False, "gst_no is required", None), status=status.HTTP_400_BAD_REQUEST)
 
+    token = get_token_from_header(request)
+    user = get_user_from_token(token)
+    api_name = request.path
+
+    payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+    is_called = is_called_by_user_previously(user=user, api_name=api_name, payload=payload)
+
+    # Step 1: Try fetching from database if real-time is not required
     if not realtime_data:
-        try:
-            report = GSTVerificationReport.objects.get(gst_no=gst_no)
+        report = GSTVerificationReport.objects.filter(gst_no=gst_no).first()
+        if report:
             serialized = GSTVerificationReportSerializer(report).data
+
+            if not is_called:
+                balance_after_deduction = get_amount_after_api_call(api_name="gst_advance", user=user)
+                if balance_after_deduction < 0.0:
+                    return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                update_user_balance(user=user, amount=balance_after_deduction)
+
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
-        
-        except GSTVerificationReport.DoesNotExist:
-            pass
-        
+
+    # Step 2: Fallback to external API
     try:
+        balance_after_deduction = get_amount_after_api_call(api_name="gst_advance", user=user)
+        if balance_after_deduction < 0.0:
+            return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+
         api_response = fetch_gst_data(gst_no)
 
-        # if api_response['success']:
-        result_data = api_response["data"]
+        if api_response.get('success'):
+            result_data = api_response["data"]
 
-        GSTVerificationReport.objects.update_or_create(
-            gst_no=gst_no,
-            defaults={"result": result_data}
-        )
-        return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
+            with transaction.atomic():
+                GSTVerificationReport.objects.update_or_create(
+                    gst_no=gst_no,
+                    defaults={"result": result_data}
+                )
+                update_user_balance(user=user, amount=balance_after_deduction)
+
+            return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
+        else:
+            return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
+
     except Exception as e:
-        return Response(create_response(False, str(e), None), status=status.HTTP_404_NOT_FOUND)
+        return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
+# def gst_turnover_search(request):
+#     gst_no = request.data.get("gst_no")
+#     year = request.data.get("year")
+#     realtime_data = request.data.get("realtimeData", False)
+
+#     if not gst_no or not year:
+#         return Response(create_response(False, "gst_no and year are required", None), status=status.HTTP_400_BAD_REQUEST)
+
+#     if not realtime_data:
+#         try:
+#             report = GSTTurnoverReport.objects.get(gst_no=gst_no, year=year)
+#             serialized = GSTTurnoverReportSerializer(report).data
+#             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
+#         except GSTTurnoverReport.DoesNotExist:
+#             pass
+#     try:
+
+#         token = get_token_from_header(request)
+#         user = get_user_from_token(token)
+#         is_called = is_called_by_user_previously(user=user, api_name=request.path)
+#         if not is_called or realtime_data:
+#             balance_after_deduction = get_amount_after_api_call(api_name="gst_turnover", user=user)
+#             if(balance_after_deduction < 0.0):
+#                 raise ValidationError("Insufficient balance.")
+
+#         api_response = fetch_gst_turnover_data(gst_no, year)
+
+#         if not is_called or realtime_data:
+#             update_user_balance(user = user, amount = balance_after_deduction)
+
+#         result_data = api_response["data"]
+
+#         GSTTurnoverReport.objects.update_or_create(
+#             gst_no=gst_no,
+#             year=year,
+#             defaults={"result": result_data}
+#         )
+#         return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
+#     except Exception as e:
+#         return Response(create_response(False, str(e), None), status=status.HTTP_404_NOT_FOUND)
 
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def gst_turnover_search(request):
     gst_no = request.data.get("gst_no")
     year = request.data.get("year")
@@ -268,28 +665,99 @@ def gst_turnover_search(request):
     if not gst_no or not year:
         return Response(create_response(False, "gst_no and year are required", None), status=status.HTTP_400_BAD_REQUEST)
 
+    token = get_token_from_header(request)
+    user = get_user_from_token(token)
+    api_name = request.path
+
+    # Unique tracking per GST and Year if needed
+    payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+    is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
+
+    # Step 1: Try fetching from database if real-time is not required
     if not realtime_data:
-        try:
-            report = GSTTurnoverReport.objects.get(gst_no=gst_no, year=year)
+        report = GSTTurnoverReport.objects.filter(gst_no=gst_no, year=year).first()
+        if report:
             serialized = GSTTurnoverReportSerializer(report).data
+
+            if not is_called:
+                balance_after_deduction = get_amount_after_api_call(api_name="gst_turnover", user=user)
+                if balance_after_deduction < 0.0:
+                    return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                update_user_balance(user=user, amount=balance_after_deduction)
+
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
-        except GSTTurnoverReport.DoesNotExist:
-            pass
+
+    # Step 2: Fallback to external API
     try:
+        balance_after_deduction = get_amount_after_api_call(api_name="gst_turnover", user=user)
+        if balance_after_deduction < 0.0:
+            return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+
         api_response = fetch_gst_turnover_data(gst_no, year)
 
-        result_data = api_response["data"]
+        if api_response.get('success'):
+            result_data = api_response["data"]
 
-        GSTTurnoverReport.objects.update_or_create(
-            gst_no=gst_no,
-            year=year,
-            defaults={"result": result_data}
-        )
-        return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
+            with transaction.atomic():
+                GSTTurnoverReport.objects.update_or_create(
+                    gst_no=gst_no,
+                    year=year,
+                    defaults={"result": result_data}
+                )
+                update_user_balance(user=user, amount=balance_after_deduction)
+
+            return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
+
+        else:
+            return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
+
     except Exception as e:
-        return Response(create_response(False, str(e), None), status=status.HTTP_404_NOT_FOUND)
+        return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
+# def udyam_verification_search(request):
+#     registration_no = request.data.get("registration_no")
+#     realtime_data = request.data.get("realtimeData", False)
+
+#     if not registration_no:
+#         return Response(create_response(False, "registration_no is required", None), status=status.HTTP_400_BAD_REQUEST)
+
+#     if not realtime_data:
+#         try:
+#             report = UdyamReport.objects.get(registration_no=registration_no)
+#             serialized = UdyamReportSerializer(report).data
+#             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
+#         except UdyamReport.DoesNotExist:
+#             pass
+#     try:
+#         # Fetch fresh data from external API
+
+#         token = get_token_from_header(request)
+#         user = get_user_from_token(token)
+#         is_called = is_called_by_user_previously(user=user, api_name=request.path)
+#         if not is_called or realtime_data:
+#             balance_after_deduction = get_amount_after_api_call(api_name="verify_udyam", user=user)
+#             if(balance_after_deduction < 0.0):
+#                 raise ValidationError("Insufficient balance.")
+
+
+#         api_response = fetch_udyam_data(registration_no)
+#         if not is_called or realtime_data: 
+#             update_user_balance(user = user, amount = balance_after_deduction)
+
+#         result_data = api_response["data"]
+#         UdyamReport.objects.update_or_create(
+#             registration_no=registration_no,
+#             defaults={"result": result_data}
+#         )
+#         return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
+#     except Exception as e:
+#         return Response(create_response(False, str(e), None), status=status.HTTP_404_NOT_FOUND)
 
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def udyam_verification_search(request):
     registration_no = request.data.get("registration_no")
     realtime_data = request.data.get("realtimeData", False)
@@ -297,57 +765,230 @@ def udyam_verification_search(request):
     if not registration_no:
         return Response(create_response(False, "registration_no is required", None), status=status.HTTP_400_BAD_REQUEST)
 
+    token = get_token_from_header(request)
+    user = get_user_from_token(token)
+    api_name = request.path
+
+    gst_no = request.data.get("gst_no")
+    year = request.data.get("year")
+    realtime_data = request.data.get("realtimeData", False)
+
+    if not gst_no or not year:
+        return Response(create_response(False, "gst_no and year are required", None), status=status.HTTP_400_BAD_REQUEST)
+
+    token = get_token_from_header(request)
+    user = get_user_from_token(token)
+    api_name = request.path
+
+    # Unique tracking per GST and Year if needed
+    payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+    is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload )
+
+    # Step 1: Try fetching from database if real-time is not required
     if not realtime_data:
-        try:
-            report = UdyamReport.objects.get(registration_no=registration_no)
+        report = UdyamReport.objects.filter(registration_no=registration_no).first()
+        if report:
             serialized = UdyamReportSerializer(report).data
+
+            if not is_called:
+                balance_after_deduction = get_amount_after_api_call(api_name="verify_udyam", user=user)
+                if balance_after_deduction < 0.0:
+                    return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                update_user_balance(user=user, amount=balance_after_deduction)
+
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
-        except UdyamReport.DoesNotExist:
-            pass
+
+    # Step 2: Fallback to external API
     try:
-        # Fetch fresh data from external API
+        balance_after_deduction = get_amount_after_api_call(api_name="verify_udyam", user=user)
+        if balance_after_deduction < 0.0:
+            return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+
         api_response = fetch_udyam_data(registration_no)
 
-        result_data = api_response["data"]
-        UdyamReport.objects.update_or_create(
-            registration_no=registration_no,
-            defaults={"result": result_data}
-        )
-        return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
+        if api_response.get('success'):
+            result_data = api_response["data"]
+
+            with transaction.atomic():
+                UdyamReport.objects.update_or_create(
+                    registration_no=registration_no,
+                    defaults={"result": result_data}
+                )
+                update_user_balance(user=user, amount=balance_after_deduction)
+
+            return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
+
+        else:
+            return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
+
     except Exception as e:
-        return Response(create_response(False, str(e), None), status=status.HTTP_404_NOT_FOUND)
+        return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
+# def profile_advance_search(request):
+#     mobile = request.data.get("mobile_number")
+#     realtime_data = request.data.get("realtimeData", False)
+
+#     if not mobile:
+#         return Response(create_response(False, "mobile is required", None), status=status.HTTP_400_BAD_REQUEST)
+
+#     if not realtime_data:
+#         try:
+#             report = ProfileAdvanceReport.objects.get(mobile=mobile)
+#             serialized = ProfileAdvanceReportSerializer(report).data
+#             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
+#         except ProfileAdvanceReport.DoesNotExist:
+#             pass
+
+#     try:
+#     # Fetch fresh data from external API
+#         token = get_token_from_header(request)
+#         user = get_user_from_token(token)
+
+#         is_called = is_called_by_user_previously(user=user, api_name=request.path)
+#         if not is_called or realtime_data:
+#             balance_after_deduction = get_amount_after_api_call(api_name="profile_advance", user=user)
+#             if(balance_after_deduction < 0.0):
+#                 raise ValidationError("Insufficient balance.")
+
+#         api_response = fetch_profile_advance_data(mobile)
+
+#         result_data = api_response["data"]
+
+#         if not is_called or realtime_data:
+#             update_user_balance(user = user, amount = balance_after_deduction)
+
+#         ProfileAdvanceReport.objects.update_or_create(
+#             mobile=mobile,
+#             defaults={"result": result_data}
+#         )
+#         return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
+#     except Exception as e:
+#         return Response(create_response(False, str(e), None), status=status.HTTP_404_NOT_FOUND)
 
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def profile_advance_search(request):
     mobile = request.data.get("mobile_number")
     realtime_data = request.data.get("realtimeData", False)
 
     if not mobile:
-        return Response(create_response(False, "mobile is required", None), status=status.HTTP_400_BAD_REQUEST)
+        return Response(create_response(False, "mobile_number is required", None), status=status.HTTP_400_BAD_REQUEST)
 
+    token = get_token_from_header(request)
+    user = get_user_from_token(token)
+    api_name = request.path
+    gst_no = request.data.get("gst_no")
+    year = request.data.get("year")
+    realtime_data = request.data.get("realtimeData", False)
+
+    if not gst_no or not year:
+        return Response(create_response(False, "gst_no and year are required", None), status=status.HTTP_400_BAD_REQUEST)
+
+    token = get_token_from_header(request)
+    user = get_user_from_token(token)
+    api_name = request.path
+
+    # Unique tracking per GST and Year if needed
+    payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+    is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
+
+    # Step 1: Try fetching from database if real-time is not required
     if not realtime_data:
-        try:
-            report = ProfileAdvanceReport.objects.get(mobile=mobile)
+        report = ProfileAdvanceReport.objects.filter(mobile=mobile).first()
+        if report:
             serialized = ProfileAdvanceReportSerializer(report).data
-            return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
-        except ProfileAdvanceReport.DoesNotExist:
-            pass
 
+            if not is_called:
+                balance_after_deduction = get_amount_after_api_call(api_name="profile_advance", user=user)
+                if balance_after_deduction < 0.0:
+                    return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                update_user_balance(user=user, amount=balance_after_deduction)
+
+            return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
+
+    # Step 2: Fallback to external API
     try:
-    # Fetch fresh data from external API
+        balance_after_deduction = get_amount_after_api_call(api_name="profile_advance", user=user)
+        if balance_after_deduction < 0.0:
+            return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+
         api_response = fetch_profile_advance_data(mobile)
 
-        result_data = api_response["data"]
+        if api_response.get('success'):
+            result_data = api_response["data"]
 
-        ProfileAdvanceReport.objects.update_or_create(
-            mobile=mobile,
-            defaults={"result": result_data}
-        )
-        return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
+            with transaction.atomic():
+                ProfileAdvanceReport.objects.update_or_create(
+                    mobile=mobile,
+                    defaults={"result": result_data}
+                )
+                update_user_balance(user=user, amount=balance_after_deduction)
+
+            return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
+
+        else:
+            return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
+
     except Exception as e:
-        return Response(create_response(False, str(e), None), status=status.HTTP_404_NOT_FOUND)
+        return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
+# def equifax_v3_search(request):
+#     mobile = request.data.get("mobile")
+#     name = request.data.get("name")
+#     id_number = request.data.get("id_number")
+#     id_type = request.data.get("id_type")
+#     realtime_data = request.data.get("realtimeData", False)
+
+#     if not all([mobile, name, id_number, id_type]):
+#         return Response(create_response(False, "Missing one or more required fields: mobile, name, id_number, id_type", None), status=status.HTTP_400_BAD_REQUEST)
+
+#     if not realtime_data:
+#         try:
+#             report = EquifaxV3Report.objects.get(mobile=mobile)
+#             serialized = EquifaxV3ReportSerializer(report).data
+#             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
+#         except EquifaxV3Report.DoesNotExist:
+#             pass
+
+#     try:
+#         # Fetch from external API
+
+#         token = get_token_from_header(request)
+#         user = get_user_from_token(token)
+
+#         is_called = is_called_by_user_previously(user=user, api_name=request.path)
+#         if not is_called or realtime_data:
+#             balance_after_deduction = get_amount_after_api_call(api_name="equifax_v3", user=user)
+#             if(balance_after_deduction < 0.0):
+#                 raise ValidationError("Insufficient balance.")
+
+#         api_response = fetch_equifax_data(id_number, id_type, mobile, name)
+
+#         result_data = api_response["data"]
+#         if not is_called or realtime_data:
+#             update_user_balance(user = user, amount = balance_after_deduction)
+
+#         EquifaxV3Report.objects.update_or_create(
+#             mobile=mobile,
+#             defaults={
+#                 "name": name,
+#                 "id_number": id_number,
+#                 "id_type": id_type,
+#                 "result": result_data
+#             }
+#         )
+#         return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
+#     except Exception as e:
+#         return Response(create_response(False, str(e), None), status=status.HTTP_404_NOT_FOUND)
 
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def equifax_v3_search(request):
     mobile = request.data.get("mobile")
     name = request.data.get("name")
@@ -358,35 +999,106 @@ def equifax_v3_search(request):
     if not all([mobile, name, id_number, id_type]):
         return Response(create_response(False, "Missing one or more required fields: mobile, name, id_number, id_type", None), status=status.HTTP_400_BAD_REQUEST)
 
-    if not realtime_data:
-        try:
-            report = EquifaxV3Report.objects.get(mobile=mobile)
-            serialized = EquifaxV3ReportSerializer(report).data
-            return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
-        except EquifaxV3Report.DoesNotExist:
-            pass
+    token = get_token_from_header(request)
+    user = get_user_from_token(token)
+    api_name = request.path
 
+    payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+    is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
+
+    # Step 1: Try fetching from database if real-time is not required
+    if not realtime_data:
+        report = EquifaxV3Report.objects.filter(mobile=mobile).first()
+        if report:
+            serialized = EquifaxV3ReportSerializer(report).data
+
+            if not is_called:
+                balance_after_deduction = get_amount_after_api_call(api_name="equifax_v3", user=user)
+                if balance_after_deduction < 0.0:
+                    return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                update_user_balance(user=user, amount=balance_after_deduction)
+
+            return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
+
+    # Step 2: Fallback to external API
     try:
-        # Fetch from external API
+        balance_after_deduction = get_amount_after_api_call(api_name="equifax_v3", user=user)
+        if balance_after_deduction < 0.0:
+            return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+
         api_response = fetch_equifax_data(id_number, id_type, mobile, name)
 
-        result_data = api_response["data"]
+        if api_response.get('success'):
+            result_data = api_response["data"]
 
-        EquifaxV3Report.objects.update_or_create(
-            mobile=mobile,
-            defaults={
-                "name": name,
-                "id_number": id_number,
-                "id_type": id_type,
-                "result": result_data
-            }
-        )
-        return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
+            with transaction.atomic():
+                EquifaxV3Report.objects.update_or_create(
+                    mobile=mobile,
+                    defaults={
+                        "name": name,
+                        "id_number": id_number,
+                        "id_type": id_type,
+                        "result": result_data
+                    }
+                )
+                update_user_balance(user=user, amount=balance_after_deduction)
+
+            return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
+
+        else:
+            return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
+
     except Exception as e:
-        return Response(create_response(False, str(e), None), status=status.HTTP_404_NOT_FOUND)
+        return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
+# def get_acc_dtls_from_mobile(request):
+#     mobile_number = request.data.get("mobile_number")
+#     realtime_data = request.data.get("realtimeData", False)
+
+#     if not mobile_number:
+#         return Response(create_response(False, "mobile_number is required", None), status=status.HTTP_400_BAD_REQUEST)
+
+#     if not realtime_data:
+#         try:
+#             report = MobileToAccountNumber.objects.get(mobile_number=mobile_number)
+#             serialized = MobileToAccountNumberSerializer(report).data
+#             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
+#         except MobileToAccountNumber.DoesNotExist:
+#             pass
+
+#     try:
+#         # Fetch fresh data from external API
+
+#         token = get_token_from_header(request)
+#         user = get_user_from_token(token)
+#         is_called = is_called_by_user_previously(user=user, api_name=request.path)
+#         if not is_called or realtime_data:
+#             balance_after_deduction = get_amount_after_api_call(api_name="mobile_to_account", user=user)
+#             if(balance_after_deduction < 0.0):
+#                 raise ValidationError("Insufficient balance.")
+
+
+#         api_response = fetch_mobile_to_account_data(mobile_number)
+
+#         if not is_called or realtime_data:
+#             update_user_balance(user = user, amount = balance_after_deduction)
+
+#         result_data = api_response["data"]
+
+#         MobileToAccountNumber.objects.update_or_create(
+#             mobile_number=mobile_number,
+#             defaults={"result": result_data}
+#         )
+#         return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
+#     except Exception as e:
+#         return Response(create_response(False, str(e), None), status=status.HTTP_404_NOT_FOUND)
 
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def get_acc_dtls_from_mobile(request):
     mobile_number = request.data.get("mobile_number")
     realtime_data = request.data.get("realtimeData", False)
@@ -394,71 +1106,234 @@ def get_acc_dtls_from_mobile(request):
     if not mobile_number:
         return Response(create_response(False, "mobile_number is required", None), status=status.HTTP_400_BAD_REQUEST)
 
-    if not realtime_data:
-        try:
-            report = MobileToAccountNumber.objects.get(mobile_number=mobile_number)
-            serialized = MobileToAccountNumberSerializer(report).data
-            return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
-        except MobileToAccountNumber.DoesNotExist:
-            pass
+    token = get_token_from_header(request)
+    user = get_user_from_token(token)
+    api_name = request.path
 
+    
+    payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+    is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
+
+    # Step 1: Try fetching from database if real-time is not required
+    if not realtime_data:
+        report = MobileToAccountNumber.objects.filter(mobile_number=mobile_number).first()
+        if report:
+            serialized = MobileToAccountNumberSerializer(report).data
+
+            if not is_called:
+                balance_after_deduction = get_amount_after_api_call(api_name="mobile_to_account", user=user)
+                if balance_after_deduction < 0.0:
+                    return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                update_user_balance(user=user, amount=balance_after_deduction)
+
+            return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
+
+    # Step 2: Fallback to external API
     try:
-        # Fetch fresh data from external API
+        balance_after_deduction = get_amount_after_api_call(api_name="mobile_to_account", user=user)
+        if balance_after_deduction < 0.0:
+            return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+
         api_response = fetch_mobile_to_account_data(mobile_number)
 
-        result_data = api_response["data"]
+        if api_response.get('success'):
+            result_data = api_response["data"]
 
-        MobileToAccountNumber.objects.update_or_create(
-            mobile_number=mobile_number,
-            defaults={"result": result_data}
-        )
-        return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
+            with transaction.atomic():
+                MobileToAccountNumber.objects.update_or_create(
+                    mobile_number=mobile_number,
+                    defaults={"result": result_data}
+                )
+                update_user_balance(user=user, amount=balance_after_deduction)
+
+            return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
+
+        else:
+            return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
+
     except Exception as e:
-        return Response(create_response(False, str(e), None), status=status.HTTP_404_NOT_FOUND)
+        return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
+# def uan_passbook_without_otp(request):
+#     uan_no_list = request.data.get("uanNoList", [])
+#     realtime_data = request.data.get("realtimeData", False)
+
+#     if not uan_no_list:
+#         return Response(create_response(False, "uanNoList is required", None), status=status.HTTP_400_BAD_REQUEST)
+
+#     results = []
+
+#     for uan in uan_no_list:
+#         if not realtime_data:
+#             try:
+#                 report = UanWithoutOtp.objects.get(uan=uan)
+#                 serialized = UanWithoutOtpSerializer(report).data
+#                 results.append({"uan": uan, "source": "db", "data": serialized['result']})
+#                 continue
+#             except UanWithoutOtp.DoesNotExist:
+#                 pass
+        
+#         token = get_token_from_header(request)
+#         user = get_user_from_token(token)
+
+#         is_called = is_called_by_user_previously(user=user, api_name=request.path)
+#         if not is_called or realtime_data:
+#             balance_after_deduction = get_amount_after_api_call(api_name="uan_passbook_without_otp", user=user)
+#             if(balance_after_deduction < 0.0):
+#                 raise ValidationError("Insufficient balance.")
+#         api_response = get_uan_dtls_without_otp(uan)
+
+#         if api_response.get("success"):
+#             if not is_called or realtime_data:
+#                 update_user_balance(user = user, amount = balance_after_deduction)
+
+#             data = api_response["data"]
+#             report, _ = UanWithoutOtp.objects.update_or_create(
+#                 uan=uan,
+#                 defaults={
+#                     "result": data
+#                 }
+#             )
+#             serialized = UanWithoutOtpSerializer(report).data
+#             results.append({"uan": uan, "source": "api", "data": serialized['result']})
+#         else:
+#             results.append({
+#                 "uan": uan,
+#                 "source": "api",
+#                 "error": "API did not respond or returned an error."
+#             })
+
+#     return Response(create_response(True, "Data processed successfully", results), status=status.HTTP_200_OK)
 
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def uan_passbook_without_otp(request):
     uan_no_list = request.data.get("uanNoList", [])
     realtime_data = request.data.get("realtimeData", False)
 
-    if not uan_no_list:
-        return Response(create_response(False, "uanNoList is required", None), status=status.HTTP_400_BAD_REQUEST)
+    if not uan_no_list or not isinstance(uan_no_list, list):
+        return Response(create_response(False, "uanNoList must be a non-empty list", None), status=status.HTTP_400_BAD_REQUEST)
+
+    token = get_token_from_header(request)
+    user = get_user_from_token(token)
+    api_name = request.path
 
     results = []
 
     for uan in uan_no_list:
+        is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=uan, full_payload=False)
+        fetched_from_db = False
+
         if not realtime_data:
-            try:
-                report = UanWithoutOtp.objects.get(uan=uan)
+            report = UanWithoutOtp.objects.filter(uan=uan).first()
+            if report:
                 serialized = UanWithoutOtpSerializer(report).data
                 results.append({"uan": uan, "source": "db", "data": serialized['result']})
-                continue
-            except UanWithoutOtp.DoesNotExist:
-                pass
+                fetched_from_db = True
 
-        api_response = get_uan_dtls_without_otp(uan)
+                if not is_called:
+                    balance_after_deduction = get_amount_after_api_call(api_name="uan_passbook_without_otp", user=user)
+                    if balance_after_deduction < 0.0:
+                        return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                    update_user_balance(user=user, amount=balance_after_deduction)
 
-        if api_response.get("success"):
-            data = api_response["data"]
-            report, _ = UanWithoutOtp.objects.update_or_create(
-                uan=uan,
-                defaults={
-                    "result": data
-                }
-            )
-            serialized = UanWithoutOtpSerializer(report).data
-            results.append({"uan": uan, "source": "api", "data": serialized['result']})
-        else:
+        if fetched_from_db and not realtime_data:
+            continue  # Skip API if fetched from DB and no real-time requested
+
+        try:
+            balance_after_deduction = get_amount_after_api_call(api_name="uan_passbook_without_otp", user=user)
+            if balance_after_deduction < 0.0:
+                return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+
+            api_response = get_uan_dtls_without_otp(uan)
+
+            if api_response.get("success"):
+                with transaction.atomic():
+                    UanWithoutOtp.objects.update_or_create(
+                        uan=uan,
+                        defaults={"result": api_response["data"]}
+                    )
+                    update_user_balance(user=user, amount=balance_after_deduction)
+
+                results.append({
+                    "uan": uan,
+                    "source": "api",
+                    "data": api_response["data"]
+                })
+            else:
+                results.append({
+                    "uan": uan,
+                    "source": "api",
+                    "error": "API did not respond or returned an error."
+                })
+
+        except Exception as e:
             results.append({
                 "uan": uan,
                 "source": "api",
-                "error": "API did not respond or returned an error."
+                "error": f"Unexpected error: {str(e)}"
             })
 
-    return Response(create_response(True, "Data processed successfully", results), status=status.HTTP_200_OK)
+    overall_status = status.HTTP_200_OK
+    if all('error' in item for item in results):
+        overall_status = status.HTTP_404_NOT_FOUND
 
+    return Response(
+        create_response(True, "UAN passbook without OTP search completed.", results),
+        status=overall_status
+    )
+
+
+
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
+# def mobile_to_dl_lookup(request):
+#     mobile_number = request.data.get("mobile_number")
+#     name = request.data.get("name")
+#     dob = request.data.get("dob")
+#     realtime_data = request.data.get("realtimeData", False)
+
+#     if not mobile_number or not name or not dob:
+#         return Response(create_response(False, "mobile_number and name and dob are required", None), status=status.HTTP_400_BAD_REQUEST)
+
+#     if not realtime_data:
+#         try:
+#             report = MobileToDLLookup.objects.get(mobile_number=mobile_number)
+#             serialized = MobileToDLLookupSerializer(report).data
+#             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
+#         except MobileToDLLookup.DoesNotExist:
+#             pass
+
+#     try:
+#         # Fetch fresh data from external API
+#         token = get_token_from_header(request)
+#         user = get_user_from_token(token)
+#         is_called = is_called_by_user_previously(user=user, api_name=request.path)
+#         if not is_called or realtime_data:
+#             balance_after_deduction = get_amount_after_api_call(api_name="mobile_to_dl", user=user)
+#             if(balance_after_deduction < 0.0):
+#                 raise ValidationError("Insufficient balance.")
+
+
+#         api_response = fetch_mobile_to_dl_data(mobile_number, name, dob)
+#         if not is_called or realtime_data:
+#             update_user_balance(user = user, amount = balance_after_deduction)
+
+#         result_data = api_response["data"]
+
+#         MobileToDLLookup.objects.update_or_create(
+#             mobile_number=mobile_number,
+#             defaults={"result": result_data}
+#         )
+#         return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
+#     except Exception as e:
+#         return Response(create_response(False, str(e), None), status=status.HTTP_404_NOT_FOUND)
 
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def mobile_to_dl_lookup(request):
     mobile_number = request.data.get("mobile_number")
     name = request.data.get("name")
@@ -466,96 +1341,265 @@ def mobile_to_dl_lookup(request):
     realtime_data = request.data.get("realtimeData", False)
 
     if not mobile_number or not name or not dob:
-        return Response(create_response(False, "mobile_number and name and dob are required", None), status=status.HTTP_400_BAD_REQUEST)
+        return Response(create_response(False, "mobile_number, name, and dob are required.", None), status=status.HTTP_400_BAD_REQUEST)
 
+    token = get_token_from_header(request)
+    user = get_user_from_token(token)
+    api_name = request.path
+
+    payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+    is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
+
+    # Step 1: Try fetching from database if real-time is not required
     if not realtime_data:
-        try:
-            report = MobileToDLLookup.objects.get(mobile_number=mobile_number)
+        report = MobileToDLLookup.objects.filter(mobile_number=mobile_number).first()
+        if report:
             serialized = MobileToDLLookupSerializer(report).data
-            return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
-        except MobileToDLLookup.DoesNotExist:
-            pass
 
+            if not is_called:
+                balance_after_deduction = get_amount_after_api_call(api_name="mobile_to_dl", user=user)
+                if balance_after_deduction < 0.0:
+                    return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                update_user_balance(user=user, amount=balance_after_deduction)
+
+            return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
+
+    # Step 2: Fallback to external API
     try:
-        # Fetch fresh data from external API
+        balance_after_deduction = get_amount_after_api_call(api_name="mobile_to_dl", user=user)
+        if balance_after_deduction < 0.0:
+            return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+
         api_response = fetch_mobile_to_dl_data(mobile_number, name, dob)
 
-        result_data = api_response["data"]
+        if api_response.get('success'):
+            result_data = api_response["data"]
 
-        MobileToDLLookup.objects.update_or_create(
-            mobile_number=mobile_number,
-            defaults={"result": result_data}
-        )
-        return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
+            with transaction.atomic():
+                MobileToDLLookup.objects.update_or_create(
+                    mobile_number=mobile_number,
+                    defaults={"result": result_data}
+                )
+                update_user_balance(user=user, amount=balance_after_deduction)
+
+            return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
+
+        else:
+            return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
+
     except Exception as e:
-        return Response(create_response(False, str(e), None), status=status.HTTP_404_NOT_FOUND)
+        return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
+# def pan_all_in_one(request):
+#     pan_number = request.data.get("pan_number")
+#     realtime_data = request.data.get("realtimeData", False)
+
+#     if not pan_number:
+#         return Response(create_response(False, "pan_number is required", None), status=status.HTTP_400_BAD_REQUEST)
+
+#     if not realtime_data:
+#         try:
+#             pan_report = PanAllInOne.objects.get(pan_number=pan_number)
+#             serialized = PanAllInOneSerializer(pan_report).data
+#             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
+        
+#         except PanAllInOne.DoesNotExist:
+#             pass
+        
+#     try:
+
+#         token = get_token_from_header(request)
+#         user = get_user_from_token(token)
+#         is_called = is_called_by_user_previously(user=user, api_name=request.path)
+#         if not is_called or realtime_data:
+#             balance_after_deduction = get_amount_after_api_call(api_name="pan_all_in_one", user=user)
+#             if(balance_after_deduction < 0.0):
+#                 raise ValidationError("Insufficient balance.")
+
+
+#         api_response = fetch_pan_all_in_one_data(pan_number)
+#         if not is_called or realtime_data:
+#             update_user_balance(user = user, amount = balance_after_deduction)
+        
+#         result_data = api_response["data"]
+
+#         PanAllInOne.objects.update_or_create(
+#             pan_number=pan_number,
+#             defaults={"result": result_data}
+#         )
+
+#         return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
+    
+#     except Exception as e:
+#         return Response(create_response(False, str(e), None), status=status.HTTP_404_NOT_FOUND)
+    
+from django.db import transaction
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.exceptions import ValidationError
+
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def pan_all_in_one(request):
     pan_number = request.data.get("pan_number")
     realtime_data = request.data.get("realtimeData", False)
 
     if not pan_number:
-        return Response(create_response(False, "pan_number is required", None), status=status.HTTP_400_BAD_REQUEST)
+        return Response(create_response(False, "pan_number is required.", None), status=status.HTTP_400_BAD_REQUEST)
 
+    token = get_token_from_header(request)
+    user = get_user_from_token(token)
+    api_name = request.path
+
+    payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+    is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
+
+    # Step 1: Try fetching from database if real-time is not required
     if not realtime_data:
-        try:
-            pan_report = PanAllInOne.objects.get(pan_number=pan_number)
+        pan_report = PanAllInOne.objects.filter(pan_number=pan_number).first()
+        if pan_report:
             serialized = PanAllInOneSerializer(pan_report).data
+
+            if not is_called:
+                balance_after_deduction = get_amount_after_api_call(api_name="pan_all_in_one", user=user)
+                if balance_after_deduction < 0.0:
+                    return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                update_user_balance(user=user, amount=balance_after_deduction)
+
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
-        
-        except PanAllInOne.DoesNotExist:
-            pass
-        
+
+    # Step 2: Fallback to external API
     try:
+        balance_after_deduction = get_amount_after_api_call(api_name="pan_all_in_one", user=user)
+        if balance_after_deduction < 0.0:
+            return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+
         api_response = fetch_pan_all_in_one_data(pan_number)
-        
-        result_data = api_response["data"]
 
-        PanAllInOne.objects.update_or_create(
-            pan_number=pan_number,
-            defaults={"result": result_data}
-        )
+        if api_response.get('success'):
+            result_data = api_response["data"]
 
-        return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
-    
+            with transaction.atomic():
+                PanAllInOne.objects.update_or_create(
+                    pan_number=pan_number,
+                    defaults={"result": result_data}
+                )
+                update_user_balance(user=user, amount=balance_after_deduction)
+
+            return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
+
+        else:
+            return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
+
     except Exception as e:
-        return Response(create_response(False, str(e), None), status=status.HTTP_404_NOT_FOUND)
+        return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
+# def digital_payment_analyser(request):
+#     mobile_number = request.data.get("mobile_number")
+#     realtime_data = request.data.get("realtimeData", False)
+
+#     if not mobile_number:
+#         return Response(create_response(False, "mobile_number is required", None), status=status.HTTP_400_BAD_REQUEST)
+
+#     if not realtime_data:
+#         try:
+#             report = DigitalPaymentAnalyser.objects.get(mobile_number=mobile_number)
+#             serialized = DigitalPaymentAnalyserSerializer(report).data
+#             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
+
+#         except DigitalPaymentAnalyser.DoesNotExist:
+#             pass
     
+#     try:
+#         token = get_token_from_header(request)
+#         user = get_user_from_token(token)
+#         is_called = is_called_by_user_previously(user=user, api_name=request.path)
+#         if not is_called or realtime_data:
+#             balance_after_deduction = get_amount_after_api_call(api_name="digital_payment_id_analyzer", user=user)
+#             if(balance_after_deduction < 0.0):
+#                 raise ValidationError("Insufficient balance.")
+
+        
+
+#         api_response = fetch_digital_payment_analyser_data(mobile_number=mobile_number)
+#         if not is_called or realtime_data:
+#             update_user_balance(user = user, amount = balance_after_deduction)
+#         if api_response:
+#             DigitalPaymentAnalyser.objects.update_or_create(
+#                 mobile_number=mobile_number,
+#                 defaults={"result": api_response}
+#             )
+#             return Response(create_response(True, "Data fetched from external API", api_response), status=status.HTTP_200_OK)
+        
+#         else:
+#             return Response(create_response(False, "No digital payments found.", data=None), status=status.HTTP_200_OK)
+#     except Exception as e:
+
+#         return Response(create_response(False, str(e), None), status=status.HTTP_404_NOT_FOUND)
+
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def digital_payment_analyser(request):
     mobile_number = request.data.get("mobile_number")
     realtime_data = request.data.get("realtimeData", False)
 
     if not mobile_number:
-        return Response(create_response(False, "mobile_number is required", None), status=status.HTTP_400_BAD_REQUEST)
+        return Response(create_response(False, "mobile_number is required.", None), status=status.HTTP_400_BAD_REQUEST)
 
+    token = get_token_from_header(request)
+    user = get_user_from_token(token)
+    api_name = request.path
+
+    payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+    is_called = is_called_by_user_previously(user=user, api_name=request.path,  payload=payload)
+
+    # Step 1: Try fetching from database if real-time is not required
     if not realtime_data:
-        try:
-            report = DigitalPaymentAnalyser.objects.get(mobile_number=mobile_number)
+        report = DigitalPaymentAnalyser.objects.filter(mobile_number=mobile_number).first()
+        if report:
             serialized = DigitalPaymentAnalyserSerializer(report).data
+
+            if not is_called:
+                balance_after_deduction = get_amount_after_api_call(api_name="digital_payment_id_analyzer", user=user)
+                if balance_after_deduction < 0.0:
+                    return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                update_user_balance(user=user, amount=balance_after_deduction)
+
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
 
-        except DigitalPaymentAnalyser.DoesNotExist:
-            pass
-    
+    # Step 2: Fallback to external API
     try:
-        api_response = fetch_digital_payment_analyser_data(mobile_number=mobile_number)
-        if api_response:
-            DigitalPaymentAnalyser.objects.update_or_create(
-                mobile_number=mobile_number,
-                defaults={"result": api_response}
-            )
-            return Response(create_response(True, "Data fetched from external API", api_response), status=status.HTTP_200_OK)
-        
-        else:
-            return Response(create_response(False, "No digital payments found.", data=None), status=status.HTTP_200_OK)
-    except Exception as e:
+        balance_after_deduction = get_amount_after_api_call(api_name="digital_payment_id_analyzer", user=user)
+        if balance_after_deduction < 0.0:
+            return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
-        return Response(create_response(False, str(e), None), status=status.HTTP_404_NOT_FOUND)
+        api_response = fetch_digital_payment_analyser_data(mobile_number=mobile_number)
+
+        if api_response:
+            with transaction.atomic():
+                DigitalPaymentAnalyser.objects.update_or_create(
+                    mobile_number=mobile_number,
+                    defaults={"result": api_response}
+                )
+                update_user_balance(user=user, amount=balance_after_deduction)
+
+            return Response(create_response(True, "Data fetched from external API", api_response), status=status.HTTP_200_OK)
+        else:
+            return Response(create_response(False, "No digital payments found.", None), status=status.HTTP_404_NOT_FOUND)
+
+    except Exception as e:
+        return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def leak_osint(request):
     request_body = request.data.get("request_body")
     realtime_data = request.data.get("realtimeData", False)
@@ -573,7 +1617,16 @@ def leak_osint(request):
             pass
 
     try:
+        token = get_token_from_header(request)
+        user = get_user_from_token(token)
+        is_called = is_called_by_user_previously(user=user, api_name=request.path)
+        if not is_called or realtime_data:
+            balance_after_deduction = get_amount_after_api_call(api_name="breach_info:", user=user)
+            if(balance_after_deduction < 0.0):
+                raise ValidationError("Insufficient balance.")
         api_response = fetch_leak_osint_data(request_body=request_body)
+        if not is_called or realtime_data:
+            update_user_balance(user = user, amount = balance_after_deduction)
         LeakOSINT.objects.update_or_create(
             request_body=request_body,
             defaults={"result": api_response}
@@ -584,6 +1637,7 @@ def leak_osint(request):
         return Response(create_response(False, str(e), None), status=status.HTTP_404_NOT_FOUND)
 
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def hunter_verify(request):
     email = request.data.get("email")
     realtime_data = request.data.get("realtimeData", False)
@@ -601,6 +1655,13 @@ def hunter_verify(request):
             pass
 
     try:
+
+        # token = get_token_from_header(request)
+        # user = get_user_from_token(token)
+        # balance_after_deduction = get_amount_after_api_call(api_name="mobile360", user=user)
+        # if(balance_after_deduction < 0.0):
+        #     raise ValidationError("Insufficient balance.")
+        # update_user_balance(user = user, amount = balance_after_deduction)
         api_response = fetch_hunter_verify_data(email=email)
         HunterVerify.objects.update_or_create(
             email=email,
@@ -611,6 +1672,7 @@ def hunter_verify(request):
         return Response(create_response(False, f"Unxpected Error: {str(e)}", None), status=status.HTTP_404_NOT_FOUND)
 
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def hunter_find(request):
     email = request.data.get("email")
     realtime_data = request.data.get("realtimeData", False)
@@ -628,6 +1690,14 @@ def hunter_find(request):
             pass
 
     try:
+
+        # token = get_token_from_header(request)
+        # user = get_user_from_token(token)
+        # balance_after_deduction = get_amount_after_api_call(api_name="mobile360", user=user)
+        # if(balance_after_deduction < 0.0):
+        #     raise ValidationError("Insufficient balance.")
+        # update_user_balance(user = user, amount = balance_after_deduction)
+
         api_response = fetch_hunter_find_data(email=email)
         HunterFind.objects.update_or_create(
             email=email,
@@ -642,6 +1712,7 @@ from django.shortcuts import render
 from core.services.email_service import EmailService  # Import the email service
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def send_welcome_email(user):
     # subject = 'Welcome to Our Mobile App!'
     # message = f'Hello abhinav,\nWelcome to our mobile app. We are excited to have you!'
@@ -652,6 +1723,7 @@ def send_welcome_email(user):
     return Response(create_response(True, "Email sent successfully", None))
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def upi_to_account_data(request):
     upi_id = request.data.get('upi_id')
     realtime_data = request.data.get('realtimeData', False)
@@ -732,6 +1804,7 @@ def upi_to_account_data(request):
     )
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def upi_to_account_full_data(request):
     upi_id = request.data.get("upi_id")
     if not upi_id:
@@ -784,6 +1857,7 @@ def upi_to_account_full_data(request):
 
 
 @api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
 def delete_upi_to_account_data(request):
     upi_id = request.query_params.get('upi_id')
     if not upi_id:

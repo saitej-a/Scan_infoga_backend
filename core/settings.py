@@ -18,10 +18,10 @@ from corsheaders.defaults import default_headers
 
 from dotenv import load_dotenv
 
-load_dotenv()
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
+load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 GHUNT_CREDS_PATH = os.path.join(BASE_DIR, 'secrets', 'creds.m')

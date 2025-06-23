@@ -5,8 +5,8 @@ from . import views
 urlpatterns = [
     path('getMobile360Dtls', views.mobile_360_search, name='mobile_360_search'),
     path('getAcDtlsFromMobNo', views.get_acc_dtls_from_mobile, name='get_acc_dtls_from_mobile'),
-    path("getuanhistory", views.uan_history_search, name="uan_history_search"),#
-    path("employmentsearch", views.uan_employment_search, name="uan_employment_search"),#
+    path("getuanhistory", views.uan_history_search, name="uan_history_search"),
+    path("employmentsearch", views.uan_employment_search, name="uan_employment_search"),
     path("esicsearch", views.esic_search, name="esic-search"),
     path("gstadvance", views.gst_verification_search, name="gst-verification-search"),
     path("gstturnover", views.gst_turnover_search, name="gst-turnover-search"),

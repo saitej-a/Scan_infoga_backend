@@ -25,7 +25,7 @@ urlpatterns = [
     path('', health_check, name='health_check'),
     path('admin/', admin.site.urls),
     path('api/auth/', include('custom_auth.urls')),
-    path('api/ghunt/', include('ghunt_util.urls')),
+    path('api/hudson/', include('hudsonrock.urls')),
     path('api/user-activities/', include('user_activities.urls')),
     path('api/mobile/', include('mobile.urls')),
     path('api/payments/', include('payments.urls')),

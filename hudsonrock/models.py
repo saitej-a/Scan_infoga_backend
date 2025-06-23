@@ -1,4 +1,5 @@
 from django.db import models
+from rest_framework.fields import MaxLengthValidator
 
 class Credential(models.Model):
     url = models.CharField(max_length=255)
@@ -24,3 +25,21 @@ class HudsonRockData(models.Model):
 
     class Meta:
         db_table = 'hudson_rock_data'
+
+class SearchByEmail(models.Model):
+    email = models.CharField(max_length=255, primary_key=True)
+    result = models.JSONField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.email
+
+class SearchByIP(models.Model):
+    ip = models.CharField(max_length=255, primary_key=True)
+    result = models.JSONField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.ip

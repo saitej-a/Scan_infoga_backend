@@ -876,17 +876,9 @@ def profile_advance_search(request):
 
     token = get_token_from_header(request)
     user = get_user_from_token(token)
-    api_name = request.path
-    gst_no = request.data.get("gst_no")
-    year = request.data.get("year")
-    realtime_data = request.data.get("realtimeData", False)
-
-    if not gst_no or not year:
-        return Response(create_response(False, "gst_no and year are required", None), status=status.HTTP_400_BAD_REQUEST)
 
     token = get_token_from_header(request)
     user = get_user_from_token(token)
-    api_name = request.path
 
     # Unique tracking per GST and Year if needed
     payload = json.loads(request.body.decode('utf-8')) if request.body else {}
@@ -998,7 +990,6 @@ def equifax_v3_search(request):
 
     token = get_token_from_header(request)
     user = get_user_from_token(token)
-    api_name = request.path
 
     payload = json.loads(request.body.decode('utf-8')) if request.body else {}
     is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
@@ -1105,8 +1096,6 @@ def get_acc_dtls_from_mobile(request):
 
     token = get_token_from_header(request)
     user = get_user_from_token(token)
-    api_name = request.path
-
     
     payload = json.loads(request.body.decode('utf-8')) if request.body else {}
     is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)

@@ -43,3 +43,21 @@ class SearchByIP(models.Model):
 
     def __str__(self):
         return self.ip
+
+class SearchByUsername(models.Model):
+    username = models.CharField(max_length=255, primary_key=True)
+    result = models.JSONField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.ip
+
+class SearchByDomain(models.Model):
+    domain = models.CharField(max_length=255, primary_key=True)
+    result = models.JSONField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.ip

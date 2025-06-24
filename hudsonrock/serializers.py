@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import HudsonRockData, SearchByEmail, SearchByIP
+from .models import HudsonRockData, SearchByEmail, SearchByIP,SearchByDomain, SearchByUsername
 
 class HudsonRockDataSerializer(serializers.ModelSerializer):
     class Meta:
@@ -20,4 +20,14 @@ class SearchByEmailSerializer(serializers.ModelSerializer):
 class SearchByIPSerializer(serializers.ModelSerializer):
     class Meta:
         model = SearchByIP
+        fields = '__all__'
+
+class SearchByUsernameSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SearchByUsername
+        fields = '__all__'
+
+class SearchByDomainSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SearchByDomain
         fields = '__all__'

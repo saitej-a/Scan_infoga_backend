@@ -2,11 +2,11 @@ from cffi import api
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-from .models import HudsonRockData, SearchByEmail, SearchByIP
+from .models import HudsonRockData, SearchByEmail, SearchByIP, SearchByUsername, SearchByDomain
 # from drf_yasg.utils import swagger_auto_schema
-from .serializers import HudsonRockDataSerializer, SearchByEmailSerializer, SearchByIPSerializer
+from .serializers import HudsonRockDataSerializer, SearchByEmailSerializer, SearchByIPSerializer, SearchByUsernameSerializer, SearchByDomainSerializer
 from core.utils import create_response
-from .utils import fetch_hudson_search_by_email, fetch_hudson_search_by_ip
+from .utils import fetch_hudson_search_by_email, fetch_hudson_search_by_ip, fetch_hudson_search_by_domain, fetch_hudson_search_by_username
 
 @api_view(['POST'])
 def save_hudson_data(request):
@@ -152,7 +152,7 @@ def search_by_ip(request):
     realtime_data = request.data.get("realtimeData")
 
     if not ip:
-        return Response(create_response(status=False, message="ip is required", data=None),status=status.HTTP_400_BAD_REQUEST)
+        return Response(create_response(status=False, message="IP is required", data=None),status=status.HTTP_400_BAD_REQUEST)
     
     if not realtime_data:
         try:
@@ -170,6 +170,72 @@ def search_by_ip(request):
 
         SearchByIP.objects.update_or_create(
             ip=ip,
+            defaults={
+                'result': result_data
+            }
+        )
+        return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response(create_response(False, str(e), None), status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['POST'])
+def search_by_username(request):
+    username = request.data.get("username")
+    realtime_data = request.data.get("realtimeData")
+
+    if not username:
+        return Response(create_response(status=False, message="Username is required", data=None),status=status.HTTP_400_BAD_REQUEST)
+    
+    if not realtime_data:
+        try:
+            report = SearchByUsername.objects.get(username=username)
+            serialized = SearchByUsernameSerializer(report).data
+            return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
+        
+        except SearchByUsername.DoesNotExist:
+            pass
+        
+    try:
+        api_response = fetch_hudson_search_by_username(username)
+        
+        result_data = api_response['data']
+
+        SearchByUsername.objects.update_or_create(
+            username=username,
+            defaults={
+                'result': result_data
+            }
+        )
+        return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response(create_response(False, str(e), None), status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['POST'])
+def search_by_domain(request):
+    domain = request.data.get("domain")
+    realtime_data = request.data.get("realtimeData")
+
+    if not domain:
+        return Response(create_response(status=False, message="Domain is required", data=None),status=status.HTTP_400_BAD_REQUEST)
+    
+    if not realtime_data:
+        try:
+            report = SearchByDomain.objects.get(domain=domain)
+            serialized = SearchByDomainSerializer(report).data
+            return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
+        
+        except SearchByDomain.DoesNotExist:
+            pass
+        
+    try:
+        api_response = fetch_hudson_search_by_domain(domain)
+        
+        result_data = api_response['data']
+
+        SearchByDomain.objects.update_or_create(
+            domain=domain,
             defaults={
                 'result': result_data
             }

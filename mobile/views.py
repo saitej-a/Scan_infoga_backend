@@ -1,8 +1,5 @@
 # views.py
 import json
-from venv import create
-from aiohttp import payload
-from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
@@ -1580,7 +1577,7 @@ def digital_payment_analyser(request):
         if balance_after_deduction < 0.0:
             return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
-        api_response = fetch_digital_payment_analyser_data(mobile_number=mobile_number)
+        api_response, billable_count = fetch_digital_payment_analyser_data(mobile_number=mobile_number)
 
         if api_response:
             with transaction.atomic():
@@ -1636,77 +1633,161 @@ def leak_osint(request):
     except Exception as e:
         return Response(create_response(False, str(e), None), status=status.HTTP_404_NOT_FOUND)
 
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
+# def hunter_verify(request):
+#     email = request.data.get("email")
+#     realtime_data = request.data.get("realtimeData", False)
+
+#     if not email:
+#         return Response(create_response(False, "email is required", None), status=status.HTTP_400_BAD_REQUEST)
+
+#     if not realtime_data:
+#         try:
+#             report = HunterVerify.objects.get(email=email)
+#             serialized = HunterVerifySerializer(report).data
+#             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
+
+#         except HunterVerify.DoesNotExist:
+#             pass
+
+#     try:
+#         api_response = fetch_hunter_verify_data(email=email)
+#         HunterVerify.objects.update_or_create(
+#             email=email,
+#             defaults={"result": api_response}
+#         )
+#         return Response(create_response(True, "Data fetched from external API", api_response), status=status.HTTP_200_OK)
+#     except Exception as e:
+#         return Response(create_response(False, f"Unxpected Error: {str(e)}", None), status=status.HTTP_404_NOT_FOUND)
+
+
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def hunter_verify(request):
+    token = get_token_from_header(request)
+    user = get_user_from_token(token)
     email = request.data.get("email")
     realtime_data = request.data.get("realtimeData", False)
 
     if not email:
         return Response(create_response(False, "email is required", None), status=status.HTTP_400_BAD_REQUEST)
+    
+    payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+    is_called = is_called_by_user_previously(user=user, api_name=request.path,payload=payload)
+    
+    print("Is Called: ", is_called)
 
     if not realtime_data:
-        try:
-            report = HunterVerify.objects.get(email=email)
+        report = HunterVerify.object.filter(email=email).first()
+        if report:
+            if not is_called:
+                balance_after_deduction = get_amount_after_api_call(api_name='hunterverify', user=user)
+                if balance_after_deduction<0.0:
+                    return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                print("Updating Balance")
+                update_user_balance(user=user, amount=balance_after_deduction)
+            
             serialized = HunterVerifySerializer(report).data
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
 
-        except HunterVerify.DoesNotExist:
-            pass
-
     try:
+        if realtime_data or not report:
+            balance_after_deduction = get_amount_after_api_call(api_name='hunterverify', user=user)
+            if(balance_after_deduction < 0.0):
+                return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
-        # token = get_token_from_header(request)
-        # user = get_user_from_token(token)
-        # balance_after_deduction = get_amount_after_api_call(api_name="mobile360", user=user)
-        # if(balance_after_deduction < 0.0):
-        #     raise ValidationError("Insufficient balance.")
-        # update_user_balance(user = user, amount = balance_after_deduction)
         api_response = fetch_hunter_verify_data(email=email)
-        HunterVerify.objects.update_or_create(
-            email=email,
-            defaults={"result": api_response}
-        )
+        with transaction.atomic():
+            HunterVerify.objects.update_or_create(
+                email=email,
+                defaults={"result": api_response}
+            )
+            if realtime_data or not is_called:
+                update_user_balance(user=user, amount=balance_after_deduction)
+
         return Response(create_response(True, "Data fetched from external API", api_response), status=status.HTTP_200_OK)
+
     except Exception as e:
         return Response(create_response(False, f"Unxpected Error: {str(e)}", None), status=status.HTTP_404_NOT_FOUND)
+
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
+# def hunter_find(request):
+#     email = request.data.get("email")
+#     realtime_data = request.data.get("realtimeData", False)
+
+#     if not email:
+#         return Response(create_response(False, "email is required", None), status=status.HTTP_400_BAD_REQUEST)
+
+#     if not realtime_data:
+#         try:
+#             report = HunterFind.objects.get(email=email)
+#             serialized = HunterFindSerializer(report).data
+#             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
+
+#         except HunterFind.DoesNotExist:
+#             pass
+
+#     try:
+#         api_response = fetch_hunter_find_data(email=email)
+#         HunterFind.objects.update_or_create(
+#             email=email,
+#             defaults={"result": api_response}
+#         )
+#         return Response(create_response(True, "Data fetched from external API", api_response), status=status.HTTP_200_OK)
+#     except Exception as e:
+#         return Response(create_response(False, f"Unxpected Error: {str(e)}", None), status=status.HTTP_404_NOT_FOUND)
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def hunter_find(request):
+    token = get_token_from_header(request)
+    user = get_user_from_token(token)
     email = request.data.get("email")
     realtime_data = request.data.get("realtimeData", False)
 
     if not email:
         return Response(create_response(False, "email is required", None), status=status.HTTP_400_BAD_REQUEST)
 
+    payload = json.loads(request.body('utf-8')) if request.body else {}
+    is_called = is_called_by_user_previously(user=user, apiname=request.path, payload=payload)
+
+    print("Is Called: ", is_called)
+
     if not realtime_data:
-        try:
-            report = HunterFind.objects.get(email=email)
+        report = HunterFind.objects.filter(email=email).first()
+        if report:
+            if not is_called:
+                balance_after_deduction = get_amount_after_api_call(api_name='hunterfind',user=user)
+                if balance_after_deduction<0.0:
+                    return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                print("Updating Balance")
+                update_user_balance(user=user, amount=balance_after_deduction)
+
             serialized = HunterFindSerializer(report).data
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
 
-        except HunterFind.DoesNotExist:
-            pass
-
     try:
-
-        # token = get_token_from_header(request)
-        # user = get_user_from_token(token)
-        # balance_after_deduction = get_amount_after_api_call(api_name="mobile360", user=user)
-        # if(balance_after_deduction < 0.0):
-        #     raise ValidationError("Insufficient balance.")
-        # update_user_balance(user = user, amount = balance_after_deduction)
+        if realtime_data or not is_called:
+            balance_after_deduction = get_amount_after_api_call(api_name='hunterfind', user=user)
+            if(balance_after_deduction < 0.0):
+                return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
         api_response = fetch_hunter_find_data(email=email)
-        HunterFind.objects.update_or_create(
-            email=email,
-            defaults={"result": api_response}
-        )
+        
+        with transaction.atomic():
+            HunterFind.objects.update_or_create(
+                email=email,
+                defaults={"result": api_response}
+            )
+            if realtime_data or not is_called:
+                update_user_balance(user=user, amount=balance_after_deduction)
         return Response(create_response(True, "Data fetched from external API", api_response), status=status.HTTP_200_OK)
+
     except Exception as e:
         return Response(create_response(False, f"Unxpected Error: {str(e)}", None), status=status.HTTP_404_NOT_FOUND)
-
 
 from django.shortcuts import render
 from core.services.email_service import EmailService  # Import the email service
@@ -1836,7 +1917,7 @@ def upi_to_account_full_data(request):
             return Response(
         create_response(True, "Data fetched from API, comparing in background.", [
                 {
-                    "datetime": api_response['data']['datetime'],
+                    "datetime": ts,
                     "data": api_response["data"]
                 }
             ]),

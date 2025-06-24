@@ -593,221 +593,6 @@ upi_handles = {
     'United Bank of India': ['@ubi']
 }
 
-
-
-# async def fetch_digital_payment_data_async(session, api_url, headers, payload, mobile_number, upi_handle, platform):
-#     """Asynchronous function to fetch data for a single UPI handle"""
-#     try:
-#         async with session.post(api_url, headers=headers, json=payload) as response:
-#             response.raise_for_status()
-#             data = await response.json()
-#             print(f"External Fetch: {data}")
-
-
-#             if data['status'] == 1:
-#                 return {
-#                     str(mobile_number) + upi_handle: {
-#                         'success': True,
-#                         'upi_handle': upi_handle,
-#                         'platform': platform,
-#                         'data': data
-#                     }
-#                 }
-#             elif data['status'] == 403:
-#                 raise Exception(data['message'])
-#                 return
-#             return {}
-
-            
-#     except aiohttp.ClientResponseError as e:
-#         raise Exception(f"API request failed")
-#         return {
-#             str(mobile_number) + upi_handle: {
-#                 'success': False,
-#                 'upi_handle': upi_handle,
-#                 'platform': platform,
-#                 'error': f"API request failed: {str(e)}"
-#             }
-#         }
-#     except json.JSONDecodeError:
-#         raise Exception("Failed to parse API response")
-#         return {
-#             str(mobile_number) + upi_handle: {
-#                 'success': False,
-#                 'upi_handle': upi_handle,
-#                 'platform': platform,
-#                 'error': "Failed to parse API response"
-#             }
-#         }
-#     except Exception as e:
-#         raise Exception(str(e))
-#         return {
-#             str(mobile_number) + upi_handle: {
-#                 'success': False,
-#                 'upi_handle': upi_handle,
-#                 'platform': platform,
-#                 'error': f"Unexpected errorss: {str(e)}"
-#             }
-#         }
-
-# async def fetch_all_digital_payment_data_async(mobile_number, api_url, api_key):
-#     """Fetch all digital payment data asynchronously"""
-#     headers = {
-#         "authkey": api_key,
-#         "Content-Type": "application/json"
-#     }
-    
-#     tasks = []
-#     async with aiohttp.ClientSession() as session:
-#         for platform, upi_handles_list in upi_handles.items():
-#             for upi_handle in upi_handles_list:
-#                 payload = {
-#                     "digital_payment_id": str(mobile_number) + upi_handle,
-#                     "consent": "Y",
-#                     "consent_text": "We confirm obtaining valid customer consent to access/process their digital payment id data. Consent remains valid, informed, and unwithdrawn."
-#                 }
-                
-#                 task = fetch_digital_payment_data_async(
-#                     session, api_url, headers, payload, mobile_number, upi_handle, platform
-#                 )
-#                 tasks.append(task)
-        
-#         results = await asyncio.gather(*tasks)
-        
-#         # Combine all results into a single dictionary
-#         combined_results = {}
-#         for result in results:
-#             combined_results.update(result)
-#         print("Combined Results", combined_results)
-#         return combined_results
-
-# def fetch_digital_payment_analyser_data(mobile_number):
-#     """Fetch digital payment details for the mobile number"""
-#     api_url = os.getenv('DIGITAL_PAYMENT_ANALYSER_API_URL')
-#     api_key = os.getenv('DIGITAL_PAYMENT_ANALYSER_AUTH_KEY')
-    
-#     # Run the async function using asyncio
-#     loop = asyncio.new_event_loop()
-#     asyncio.set_event_loop(loop)
-#     result = loop.run_until_complete(fetch_all_digital_payment_data_async(mobile_number, api_url, api_key))
-#     print("Result", result)
-#     loop.close()
-    
-#     return result
-
-# ----------------------------------------------------------------------------------------------------------------------------------------
-
-# def chunked_iterable(iterable, size):
-#     """Helper function to chunk iterable into fixed-size pieces."""
-#     it = iter(iterable)
-#     while True:
-#         chunk = list(islice(it, size))
-#         if not chunk:
-#             break
-#         yield chunk
-
-# async def fetch_digital_payment_data_async(session, api_url, headers, payload, mobile_number, upi_handle, platform):
-#     """Asynchronous function to fetch data for a single UPI handle"""
-#     try:
-#         async with session.post(api_url, headers=headers, json=payload) as response:
-#             response.raise_for_status()
-#             data = await response.json()
-#             print(f"External Fetch: {data}")
-
-
-#             if data['status'] == 1:
-#                 return {
-#                     str(mobile_number) + upi_handle: {
-#                         'success': True,
-#                         'upi_handle': upi_handle,
-#                         'platform': platform,
-#                         'data': data
-#                     }
-#                 }
-#             elif data['status'] == 403:
-#                 raise Exception(data['message'])
-#                 return
-#             return {}
-                
-#     except aiohttp.ClientResponseError as e:
-#         raise Exception(f"API request failed")
-#         return {
-#             str(mobile_number) + upi_handle: {
-#                 'success': False,
-#                 'upi_handle': upi_handle,
-#                 'platform': platform,
-#                 'error': f"API request failed: {str(e)}"
-#             }
-#         }
-#     except json.JSONDecodeError:
-#         raise Exception("Failed to parse API response")
-#         return {
-#             str(mobile_number) + upi_handle: {
-#                 'success': False,
-#                 'upi_handle': upi_handle,
-#                 'platform': platform,
-#                 'error': "Failed to parse API response"
-#             }
-#         }
-#     except Exception as e:
-#         raise Exception(str(e))
-#         return {
-#             str(mobile_number) + upi_handle: {
-#                 'success': False,
-#                 'upi_handle': upi_handle,
-#                 'platform': platform,
-#                 'error': f"Unexpected errorss: {str(e)}"
-#             }
-#         }
-
-# async def fetch_all_digital_payment_data_async(mobile_number, api_url, api_key):
-#     headers = {
-#         "authkey": api_key,
-#         "Content-Type": "application/json"
-#     }
-
-#     upi_handle_pairs = [
-#         (platform, upi_handle)
-#         for platform, handles in upi_handles.items()
-#         for upi_handle in handles
-#     ]
-
-#     combined_results = {}
-#     async with aiohttp.ClientSession() as session:
-#         for batch_number, batch in enumerate(chunked_iterable(upi_handle_pairs, 36), start=1):
-#             print(f"\n🟩 Processing batch {batch_number} with {len(batch)} handles")
-
-#             tasks = []
-#             for platform, upi_handle in batch:
-#                 payload = {
-#                     "digital_payment_id": str(mobile_number) + upi_handle,
-#                     "consent": "Y",
-#                     "consent_text": (
-#                         "We confirm obtaining valid customer consent to access/process their "
-#                         "digital payment id data. Consent remains valid, informed, and unwithdrawn."
-#                     )
-#                 }
-#                 task = fetch_digital_payment_data_async(
-#                     session, api_url, headers, payload, mobile_number, upi_handle, platform
-#                 )
-#                 tasks.append(task)
-
-#             # Run the batch concurrently
-#             results = await asyncio.gather(*tasks)
-
-#             # Merge into combined result
-#             for result in results:
-#                 combined_results.update(result)
-
-#             print(f"🕐 Waiting 12 seconds before next batch...\n")
-#             await asyncio.sleep(30)  # wait 10–15 seconds to avoid rate limits
-
-#     print("✅ All batches complete. Combined Results:", combined_results)
-#     return combined_results
-
-
-
-#----------------------------------------------------------------------------------------------
 # from itertools import islice
 # import aiohttp
 # import asyncio
@@ -840,25 +625,26 @@ upi_handles = {
 #                         'data': data
 #                     }
 #                 }
-#             elif data.get("status") == 403:
-#                 return {
-#                     str(mobile_number) + upi_handle: {
-#                         'success': False,
-#                         'upi_handle': upi_handle,
-#                         'platform': platform,
-#                         'error': data.get("message", "Forbidden")
-#                     }
-#                 }
-#             return {}
+#             else:
+#                 # Log and return failure cases as well
+#                 return #{
+#                 #     str(mobile_number) + upi_handle: {
+#                 #         'success': False,
+#                 #         'upi_handle': upi_handle,
+#                 #         'platform': platform,
+#                 #         'error': data.get("message", "No success status"),
+#                 #         'data': data
+#                 #     }
+#                 # }
 #     except Exception as e:
-#         return {
-#             str(mobile_number) + upi_handle: {
-#                 'success': False,
-#                 'upi_handle': upi_handle,
-#                 'platform': platform,
-#                 'error': f"Error getting the data from API"
-#             }
-#         }
+#         return #{
+#         #     str(mobile_number) + upi_handle: {
+#         #         'success': False,
+#         #         'upi_handle': upi_handle,
+#         #         'platform': platform,
+#         #         'error': f"Error getting the data from API: {str(e)}"
+#         #     }
+#         # }
 
 # async def fetch_all_digital_payment_data_async(mobile_number, api_url, api_key):
 #     headers = {
@@ -895,26 +681,16 @@ upi_handles = {
 #             try:
 #                 results = await asyncio.gather(*tasks, return_exceptions=True)
 
-#                 batch_results = {}
 #                 for result in results:
 #                     if isinstance(result, dict):
-#                         batch_results.update(result)
+#                         combined_results.update(result)
 #                     elif isinstance(result, Exception):
 #                         print(f"⚠️ Task failed: {result}")
 
-#                 # Stop if current batch has no successful results
-#                 if not batch_results:
-#                     print(f"Batch {batch_number} failed completely. Returning previous successful results.\n")
-#                     return combined_results
-
-#                 # Merge successful results from current batch
-#                 combined_results.update(batch_results)
-
 #             except Exception as e:
-#                 print(f"Unexpected error in batch {batch_number}: {str(e)} — returning results so far.")
-#                 return combined_results
+#                 print(f"Unexpected error in batch {batch_number}: {str(e)}")
 
-#             print(f"Waiting 10 seconds before next batch...\n")
+#             print(f"⏳ Waiting 10 seconds before next batch...\n")
 #             await asyncio.sleep(10)
 
 #     print("✅ All batches complete. Combined Results:", combined_results)
@@ -924,7 +700,7 @@ upi_handles = {
 #     """Fetch digital payment details for the mobile number"""
 #     api_url = os.getenv('DIGITAL_PAYMENT_ANALYSER_API_URL')
 #     api_key = os.getenv('DIGITAL_PAYMENT_ANALYSER_AUTH_KEY')
-    
+
 #     loop = asyncio.new_event_loop()
 #     asyncio.set_event_loop(loop)
 
@@ -935,31 +711,150 @@ upi_handles = {
 #     except Exception as e:
 #         print(f"Global failure occurred: {str(e)}")
 #         result = {}
-
 #     finally:
 #         loop.close()
 
-#     print("Final Result (partial or complete):", result)
+#     print("📦 Final Result (partial or complete):", result)
 #     return result
 
-#----------------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------------------
 
+# from itertools import islice
+# import aiohttp
+# import asyncio
+# import os
+# import json
+
+# def chunked_iterable(iterable, size):
+#     """Helper function to chunk iterable into fixed-size pieces."""
+#     it = iter(iterable)
+#     while True:
+#         chunk = list(islice(it, size))
+#         if not chunk:
+#             break
+#         yield chunk
+
+# async def fetch_digital_payment_data_async(session, api_url, headers, payload, mobile_number, upi_handle, platform):
+#     """Asynchronous function to fetch data for a single UPI handle"""
+#     try:
+#         async with session.post(api_url, headers=headers, json=payload) as response:
+#             response.raise_for_status()
+#             data = await response.json()
+#             print(f"External Fetch: {data}")
+
+#             if data.get("status") == 1:
+#                 return {
+#                     'key': str(mobile_number) + upi_handle,
+#                     'data': {
+#                         'success': True,
+#                         'upi_handle': upi_handle,
+#                         'platform': platform,
+#                         'data': data,
+#                         'billable': data.get("billable", False)
+#                     }
+#                 }
+#             else:
+#                 return {
+#                     'key': str(mobile_number) + upi_handle,
+#                     'data': {
+#                         'success': False,
+#                         'upi_handle': upi_handle,
+#                         'platform': platform,
+#                         'error': data.get("message", "No success status"),
+#                         'data': data,
+#                         'billable': data.get("billable", False)
+#                     }
+#                 }
+#     except Exception as e:
+#         return {
+#             'key': str(mobile_number) + upi_handle,
+#             'data': {
+#                 'success': False,
+#                 'upi_handle': upi_handle,
+#                 'platform': platform,
+#                 'error': f"Error getting the data from API: {str(e)}",
+#                 'billable': False
+#             }
+#         }
+
+# async def fetch_all_digital_payment_data_async(mobile_number, api_url, api_key):
+#     headers = {
+#         "authkey": api_key,
+#         "Content-Type": "application/json"
+#     }
+
+#     upi_handle_pairs = [
+#         (platform, upi_handle)
+#         for platform, handles in upi_handles.items()
+#         for upi_handle in handles
+#     ]
+
+#     combined_results = {}
+#     billable_count = 0
+
+#     async with aiohttp.ClientSession() as session:
+#         for batch_number, batch in enumerate(chunked_iterable(upi_handle_pairs, 30), start=1):
+#             print(f"🔄 Processing batch {batch_number} with {len(batch)} handles")
+
+#             tasks = []
+#             for platform, upi_handle in batch:
+#                 payload = {
+#                     "digital_payment_id": str(mobile_number) + upi_handle,
+#                     "consent": "Y",
+#                     "consent_text": (
+#                         "We confirm obtaining valid customer consent to access/process their digital payment id data. Consent remains valid, informed, and unwithdrawn."
+#                     )
+#                 }
+#                 task = fetch_digital_payment_data_async(
+#                     session, api_url, headers, payload, mobile_number, upi_handle, platform
+#                 )
+#                 tasks.append(task)
+
+#             try:
+#                 results = await asyncio.gather(*tasks, return_exceptions=True)
+
+#                 for result in results:
+#                     if isinstance(result, dict):
+#                         key = result['key']
+#                         value = result['data']
+#                         combined_results[key] = value
+#                         if value.get("billable") is True:
+#                             billable_count += 1
+#                     elif isinstance(result, Exception):
+#                         print(f"⚠️ Task failed: {result}")
+
+#             except Exception as e:
+#                 print(f"Unexpected error in batch {batch_number}: {str(e)}")
+
+#             print(f"⏳ Waiting 10 seconds before next batch...\n")
+#             await asyncio.sleep(10)
+
+#     print("✅ All batches complete. Combined Results:", combined_results)
+#     print(f"📊 Total billable responses: {billable_count}")
+#     return combined_results, billable_count
 
 # def fetch_digital_payment_analyser_data(mobile_number):
 #     """Fetch digital payment details for the mobile number"""
 #     api_url = os.getenv('DIGITAL_PAYMENT_ANALYSER_API_URL')
 #     api_key = os.getenv('DIGITAL_PAYMENT_ANALYSER_AUTH_KEY')
-    
-#     # Run the async function using asyncio
+
 #     loop = asyncio.new_event_loop()
 #     asyncio.set_event_loop(loop)
-#     result = loop.run_until_complete(fetch_all_digital_payment_data_async(mobile_number, api_url, api_key))
-#     print("Result", result)
-#     loop.close()
-    
-#     return result
 
-#----------------------------------------------------------------------------------------------
+#     try:
+#         result, billable_count = loop.run_until_complete(
+#             fetch_all_digital_payment_data_async(mobile_number, api_url, api_key)
+#         )
+#     except Exception as e:
+#         print(f"Global failure occurred: {str(e)}")
+#         result, billable_count = {}, 0
+#     finally:
+#         loop.close()
+
+#     print("📦 Final Result (partial or complete):", result)
+#     print(f"📊 Final Billable Count: {billable_count}")
+#     return result, billable_count
+
 
 from itertools import islice
 import aiohttp
@@ -986,33 +881,38 @@ async def fetch_digital_payment_data_async(session, api_url, headers, payload, m
 
             if data.get("status") == 1:
                 return {
-                    str(mobile_number) + upi_handle: {
+                    'key': str(mobile_number) + upi_handle,
+                    'data': {
                         'success': True,
                         'upi_handle': upi_handle,
                         'platform': platform,
-                        'data': data
+                        'data': data,
+                        'billable': data.get("billable", False)
                     }
                 }
             else:
-                # Log and return failure cases as well
-                return #{
-                #     str(mobile_number) + upi_handle: {
-                #         'success': False,
-                #         'upi_handle': upi_handle,
-                #         'platform': platform,
-                #         'error': data.get("message", "No success status"),
-                #         'data': data
-                #     }
-                # }
+                return {
+                    'key': str(mobile_number) + upi_handle,
+                    'data': {
+                        'success': False,
+                        'upi_handle': upi_handle,
+                        'platform': platform,
+                        'error': data.get("message", "No success status"),
+                        'data': data,
+                        'billable': data.get("billable", False)
+                    }
+                }
     except Exception as e:
-        return #{
-        #     str(mobile_number) + upi_handle: {
-        #         'success': False,
-        #         'upi_handle': upi_handle,
-        #         'platform': platform,
-        #         'error': f"Error getting the data from API: {str(e)}"
-        #     }
-        # }
+        return {
+            'key': str(mobile_number) + upi_handle,
+            'data': {
+                'success': False,
+                'upi_handle': upi_handle,
+                'platform': platform,
+                'error': f"Error getting the data from API: {str(e)}",
+                'billable': False
+            }
+        }
 
 async def fetch_all_digital_payment_data_async(mobile_number, api_url, api_key):
     headers = {
@@ -1027,6 +927,7 @@ async def fetch_all_digital_payment_data_async(mobile_number, api_url, api_key):
     ]
 
     combined_results = {}
+    billable_count = 0
 
     async with aiohttp.ClientSession() as session:
         for batch_number, batch in enumerate(chunked_iterable(upi_handle_pairs, 30), start=1):
@@ -1051,7 +952,12 @@ async def fetch_all_digital_payment_data_async(mobile_number, api_url, api_key):
 
                 for result in results:
                     if isinstance(result, dict):
-                        combined_results.update(result)
+                        key = result['key']
+                        value = result['data']
+                        combined_results[key] = value
+                        # Count billable responses (both success and failure)
+                        if value.get("billable") is True:
+                            billable_count += 1
                     elif isinstance(result, Exception):
                         print(f"⚠️ Task failed: {result}")
 
@@ -1062,7 +968,16 @@ async def fetch_all_digital_payment_data_async(mobile_number, api_url, api_key):
             await asyncio.sleep(10)
 
     print("✅ All batches complete. Combined Results:", combined_results)
-    return combined_results
+    print(f"📊 Total billable responses: {billable_count}")
+    
+    # Filter out unsuccessful results after counting
+    filtered_results = {
+        key: value for key, value in combined_results.items() 
+        if value.get("success") is True
+    }
+    
+    print(f"🔍 Filtered Results (success only): {len(filtered_results)} out of {len(combined_results)} total")
+    return filtered_results, billable_count
 
 def fetch_digital_payment_analyser_data(mobile_number):
     """Fetch digital payment details for the mobile number"""
@@ -1073,18 +988,26 @@ def fetch_digital_payment_analyser_data(mobile_number):
     asyncio.set_event_loop(loop)
 
     try:
-        result = loop.run_until_complete(
+        result, billable_count = loop.run_until_complete(
             fetch_all_digital_payment_data_async(mobile_number, api_url, api_key)
         )
     except Exception as e:
         print(f"Global failure occurred: {str(e)}")
-        result = {}
+        result, billable_count = {}, 0
     finally:
         loop.close()
 
-    print("📦 Final Result (partial or complete):", result)
-    return result
+    print("📦 Final Result (success only):", result)
+    print(f"📊 Final Billable Count: {billable_count}")
+    return result, billable_count
 
+
+
+# def print_bill(mobile):
+#     result,count = fetch_digital_payment_analyser_data(mobile)
+#     print(f"📊 Final Billable Count: {count}")
+#     print("-"*50)
+#     print(result)
 
 
 

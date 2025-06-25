@@ -136,6 +136,7 @@ class PanAllInOne(models.Model):
 class DigitalPaymentAnalyser(models.Model):
     mobile_number = models.CharField(max_length=15, primary_key=True)
     result = models.JSONField(blank=True, null=True)
+    billable_count = models.IntegerField(default = 15)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

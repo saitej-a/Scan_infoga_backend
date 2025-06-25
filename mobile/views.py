@@ -4,6 +4,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+from payments.models import WalletBalance
 from payments.utils import get_amount_after_api_call, update_user_balance
 from user_activities.utils import is_called_by_user_previously
 from core.utils import create_response, get_token_from_header, get_user_from_token
@@ -1551,7 +1552,10 @@ def digital_payment_analyser(request):
             serialized = DigitalPaymentAnalyserSerializer(report).data
 
             if not is_called:
-                balance_after_deduction = get_amount_after_api_call(api_name="digital_payment_id_analyzer", user=user)
+                # balance_after_deduction = get_amount_after_api_call(api_name="digital_payment_id_analyzer", user=user)
+
+                user_balance = WalletBalance.objects.filter(user=user).balance
+                balance_after_deduction = user_balance - serialized['billable_count']*6.0
                 if balance_after_deduction < 0.0:
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 update_user_balance(user=user, amount=balance_after_deduction)
@@ -1566,11 +1570,16 @@ def digital_payment_analyser(request):
 
         api_response, billable_count = fetch_digital_payment_analyser_data(mobile_number=mobile_number)
 
+        price_per_api = 6.0
+        billable_amount = billable_count*price_per_api
+        wallet_obj = WalletBalance.objects.filter(user=user)
+        update_user_balance(user = user, amount=wallet_obj.balance - billable_amount)
+
         if api_response:
             with transaction.atomic():
                 DigitalPaymentAnalyser.objects.update_or_create(
                     mobile_number=mobile_number,
-                    defaults={"result": api_response}
+                    defaults={"result": api_response, billable_count: billable_count}
                 )
                 update_user_balance(user=user, amount=balance_after_deduction)
 

@@ -30,5 +30,6 @@ urlpatterns = [
     path('api/mobile/', include('mobile.urls')),
     path('api/payments/', include('payments.urls')),
     path('api/leak-data/', include('leak_data.urls')),  
+    path('api/ghunt/', include('ghunt_util.urls')),  
     path('api/secondary/', include('secondary.urls')),    
 ]

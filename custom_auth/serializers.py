@@ -146,6 +146,10 @@ class UserListSerializer(serializers.ModelSerializer):
         return obj.session_last_login 
 
 class BookmarkSerializer(serializers.ModelSerializer):
+    id = serializers.SerializerMethodField()
     class Meta:
         model = Bookmark
-        fields = ['id', 'bookmark_page', 'created_at', 'payload', 'latitude', 'longitude']
+        fields = ['id', 'bookmark_page', 'created_at', 'payload', 'latitude', 'longitude', 'case_type', 'case_description', 'investigator', 'updated_at', 'status']
+
+    def get_id(self, obj):
+        return obj.formatted_id

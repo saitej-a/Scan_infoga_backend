@@ -107,9 +107,26 @@ class OTP(models.Model):
 # 1: Scaninfoga Intelligence
 
 class Bookmark(models.Model):
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        SUCCESS = 'success', 'Success'
+        FAILED = 'failed', 'Failed'
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, db_index=True)
     bookmark_page = models.IntegerField()
     latitude = models.CharField(null = True)
     longitude = models.CharField(null = True)
+    investigator = models.CharField(null=True)
+    case_type = models.CharField(null=True)
+    case_description = models.CharField(null=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING, db_index=True)
     payload = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def formatted_id(self):
+        return f"SCA{str(self.pk).zfill(6)}"  # or self.pk instead of super().id
+
+    def get_raw_id(self):
+        return self.pk  # or simply self.pk
+

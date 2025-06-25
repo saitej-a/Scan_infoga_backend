@@ -76,6 +76,5 @@ class EmailService:
             )
             return True  # Email sent successfully
         except Exception as e:
-            # Log the exception (you can use logging here)
             print(f"Failed to send email: {e}")
             return False  # Email failed to send

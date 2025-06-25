@@ -1077,13 +1077,17 @@ def add_bookmark(request):
     payload = request.data.get("payload")
     latitude = request.data.get("latitude")
     longitude = request.data.get("longitude")
+    investigator = request.data.get("investigator")
+    case_type = request.data.get("caseType")
+    case_description = request.data.get("caseDescription")
+    
 
-    if not bookmark_page or not payload or not latitude or not longitude:
-        return Response(create_response(False, "Bookmark Page, Payload, Latitude, Longitude is required", None), status=status.HTTP_400_BAD_REQUEST)
+    if not bookmark_page or not payload or not latitude or not longitude or not investigator or not case_type or not case_description:
+        return Response(create_response(False, "Bookmark Page, Payload, Latitude, Longitude, Investigator, Case Type, Case Description is required", None), status=status.HTTP_400_BAD_REQUEST)
 
-    Bookmark.objects.create(user=user, bookmark_page=bookmark_page, payload=payload, latitude=latitude, longitude=longitude)
+    saved_obj = Bookmark.objects.create(user=user, bookmark_page=bookmark_page, payload=payload, latitude=latitude, longitude=longitude, investigator=investigator, case_type=case_type, case_description=case_description)
 
-    return Response(create_response(True, "Bookmark added successfully", None), status=status.HTTP_200_OK)
+    return Response(create_response(True, f'Bookmark added successfully with case ID: {saved_obj.id}', data={"case_id": saved_obj.id}), status=status.HTTP_200_OK)
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -1094,5 +1098,34 @@ def get_bookmark_list(request):
     bookmark_list = Bookmark.objects.filter(user=user)
     serializer = BookmarkSerializer(bookmark_list, many=True)
     return Response(create_response(True, "Bookmark list retrieved successfully", serializer.data), status=status.HTTP_200_OK)
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def delete_bookmark_by_id(request):
+    """
+    Deletes a Bookmark by formatted ID (e.g., SCA000123)
+    """
+
+    bookmark_id = request.data.get("caseId")
+    try:
+        token = get_token_from_header(request=request)
+        user = get_user_from_token(token)
+
+        # Extract the raw integer ID from formatted ID
+        if not bookmark_id.startswith('SCA'):
+            return Response(create_response(False, 'Invalid Bookmark ID format', None), status=status.HTTP_400_BAD_REQUEST)
+
+        raw_id = int(bookmark_id.replace('SCA', '').lstrip('0'))
+
+        bookmark = Bookmark.objects.get(user=user, pk=raw_id)
+        bookmark.delete()
+
+        return Response(create_response(True, 'Bookmark deleted successfully', None), status=status.HTTP_200_OK)
+
+    except Bookmark.DoesNotExist:
+        return Response(create_response(False, 'Bookmark not found', None), status=status.HTTP_404_NOT_FOUND)
+
+    except Exception as e:
+        return Response(create_response(False, f'An error occurred: {str(e)}', None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 

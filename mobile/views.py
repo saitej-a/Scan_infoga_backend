@@ -764,14 +764,8 @@ def udyam_verification_search(request):
 
     token = get_token_from_header(request)
     user = get_user_from_token(token)
-    api_name = request.path
 
-    gst_no = request.data.get("gst_no")
-    year = request.data.get("year")
     realtime_data = request.data.get("realtimeData", False)
-
-    if not gst_no or not year:
-        return Response(create_response(False, "gst_no and year are required", None), status=status.HTTP_400_BAD_REQUEST)
 
     token = get_token_from_header(request)
     user = get_user_from_token(token)
@@ -783,7 +777,7 @@ def udyam_verification_search(request):
 
     # Step 1: Try fetching from database if real-time is not required
     if not realtime_data:
-        report = UdyamReport.objects.filter(registration_no=registration_no).first()
+        report = UdyamReport.objects.get(registration_no=registration_no)
         if report:
             serialized = UdyamReportSerializer(report).data
 
@@ -900,11 +894,15 @@ def profile_advance_search(request):
 
     # Step 2: Fallback to external API
     try:
+        print('Before bal after ded')
         balance_after_deduction = get_amount_after_api_call(api_name="profile_advance", user=user)
+        print('After bal after ded')
         if balance_after_deduction < 0.0:
             return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
+        print("Before api resp")
         api_response = fetch_profile_advance_data(mobile)
+        print("After api resp")
 
         if api_response.get('success'):
             result_data = api_response["data"]
@@ -1607,7 +1605,7 @@ def leak_osint(request):
         user = get_user_from_token(token)
         is_called = is_called_by_user_previously(user=user, api_name=request.path)
         if not is_called or realtime_data:
-            balance_after_deduction = get_amount_after_api_call(api_name="breach_info:", user=user)
+            balance_after_deduction = get_amount_after_api_call(api_name="breach_info", user=user)
             if(balance_after_deduction < 0.0):
                 raise ValidationError("Insufficient balance.")
         api_response = fetch_leak_osint_data(request_body=request_body)

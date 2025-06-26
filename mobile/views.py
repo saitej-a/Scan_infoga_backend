@@ -250,7 +250,7 @@ def mobile_360_call_count(request):
                 "last_updated_at": None
             }
             return Response(
-                create_response(False, "Mobile number not found in records", count_data), 
+                create_response(True, "Mobile number not found in records", count_data), 
                 status=status.HTTP_200_OK
             )
             

@@ -88,7 +88,7 @@ def fetch_payworld_data(sender_mobile):
         if response.status_code != 200:
             return {
                 "status": False,
-                "message": f"Payworld API HTTP {response.status_code}"
+                "message": f"External API HTTP {response.status_code}"
             }
 
         result = response.json()
@@ -158,3 +158,76 @@ def fetch_razorpay_ifsc_data(ifsc_code):
 
     except Exception as e:
         raise Exception(f"Failed to fetch data from Razorpay IFSC API: {str(e)}")
+
+def fetch_paynearby_data(mobile_number):
+    """
+    Fetches data from Paynearby API.
+    """
+    api_url = os.getenv("PAYNEARBY_API_URL")
+    
+    try:
+        cookie_obj = cache.get("paynearby_credentials")
+        if not cookie_obj or "token" not in cookie_obj:
+            return {
+                "status": False,
+                "message": "Paynearby session cookie not found in cache"
+            }
+
+        headers={
+            "Authorization":cookie_obj['token']
+        }
+        
+        payload = {
+        "phone_number": mobile_number,
+        "detail_level": "high",
+        "agent_ref_id": 8785475,
+        "latitude": cookie_obj["lat"],
+        "longitude": cookie_obj["lng"],
+        "request_channel": 11,
+        "service_channel": 4,
+        "checksum_data": "53a90ad3a18e87d2c7e50674d3da96152e27c6157f23cc9c09805d840e7eb8000edf238e977f3ea257094f1301a806f12784e17c0f559f4486e30d08c8f8f0ab"
+    }
+        
+        response = requests.post(url=api_url, headers=headers, json=payload)
+        
+        if response.status_code != 200:
+            return {
+                "status": False,
+                "message": f"External API HTTP {response.status_code}"
+            }
+        
+        result = response.json()
+        
+        if "data" not in result:
+            return {
+                "status": False,
+                "message": "Data field missing in API response"
+            }
+        
+        data = result["data"]
+        data["datetime"] = datetime.datetime.now().isoformat() + "Z"
+
+        return {
+            "status": True,
+            "data": data
+        }
+
+    except requests.exceptions.RequestException as req_err:
+        return {
+            "status": False,
+            "message": f"Request failed: {str(req_err)}"
+        }
+
+    except ValueError as json_err:
+        return {
+            "status": False,
+            "message": f"Invalid JSON response from Payworld: {json_err}"
+        }
+
+    except Exception as e:
+        return {
+            "status": False,
+            "message": f"Unexpected error: {str(e)}"
+        }
+
+        

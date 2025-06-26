@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import api_view
 from django.utils import timezone
+from rest_framework.views import APIView
 from core.utils import create_response
 from django.core.cache import cache
 
@@ -21,8 +22,29 @@ def set_cookie(request):
         cache.set("cookie_payworld", {
             "cookie": cookie,
             "timestamp": timezone.now().isoformat(),
-        }, timeout=14400)
+        }, timeout=14400)   # 4 hours
         return Response(create_response(True, "Cookie saved successfully", None), status=200)
+    except Exception as e:
+        return Response(create_response(False, str(e), None), status=500)
+
+
+@api_view(['POST'])
+def set_paynearby_credentials(request):
+    token = request.data.get("token")
+    token = f"Bearer {token}"
+    lat=request.data.get("latitude")
+    lng=request.data.get("longitude")
+    
+    if not token or not lat or not lng:
+        return Response(create_response(False, "Token, latitude, and longitude are required", None), status=400)
+    try:
+        cache.set("paynearby_credentials", {
+            "token": token,
+            "lat": lat,
+            "lng": lng,
+            "timestamp": timezone.now().isoformat(),
+        }, timeout=14400)   # 4 hours
+        return Response(create_response(True, "Credentials saved successfully", None), status=200)
     except Exception as e:
         return Response(create_response(False, str(e), None), status=500)
 

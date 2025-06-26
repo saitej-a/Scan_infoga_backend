@@ -3,6 +3,7 @@ from . import views
 
 urlpatterns = [
     path('set-cookies', views.set_cookie, name='set-cookies'),
+    path('set-credentials-paynearby', views.set_paynearby_credentials, name='set-credentials-paynearby'),
     path('payworld-data', views.payworld_data, name='payworld-data'),
     path('payworld-all-data', views.get_full_payworld_data, name='payworld-all-data'),
     # path('payworld-delete', views.delete_payworld_data, name='payworld-delete'),

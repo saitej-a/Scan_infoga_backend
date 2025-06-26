@@ -172,7 +172,7 @@ def search_by_email(request):
             if realtime_data or not is_called:
                 update_user_balance(user=user, amount=balance_after_deduction)
         
-        log_user_activity(request, UserActivity.Status.SUCCESS)    
+        log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
     except Exception as e:
         log_user_activity(request, UserActivity.Status.FAILED)
@@ -221,7 +221,7 @@ def search_by_ip(request):
     if not ip:
         return Response(create_response(status=False, message="IP is required", data=None),status=status.HTTP_400_BAD_REQUEST)
     
-    payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+    payload = request.data
     is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
     
     print('Is Called: ',is_called)
@@ -232,11 +232,13 @@ def search_by_ip(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name="search-by-ip", user=user)
                 if balance_after_deduction < 0.0:
+                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 print("UPDATING")
                 update_user_balance(user=user, amount=balance_after_deduction)
 
             serialized = SearchByIPSerializer(report).data
+            log_user_activity(request, UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
         
     try:
@@ -244,6 +246,7 @@ def search_by_ip(request):
         if realtime_data or not report:
             balance_after_deduction = get_amount_after_api_call(api_name="search-by-ip", user=user)
             if balance_after_deduction < 0.0:
+                log_user_activity(request, UserActivity.Status.FAILED)
                 return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
         # Fetch from external API
@@ -263,10 +266,12 @@ def search_by_ip(request):
             # Deduct balance only for realtime or first time external call
             if realtime_data or not is_called:
                 update_user_balance(user=user, amount=balance_after_deduction)
-
+        
+        log_user_activity(request, UserActivity.Status.SUCCESS)    
         return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
 
     except Exception as e:
+        log_user_activity(request, UserActivity.Status.FAILED)
         return Response(create_response(False, str(e), None), status=status.HTTP_404_NOT_FOUND)
 
 
@@ -313,7 +318,7 @@ def search_by_username(request):
     if not username:
         return Response(create_response(status=False, message="Username is required", data=None),status=status.HTTP_400_BAD_REQUEST)
     
-    payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+    payload = request.data
     is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
     
     print('Is Called: ',is_called)
@@ -324,11 +329,13 @@ def search_by_username(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name='search-by-username',user=user)
                 if balance_after_deduction<0.0:
+                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 print("UPDATING")
                 update_user_balance(user=user, amount=balance_after_deduction)
             
             serialized = SearchByUsernameSerializer(report).data
+            log_user_activity(request, UserActivity.Status.SUCCESS)  
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
         
     try:
@@ -336,6 +343,7 @@ def search_by_username(request):
         if realtime_data or not report:
             balance_after_deduction = get_amount_after_api_call(api_name="search-by-username", user=user)
             if balance_after_deduction < 0.0:
+                log_user_activity(request, UserActivity.Status.FAILED)
                 return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
 
@@ -353,10 +361,12 @@ def search_by_username(request):
             
             if realtime_data or not is_called:
                 update_user_balance(user=user, amount=balance_after_deduction)
-            
+        
+        log_user_activity(request, UserActivity.Status.SUCCESS)  
         return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
 
     except Exception as e:
+        log_user_activity(request, UserActivity.Status.FAILED)
         return Response(create_response(False, str(e), None), status=status.HTTP_404_NOT_FOUND)
 
 
@@ -403,7 +413,7 @@ def search_by_domain(request):
     if not domain:
         return Response(create_response(status=False, message="Domain is required", data=None),status=status.HTTP_400_BAD_REQUEST)
         
-    payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+    payload = request.data
     is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
     
     print('Is Called: ',is_called)
@@ -415,17 +425,20 @@ def search_by_domain(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name='search-by-domain',user=user)
                 if balance_after_deduction<0.0:
+                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 print("UPDATING")
                 update_user_balance(user=user, amount=balance_after_deduction)
             
             serialized = SearchByDomainSerializer(report).data
+            log_user_activity(request, UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
         
     try:
         if realtime_data or not report:
             balance_after_deduction = get_amount_after_api_call(api_name="search-by-domain", user=user)
             if balance_after_deduction < 0.0:
+                log_user_activity(request, UserActivity.Status.FAILED)
                 return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
         api_response = fetch_hudson_search_by_domain(domain)
@@ -442,10 +455,12 @@ def search_by_domain(request):
             
             if realtime_data or not is_called:
                 update_user_balance(user=user, amount=balance_after_deduction)
-            
+        
+        log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
 
     except Exception as e:
+        log_user_activity(request, UserActivity.Status.FAILED)
         return Response(create_response(False, str(e), None), status=status.HTTP_404_NOT_FOUND)
 
 

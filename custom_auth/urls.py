@@ -18,5 +18,7 @@ urlpatterns = [
     path('getAllUsers', views.get_all_users, name="get-all-users"),
     path('addBookmark', views.add_bookmark, name="add-bookmark"),
     path('getBookmarkList', views.get_bookmark_list, name="get-bookmark-list"),
-    path('deleteBookmark', views.delete_bookmark_by_id, name='delete-bookmark-by-id')
+    path('deleteBookmark', views.delete_bookmark_by_id, name='delete-bookmark-by-id'),
+    path('updateBookmarkStatus', views.update_bookmark_status, name='update-bookmark-status')
+
 ]

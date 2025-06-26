@@ -2,6 +2,10 @@ from django.db import models
 from custom_auth.models import CustomUser as User
 
 class UserActivity(models.Model):
+    class Status(models.TextChoices):
+        SUCCESS = 'success', 'Success'
+        FAILED = 'failed', 'Failed'
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='activities', default = 0)
     email = models.EmailField()
     api_called = models.CharField(max_length=255)
@@ -14,6 +18,7 @@ class UserActivity(models.Model):
     browser = models.CharField(max_length=255, null=True, blank=True)
     latitude = models.CharField(max_length=50, null=True, blank=True)
     longitude = models.CharField(max_length=50, null=True, blank=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.FAILED, db_index=True)
 
     class Meta:
         ordering = ['-activity_time']

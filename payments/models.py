@@ -4,7 +4,7 @@ from custom_auth.models import CustomUser as CustomUser
 
 class WalletBalance(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    balance = models.DecimalField(max_digits=10, decimal_places=2, default=2000)
+    balance = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
     # user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='wallet')
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='wallet')
 

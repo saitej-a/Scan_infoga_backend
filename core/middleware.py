@@ -13,7 +13,9 @@ class GlobalExceptionMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        self.log_user_activity(request)
+        if not request.path.startswith("/api/mobile/"):
+            self.log_user_activity(request)
+        # self.log_user_activity(request)
         response = self.get_response(request)
         return response
 
@@ -66,7 +68,8 @@ class GlobalExceptionMiddleware:
                     device=client_info.get("device", ""),
                     browser=client_info.get("browser", ""),
                     latitude=client_info.get("latitude", ""),
-                    longitude=client_info.get("longitude", "")
+                    longitude=client_info.get("longitude", ""),
+                    status= UserActivity.Status.SUCCESS
                 )
 
                 print("Created user activity")

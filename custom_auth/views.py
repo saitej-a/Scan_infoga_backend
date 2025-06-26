@@ -224,6 +224,132 @@ def verifyOTP(request):
         )
 
 
+
+@api_view(['POST'])
+def change_password(request):
+    email = request.data.get("email")
+
+    if not email:
+        return Response(
+            create_response(False, "Email is required", None),
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        user = CustomUser.objects.get(email=email)
+    except CustomUser.DoesNotExist:
+        return Response(
+            create_response(False, "User not found", None),
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Generate secret and OTP
+    secret_key = pyotp.random_base32()
+    otp = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+    otp_hash = hashlib.sha256(otp.encode()).hexdigest()
+
+    # Save OTP and email in Redis
+    cache.set(f"user_data_pass_reset:{email}", {
+        "secret": secret_key,
+        "otp_hash": otp_hash,
+        "timestamp": timezone.now().isoformat()
+    }, timeout=3600)  # 60 minutes
+
+    # Send OTP via email
+    send_otp_email.delay(name=user.first_name + " " + user.last_name, otp=otp, user_email=email, reset_password=True)
+
+    return Response(
+        create_response(True, "OTP sent to email for password reset", None),
+        status=status.HTTP_200_OK
+    )
+
+
+@api_view(['POST'])
+def verify_password_reset_otp(request):
+    email = request.data.get("email")
+    otp = request.data.get("otp")
+    new_password = request.data.get("newPassword")
+
+    if not (email and otp and new_password):
+        return Response(
+            create_response(False, "Email, OTP, and new password are required", None),
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    cached = cache.get(f"user_data_pass_reset:{email}")
+    if not cached:
+        return Response(
+            create_response(False, "OTP expired or not requested", None),
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    expected_hash = cached["otp_hash"]
+    otp_hash = hashlib.sha256(otp.encode()).hexdigest()
+
+    if otp_hash != expected_hash:
+        return Response(
+            create_response(False, "Invalid OTP", None),
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        user = CustomUser.objects.get(email=email)
+    except CustomUser.DoesNotExist:
+        return Response(
+            create_response(False, "User not found", None),
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Update password and secret
+    user.set_password(new_password)
+    user.otp_secret = cached["secret"]
+    user.save()
+
+    # Optional: clear cache
+    cache.delete(f"user_data_pass_reset:{email}")
+
+    # Optionally send password change confirmation email
+    send_welcome_email.delay(user_email=email, name=user.first_name + " " + user.last_name)
+
+    return Response(
+        create_response(True, "Password reset successful", None),
+        status=status.HTTP_200_OK
+    )
+
+
+
+# def change_password(request):
+#     email = request.data.get("email")
+#     password = request.data.get("newPassword")
+
+#     if not email:
+#         return Response(
+#             create_response(False, "Email is required", None),
+#             status=status.HTTP_400_BAD_REQUEST
+#         )
+    
+#     user = CustomUser.objects.get(email=email)
+#     if not user:
+#         return Response(
+#             create_response(False, "User not found", None),
+#             status=status.HTTP_400_BAD_REQUEST
+#         )
+
+#     secret_key = pyotp.random_base32()
+#     otp = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+#     otp_hash = hashlib.sha256(otp.encode()).hexdigest()
+
+
+#       # Save user data and otp in Redis
+#     cache.set(f"user_data_pass_reset:{email}", {
+#         "data": user_data,
+#         "secret": secret_key,
+#         "otp_hash": otp_hash,
+#         "timestamp": timezone.now().isoformat()
+#     }, timeout=3600)  # 60 minutes
+
+
+
 # @api_view(['POST'])
 # def verifyOTP(request):
 #     otp = request.data.get('otp')
@@ -287,63 +413,132 @@ def verifyOTP(request):
 #             status=status.HTTP_400_BAD_REQUEST
 #         )
 
+# @api_view(['POST'])
+# def resendOTP(request):
+#     user_email = request.data.get('email')
+    
+#     # Get the user from the email
+#     try:
+#         user = User.objects.get(email=user_email)
+#     except User.DoesNotExist:
+#         return Response(
+#             create_response(
+#                 status=False,
+#                 message="User not found",
+#                 data=None
+#             ),
+#             status=status.HTTP_400_BAD_REQUEST
+#         )
+
+#     # Fetch the latest OTP or create a new one
+#     otp_obj, created = OTP.objects.get_or_create(user=user)
+    
+#     if created:
+#         otp = otp_obj.generate_otp()  # Generate and save OTP if it's the first time
+#     else:
+#         if otp_obj.is_expired():
+#             otp = otp_obj.generate_otp()  # Generate a new OTP if expired
+#         else:
+#             return Response(
+#                 create_response(
+#                     status=False,
+#                     message="OTP is still valid, please wait until it expires",
+#                     data=None
+#                 ),
+#                 status=status.HTTP_400_BAD_REQUEST
+#             )
+
+#     # Send OTP via Email
+#     context = {"otp": otp}
+#     email_sent = EmailService.send_email("otp_email", user.email, from_email="no-reply@scaninfoga.com", context=context)
+    
+#     if email_sent:
+#         return Response(
+#             create_response(
+#                 status=True,
+#                 message="OTP resent successfully",
+#                 data=None
+#             ),
+#             status=status.HTTP_200_OK
+#         )
+#     else:
+#         return Response(
+#             create_response(
+#                 status=False,
+#                 message="Failed to resend OTP",
+#                 data=None
+#             ),
+#             status=status.HTTP_500_INTERNAL_SERVER_ERROR
+#         )
+
+
 @api_view(['POST'])
 def resendOTP(request):
-    user_email = request.data.get('email')
-    
-    # Get the user from the email
-    try:
-        user = User.objects.get(email=user_email)
-    except User.DoesNotExist:
+    email = request.data.get('email')
+    otp_type = request.data.get('type', 'registration')  # registration or password_reset
+
+    if not email:
         return Response(
-            create_response(
-                status=False,
-                message="User not found",
-                data=None
-            ),
+            create_response(False, "Email is required", None),
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # Fetch the latest OTP or create a new one
-    otp_obj, created = OTP.objects.get_or_create(user=user)
-    
-    if created:
-        otp = otp_obj.generate_otp()  # Generate and save OTP if it's the first time
+    if otp_type == 'registration':
+        cache_key = f"user_data:{email}"
+    elif otp_type == 'password_reset':
+        cache_key = f"user_data_pass_reset:{email}"
     else:
-        if otp_obj.is_expired():
-            otp = otp_obj.generate_otp()  # Generate a new OTP if expired
-        else:
-            return Response(
-                create_response(
-                    status=False,
-                    message="OTP is still valid, please wait until it expires",
-                    data=None
-                ),
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        return Response(
+            create_response(False, "Invalid OTP type", None),
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
-    # Send OTP via Email
-    context = {"otp": otp}
-    email_sent = EmailService.send_email("otp_email", user.email, from_email="no-reply@scaninfoga.com", context=context)
-    
-    if email_sent:
+    cached = cache.get(cache_key)
+    if not cached:
         return Response(
-            create_response(
-                status=True,
-                message="OTP resent successfully",
-                data=None
-            ),
-            status=status.HTTP_200_OK
+            create_response(False, "No OTP found. Please register or initiate password reset first.", None),
+            status=status.HTTP_400_BAD_REQUEST
         )
+
+    # Check if OTP is still valid (less than 60 mins)
+    timestamp = timezone.datetime.fromisoformat(cached['timestamp'])
+    elapsed = (timezone.now() - timestamp).total_seconds()
+
+    if elapsed < 300:  # Allow resend only if more than 5 minutes passed
+        return Response(
+            create_response(False, "OTP is still valid. Please wait before requesting a new OTP.", None),
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Generate new OTP
+    otp = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+    otp_hash = hashlib.sha256(otp.encode()).hexdigest()
+
+    cached['otp_hash'] = otp_hash
+    cached['timestamp'] = timezone.now().isoformat()
+
+    # Update cache
+    cache.set(cache_key, cached, timeout=3600)
+
+    name = None
+    if otp_type == 'registration':
+        user_data = cached.get("data")
+        name = user_data["first_name"] + " " + user_data["last_name"]
     else:
-        return Response(
-            create_response(
-                status=False,
-                message="Failed to resend OTP",
-                data=None
-            ),
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+        try:
+            user = CustomUser.objects.get(email=email)
+            name = user.first_name + " " + user.last_name
+        except CustomUser.DoesNotExist:
+            name = "User"
+
+    # Send OTP via email
+    send_otp_email.delay(name=name, otp=otp, user_email=email)
+
+    return Response(
+        create_response(True, "OTP resent successfully", None),
+        status=status.HTTP_200_OK
+    )
+
 
 @api_view(['POST'])
 def loginUser(request):
@@ -1129,3 +1324,28 @@ def delete_bookmark_by_id(request):
         return Response(create_response(False, f'An error occurred: {str(e)}', None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+@api_view(["POST"])
+def update_bookmark_status(request):
+    id = request.data.get("caseId")
+    case_status = request.data.get('status')
+    investigator = request.data.get('investigator')
+
+    if(not id or not case_status or not investigator or not case_status in ['pending', 'success']):
+        return Response(create_response(False, 'Invalid request', None), status=status.HTTP_400_BAD_REQUEST)
+    
+    token = get_token_from_header(request=request)
+    user = get_user_from_token(token)
+
+    # Extract the raw integer ID from formatted ID
+    if not id.startswith('SCA'):
+        return Response(create_response(False, 'Invalid Bookmark ID format', None), status=status.HTTP_400_BAD_REQUEST)
+
+    raw_id = int(id.replace('SCA', '').lstrip('0'))
+
+    bookmark = Bookmark.objects.get(user=user, pk=raw_id)
+    bookmark.status = case_status
+    bookmark.investigator = investigator
+    bookmark.updated_at = timezone.now()
+    bookmark.save()
+
+    return Response(create_response(True, 'Bookmark status updated successfully', None), status=status.HTTP_200_OK)

@@ -1,4 +1,6 @@
 from django.contrib.auth import get_user_model
+
+from core.utils import get_token_from_header, get_user_from_token
 from .models import UserActivity
 import json
 
@@ -92,6 +94,38 @@ def add_activity(email, api_called, request_payload=None):
 #                     return True
 #         return False
 
+# def is_called_by_user_previously(user, api_name, payload, full_payload=True):
+#     """
+#     Checks if the API was previously called by the user.
+#     'realtimeData' is always ignored during comparison.
+
+#     - If full_payload: compares the entire payload excluding 'realtimeData'.
+#     - If not full_payload: searches if 'payload' exists inside any list in the stored payload (excluding 'realtimeData').
+#     - if status is success, return True
+#     """
+#     if full_payload:
+#         filtered_payload = {k: v for k, v in payload.items() if k != "realtimeData"}
+#         matching_activities = UserActivity.objects.filter(user=user, api_called=api_name)
+
+#         for activity in matching_activities:
+#             db_payload = {k: v for k, v in activity.request_payload.items() if k != "realtimeData"}
+#             if db_payload == filtered_payload:
+#                 if(activity.status == 'success'):
+#                     return True
+#         return False
+
+#     else:
+#         matching_activities = UserActivity.objects.filter(user=user, api_called=api_name)
+#         for activity in matching_activities:
+#             for key, value in activity.request_payload.items():
+#                 if key == "realtimeData":
+#                     continue  # skip
+#                 if isinstance(value, list) and payload in value:
+#                     if(activity.status == 'success'):
+#                         return True
+#         return False
+
+
 def is_called_by_user_previously(user, api_name, payload, full_payload=True):
     """
     Checks if the API was previously called by the user.
@@ -99,32 +133,85 @@ def is_called_by_user_previously(user, api_name, payload, full_payload=True):
 
     - If full_payload: compares the entire payload excluding 'realtimeData'.
     - If not full_payload: searches if 'payload' exists inside any list in the stored payload (excluding 'realtimeData').
-    - In both cases, at least two occurrences (count > 1) are required to return True.
+    - If a matching payload has status 'success', returns True.
     """
+    matching_activities = UserActivity.objects.filter(user=user, api_called=api_name)
+
     if full_payload:
         filtered_payload = {k: v for k, v in payload.items() if k != "realtimeData"}
-        matching_activities = UserActivity.objects.filter(user=user, api_called=api_name)
 
-        count = 0
         for activity in matching_activities:
             db_payload = {k: v for k, v in activity.request_payload.items() if k != "realtimeData"}
-            if db_payload == filtered_payload:
-                count += 1
-                if count > 1:
-                    return True
+            if db_payload == filtered_payload and activity.status == UserActivity.Status.SUCCESS:
+                return True
         return False
 
     else:
-        matching_activities = UserActivity.objects.filter(user=user, api_called=api_name)
-
-        count = 0
         for activity in matching_activities:
             for key, value in activity.request_payload.items():
                 if key == "realtimeData":
                     continue  # skip
                 if isinstance(value, list) and payload in value:
-                    count += 1
-                    if count > 1:
+                    if activity.status == UserActivity.Status.SUCCESS:
                         return True
         return False
 
+
+def log_user_activity(request, status):
+    try:
+        # 1. Decode JWT Token
+        auth_header = request.headers.get("Authorization", "")
+        token = auth_header.split(" ")[1] if auth_header.startswith("Bearer ") else None
+        email = None
+        user = None
+
+        token = get_token_from_header(request)
+        user = get_user_from_token(token)
+
+
+        # email = user.email
+        # if token:
+        #     payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+        #     email = payload.get("email")  # Adjust key if needed (e.g., 'email')
+        #     if email:
+        #         user = User.objects.filter(email=email).first()
+
+        # 2. Parse clientInfo
+        client_info_raw = request.headers.get("clientInfo", "{}")
+
+        try:
+            client_info = json.loads(client_info_raw)
+        except json.JSONDecodeError as e:
+            client_info = {}
+
+        # 3. Parse payload
+        # try:
+        #     # payload_data = json.loads(request.body.decode('utf-8')) if request.body else {}
+        #     pay
+        # except Exception:
+        #     payload_data = {}
+
+        payload_data = request.data if request.data else {}
+
+        # 4. Save to DB
+        if user:
+            UserActivity.objects.create(
+                user=user,
+                email=user.email,
+                api_called=request.path,
+                request_payload=payload_data,
+                ip_address=client_info.get("ipAddress", request.META.get("REMOTE_ADDR", "")),
+                device=client_info.get("device", ""),
+                browser=client_info.get("browser", ""),
+                latitude=client_info.get("latitude", ""),
+                longitude=client_info.get("longitude", ""),
+                status = status
+            )
+
+            print("Created user activity")
+        else:
+            print("User not found did not create")
+    except Exception as e:
+        # Don't break request flow if activity logging fails
+        print("Exception from middleware log user activity: ", str(e))
+        pass

@@ -9,6 +9,10 @@ from payments.utils import get_amount_after_api_call, update_user_balance
 from user_activities.utils import is_called_by_user_previously
 from core.utils import create_response, get_token_from_header, get_user_from_token
 from django.db import transaction
+from user_activities.utils import log_user_activity
+from user_activities.models import UserActivity
+
+from decimal import Decimal
 
 from .models import (
     Mobile360Report,
@@ -90,10 +94,8 @@ def mobile_360_search(request):
     if not mobile_number:
         return Response(create_response(False, "mobile_number is required", None), status=status.HTTP_400_BAD_REQUEST)
 
-    payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+    payload = request.data
     is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
-
-    print("IS CALLED: ", is_called)
 
     # Try fetching from cache/database if realtime is not requested
     if not realtime_data:
@@ -103,11 +105,13 @@ def mobile_360_search(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name="mobile360", user=user)
                 if balance_after_deduction < 0.0:
+                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 print("UPDATING")
                 update_user_balance(user=user, amount=balance_after_deduction)
 
             serialized = Mobile360ReportSerializer(report).data
+            log_user_activity(request, UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
 
     try:
@@ -115,6 +119,7 @@ def mobile_360_search(request):
         if realtime_data or not report:
             balance_after_deduction = get_amount_after_api_call(api_name="mobile360", user=user)
             if balance_after_deduction < 0.0:
+                log_user_activity(request, UserActivity.Status.FAILED)
                 return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
         # Fetch from external API
@@ -131,9 +136,11 @@ def mobile_360_search(request):
             if realtime_data or not is_called:
                 update_user_balance(user=user, amount=balance_after_deduction)
 
+        log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(create_response(True, "Data fetched from external API", result_data['data']), status=status.HTTP_200_OK)
 
     except Exception as e:
+        log_user_activity(request, UserActivity.Status.FAILED)
         return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -1529,6 +1536,67 @@ def pan_all_in_one(request):
 
 #         return Response(create_response(False, str(e), None), status=status.HTTP_404_NOT_FOUND)
 
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
+# def digital_payment_analyser(request):
+#     mobile_number = request.data.get("mobile_number")
+#     realtime_data = request.data.get("realtimeData", False)
+
+#     if not mobile_number:
+#         return Response(create_response(False, "mobile_number is required.", None), status=status.HTTP_400_BAD_REQUEST)
+
+#     token = get_token_from_header(request)
+#     user = get_user_from_token(token)
+#     api_name = request.path
+
+#     payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+#     is_called = is_called_by_user_previously(user=user, api_name=request.path,  payload=payload)
+
+#     # Step 1: Try fetching from database if real-time is not required
+#     if not realtime_data:
+#         report = DigitalPaymentAnalyser.objects.filter(mobile_number=mobile_number).first()
+#         if report:
+#             serialized = DigitalPaymentAnalyserSerializer(report).data
+
+#             if not is_called:
+#                 # balance_after_deduction = get_amount_after_api_call(api_name="digital_payment_id_analyzer", user=user)
+
+#                 user_balance = WalletBalance.objects.get(user=user).balance
+#                 balance_after_deduction = user_balance - serialized['billable_count']*6.0
+#                 if balance_after_deduction < 0.0:
+#                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+#                 update_user_balance(user=user, amount=balance_after_deduction)
+
+#             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
+
+#     # Step 2: Fallback to external API
+#     try:
+#         balance_after_deduction = get_amount_after_api_call(api_name="digital_payment_id_analyzer", user=user)
+#         if balance_after_deduction < 0.0:
+#             return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+
+#         api_response, billable_count = fetch_digital_payment_analyser_data(mobile_number=mobile_number)
+
+#         price_per_api =Decimal(6.0)
+#         billable_amount = billable_count*price_per_api
+#         wallet_obj = WalletBalance.objects.get(user=user)
+#         update_user_balance(user = user, amount=wallet_obj.balance - billable_amount)
+
+#         if api_response:
+#             with transaction.atomic():
+#                 DigitalPaymentAnalyser.objects.update_or_create(
+#                     mobile_number=mobile_number,
+#                     defaults={"result": api_response, billable_count: billable_count}
+#                 )
+#                 update_user_balance(user=user, amount=balance_after_deduction)
+
+#             return Response(create_response(True, "Data fetched from external API", api_response), status=status.HTTP_200_OK)
+#         else:
+#             return Response(create_response(False, "No digital payments found.", None), status=status.HTTP_404_NOT_FOUND)
+
+#     except Exception as e:
+#         return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def digital_payment_analyser(request):
@@ -1543,7 +1611,7 @@ def digital_payment_analyser(request):
     api_name = request.path
 
     payload = json.loads(request.body.decode('utf-8')) if request.body else {}
-    is_called = is_called_by_user_previously(user=user, api_name=request.path,  payload=payload)
+    is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
 
     # Step 1: Try fetching from database if real-time is not required
     if not realtime_data:
@@ -1552,12 +1620,13 @@ def digital_payment_analyser(request):
             serialized = DigitalPaymentAnalyserSerializer(report).data
 
             if not is_called:
-                # balance_after_deduction = get_amount_after_api_call(api_name="digital_payment_id_analyzer", user=user)
+                price_per_api = Decimal('6.0')
+                user_balance = WalletBalance.objects.get(user=user).balance
+                balance_after_deduction = user_balance - Decimal(serialized['billable_count']) * price_per_api
 
-                user_balance = WalletBalance.objects.filter(user=user).balance
-                balance_after_deduction = user_balance - serialized['billable_count']*6.0
                 if balance_after_deduction < 0.0:
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+
                 update_user_balance(user=user, amount=balance_after_deduction)
 
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
@@ -1570,18 +1639,20 @@ def digital_payment_analyser(request):
 
         api_response, billable_count = fetch_digital_payment_analyser_data(mobile_number=mobile_number)
 
-        price_per_api = 6.0
-        billable_amount = billable_count*price_per_api
-        wallet_obj = WalletBalance.objects.filter(user=user)
-        update_user_balance(user = user, amount=wallet_obj.balance - billable_amount)
+        price_per_api = Decimal('6.0')
+        billable_amount = Decimal(billable_count) * price_per_api
+        wallet_obj = WalletBalance.objects.get(user=user)
+
+        # update_user_balance(user=user, amount=wallet_obj.balance - billable_amount)
 
         if api_response:
             with transaction.atomic():
                 DigitalPaymentAnalyser.objects.update_or_create(
                     mobile_number=mobile_number,
-                    defaults={"result": api_response, billable_count: billable_count}
+                    defaults={"result": api_response, "billable_count": billable_count}
                 )
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=wallet_obj.balance - billable_amount)
+                # update_user_balance(user=user, amount=balance_after_deduction)
 
             return Response(create_response(True, "Data fetched from external API", api_response), status=status.HTTP_200_OK)
         else:

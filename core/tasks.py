@@ -1,4 +1,5 @@
 from celery import shared_task
+from django import template
 from core.services.email_service import EmailService
 from secondary.models import PayworldData2, RazorpayIFSCData
 from mobile.models import UPIToAccount
@@ -18,13 +19,14 @@ def send_welcome_email(user_email, name):
         return "Failed to send welcome email"
 
 @shared_task
-def send_otp_email(user_email, name, otp):
+def send_otp_email(user_email, name, otp, reset_password = False):
     context = {
         "username": name,
         "otp": otp,
     }
     print("shared task")
-    email_sent = EmailService.send_email(template_name="otp_template", to_email=user_email, context=context)
+    template_name = "otp_template_reset_password"  if reset_password else "otp_template"
+    email_sent = EmailService.send_email(template_name=template_name, to_email=user_email, context=context)
     
     if email_sent:
         return "OTP email sent successfully"

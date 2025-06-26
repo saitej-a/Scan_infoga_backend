@@ -170,9 +170,9 @@ def mobile_360_search(request):
                 print("UPDATING")
                 update_user_balance(user=user, amount=balance_after_deduction)
                 
-                # Increment count on successful cached data fetch
-                report.count += 1
-                report.save(update_fields=['count'])
+            # Increment count on successful cached data fetch
+            report.count += 1
+            report.save(update_fields=['count'])
                 
             serialized = Mobile360ReportSerializer(report).data
             log_user_activity(request, UserActivity.Status.SUCCESS)

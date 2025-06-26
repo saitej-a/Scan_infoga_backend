@@ -2,11 +2,13 @@ import json
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
+
+from user_activities.models import UserActivity
 from .models import HudsonRockData, SearchByEmail, SearchByIP, SearchByUsername, SearchByDomain
 # from drf_yasg.utils import swagger_auto_schema
 from .serializers import HudsonRockDataSerializer, SearchByEmailSerializer, SearchByIPSerializer, SearchByUsernameSerializer, SearchByDomainSerializer
 from payments.utils import get_amount_after_api_call, update_user_balance
-from user_activities.utils import is_called_by_user_previously
+from user_activities.utils import is_called_by_user_previously, log_user_activity
 from core.utils import create_response, get_token_from_header, get_user_from_token
 from .utils import fetch_hudson_search_by_email, fetch_hudson_search_by_ip, fetch_hudson_search_by_domain, fetch_hudson_search_by_username
 from django.db import transaction
@@ -129,7 +131,7 @@ def search_by_email(request):
     if not email:
         return Response(create_response(status=False, message="Email is required", data=None),status=status.HTTP_400_BAD_REQUEST)
     
-    payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+    payload = request.data
     is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
     
     print("Is Called: ",is_called)
@@ -140,17 +142,20 @@ def search_by_email(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name='search-by-email', user=user)
                 if balance_after_deduction<0.0:
+                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 print("UPDATING")
                 update_user_balance(user=user, amount=balance_after_deduction)
 
             serialized = SearchByEmailSerializer(report).data
+            log_user_activity(request, UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
 
     try:
         if realtime_data or not report:
             balance_after_deduction = get_amount_after_api_call(api_name='search-by-email', user=user)
             if balance_after_deduction<0.0:
+                log_user_activity(request, UserActivity.Status.FAILED)
                 return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
         
         api_response = fetch_hudson_search_by_email(email)
@@ -166,9 +171,11 @@ def search_by_email(request):
             
             if realtime_data or not is_called:
                 update_user_balance(user=user, amount=balance_after_deduction)
-            
+        
+        log_user_activity(request, UserActivity.Status.SUCCESS)    
         return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
     except Exception as e:
+        log_user_activity(request, UserActivity.Status.FAILED)
         return Response(create_response(False, str(e), None), status=status.HTTP_404_NOT_FOUND)
 
 

@@ -23,5 +23,6 @@ urlpatterns = [
     path('sendMail', views.send_welcome_email, name="welcome-mail"),
     path('upi-to-account', views.upi_to_account_data, name="upi-to-account"),
     path('upi-to-account-full-data', views.upi_to_account_full_data, name="upi-to-account-full-data"),
+    path('mobile-count', views.mobile_360_call_count, name="mobile-count"),
     # path('delete-upi-to-account', views.delete_upi_to_account_data, name="delete-upi-to-account"),
 ]

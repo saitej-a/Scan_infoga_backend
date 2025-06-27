@@ -23,11 +23,11 @@ class CustomUserManager(BaseUserManager):
         return self.create_user(email, password, **extra_fields)
 
 class CustomUser(AbstractUser):
-    # class SubscriptionPlans(models.TextChoices):
-    #     FREE = 'FREE', 'Free'
-    #     SILVER = 'SILVER', 'Silver'
-    #     GOLD = 'GOLD', 'Gold'
-    #     PLATINUM = 'PLATINUM', 'Platinum'
+    class SubscriptionPlans(models.TextChoices):
+        FREE = 'FREE', 'Free'
+        SILVER = 'SILVER', 'Silver'
+        GOLD = 'GOLD', 'Gold'
+        PLATINUM = 'PLATINUM', 'Platinum'
     username = None
     email = models.EmailField(_('email address'), unique=True)
     user_type = models.CharField(max_length=20, choices=[
@@ -38,8 +38,8 @@ class CustomUser(AbstractUser):
     ], default='USER')
     date_joined = models.DateTimeField(auto_now_add=True, null=True)
     otp_secret = models.CharField(max_length=32)  # Remove blank=True, null=True to make it required
-    # subscription_plan = models.CharField(max_length=20, choices=SubscriptionPlans.choices, default=SubscriptionPlans.FREE)
-    # subscription_date = models.DateTimeField(null=True, blank=True)
+    subscription_plan = models.CharField(max_length=20, choices=SubscriptionPlans.choices, default=SubscriptionPlans.FREE)
+    subscription_date = models.DateTimeField(null=True, blank=True)
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
 

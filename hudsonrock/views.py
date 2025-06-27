@@ -152,7 +152,9 @@ def search_by_email(request):
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
 
     try:
+        print("REALTIME DATA try: ")
         if realtime_data or not report:
+            print("Realtine data and nit report")
             balance_after_deduction = get_amount_after_api_call(api_name='hudson_search_by_email', user=user)
             if balance_after_deduction<0.0:
                 log_user_activity(request, UserActivity.Status.FAILED)
@@ -169,8 +171,9 @@ def search_by_email(request):
                 }
             )
             
-            if realtime_data or not is_called:
-                update_user_balance(user=user, amount=balance_after_deduction)
+            print("UPdating user balance")
+            update_user_balance(user=user, amount=balance_after_deduction)
+            print("Updated")
         
         log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)

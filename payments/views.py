@@ -298,7 +298,26 @@ def update_txn_status_to_success(request):
     txn.updated_at = timezone.now()
     txn.save()
 
-    # user = txn.user
+    user = txn.user
+
+    # Determine the new subscription plan based on amount
+    if 59000 <= amount < 354000:
+        if user.subscription_plan == CustomUser.SubscriptionPlans.FREE:
+            user.subscription_plan = CustomUser.SubscriptionPlans.SILVER
+            user.subscription_date = timezone.now()
+            user.save()
+
+    elif 354000 <= amount < 1018000:
+        if user.subscription_plan in [CustomUser.SubscriptionPlans.FREE, CustomUser.SubscriptionPlans.SILVER]:
+            user.subscription_plan = CustomUser.SubscriptionPlans.GOLD
+            user.subscription_date = timezone.now()
+            user.save()
+
+    elif amount >= 1018000:
+        if user.subscription_plan != CustomUser.SubscriptionPlans.PLATINUM:
+            user.subscription_plan = CustomUser.SubscriptionPlans.PLATINUM
+            user.subscription_date = timezone.now()
+            user.save()
 
 
     # update the wallet balance for the user

@@ -658,6 +658,8 @@ def loginUser(request):
         "browser": clientinfo.get('browser', 'Unknown'),
         "latitude": clientinfo.get('latitude', '0'),
         "longitude": clientinfo.get('longitude', '0'),
+        "subscriptionPlan": user.subscription_plan,
+        "subscriptionDate": user.subscription_date
     }
 
     # UserSession.objects.create(

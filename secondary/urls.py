@@ -10,4 +10,6 @@ urlpatterns = [
     path('ifsc-data', views.razorpay_ifsc_data, name='ifsc-data'),
     path('ifsc-all-data', views.get_full_razorpay_ifsc_data, name='ifsc-all-data'),
     # path('ifsc-delete', views.delete_razorpay_ifsc_data, name='ifsc-delete'),
+    path('paynearby-data', views.paynearby_data, name='paynearby-data'),
+    path('paynearby-all-data', views.get_full_paynearby_data, name='paynearby-all-data'),
 ]

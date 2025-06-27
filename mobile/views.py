@@ -2202,29 +2202,29 @@ def upi_to_account_full_data(request):
         )
 
 
-@api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
-def delete_upi_to_account_data(request):
-    upi_id = request.query_params.get('upi_id')
-    if not upi_id:
-        return Response(
-            create_response(False, "Missing?upi_id parameter in query", None),
-            status=status.HTTP_400_BAD_REQUEST
-        )
+# @api_view(['DELETE'])
+# @permission_classes([IsAuthenticated])
+# def delete_upi_to_account_data(request):
+#     upi_id = request.query_params.get('upi_id')
+#     if not upi_id:
+#         return Response(
+#             create_response(False, "Missing?upi_id parameter in query", None),
+#             status=status.HTTP_400_BAD_REQUEST
+#         )
 
-    records = UPIToAccount.objects.filter(upi_id=upi_id)
-    count = records.count()   
+#     records = UPIToAccount.objects.filter(upi_id=upi_id)
+#     count = records.count()   
 
-    if count == 0:
-        return Response(
-            create_response(False, f'No data found for upi_id: {upi_id}', None),
-            status=status.HTTP_404_NOT_FOUND
-        )
+#     if count == 0:
+#         return Response(
+#             create_response(False, f'No data found for upi_id: {upi_id}', None),
+#             status=status.HTTP_404_NOT_FOUND
+#         )
 
-    records.delete()
-    return Response(
-        create_response(True, f'Successfully deleted {count} record(s) for upi_id: {upi_id}', None),
-        status=status.HTTP_200_OK
-    )
+#     records.delete()
+#     return Response(
+#         create_response(True, f'Successfully deleted {count} record(s) for upi_id: {upi_id}', None),
+#         status=status.HTTP_200_OK
+#     )
     
         

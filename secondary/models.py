@@ -30,3 +30,22 @@ class RazorpayIFSCData(models.Model):
     def __str__(self):
         return self.ifsc_code
 
+class RazorpayIFSCData2(models.Model):
+    ifsc_code = models.CharField(max_length=11, primary_key=True)
+    result = models.JSONField(default=list, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.ifsc_code
+
+class PaynearbyData(models.Model):
+    mobile_number = models.CharField(max_length=15, primary_key=True)
+    result = models.JSONField(default=list, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.mobile_number

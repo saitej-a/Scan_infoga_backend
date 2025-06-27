@@ -205,11 +205,17 @@ def fetch_paynearby_data(mobile_number):
             }
         
         data = result["data"]
-        data["datetime"] = datetime.datetime.now().isoformat() + "Z"
+        filtered_data = {
+            "vendor":data['vendor'],
+            'bene':data['bene'],
+            'monthly_transaction_limit':data['monthly_transaction_limit'],
+            'remaining_limit':data['remaining_limit'],
+            'datetime':datetime.datetime.now().isoformat() + "Z"
+        }
 
         return {
             "status": True,
-            "data": data
+            "data": filtered_data
         }
 
     except requests.exceptions.RequestException as req_err:

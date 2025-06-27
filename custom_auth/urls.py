@@ -19,6 +19,7 @@ urlpatterns = [
     path('addBookmark', views.add_bookmark, name="add-bookmark"),
     path('getBookmarkList', views.get_bookmark_list, name="get-bookmark-list"),
     path('deleteBookmark', views.delete_bookmark_by_id, name='delete-bookmark-by-id'),
-    path('updateBookmarkStatus', views.update_bookmark_status, name='update-bookmark-status')
-
+    path('updateBookmarkStatus', views.update_bookmark_status, name='update-bookmark-status'),
+    path('forget-password', views.forget_password, name="forget-password"),
+    path('verify-password-reset-otp', views.verify_password_reset_otp, name="verify-password-reset-otp"),
 ]

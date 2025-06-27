@@ -140,7 +140,7 @@ def search_by_email(request):
         report = SearchByEmail.objects.filter(email=email).first()
         if report:
             if not is_called:
-                balance_after_deduction = get_amount_after_api_call(api_name='search-by-email', user=user)
+                balance_after_deduction = get_amount_after_api_call(api_name='hudson_search_by_email', user=user)
                 if balance_after_deduction<0.0:
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
@@ -153,7 +153,7 @@ def search_by_email(request):
 
     try:
         if realtime_data or not report:
-            balance_after_deduction = get_amount_after_api_call(api_name='search-by-email', user=user)
+            balance_after_deduction = get_amount_after_api_call(api_name='hudson_search_by_email', user=user)
             if balance_after_deduction<0.0:
                 log_user_activity(request, UserActivity.Status.FAILED)
                 return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
@@ -230,7 +230,7 @@ def search_by_ip(request):
         report = SearchByIP.objects.filter(ip=ip).first()
         if report:
             if not is_called:
-                balance_after_deduction = get_amount_after_api_call(api_name="search-by-ip", user=user)
+                balance_after_deduction = get_amount_after_api_call(api_name="hudson_search_by_ip", user=user)
                 if balance_after_deduction < 0.0:
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
@@ -244,7 +244,7 @@ def search_by_ip(request):
     try:
         # Balance check and deduction only if realtime call or new fetch
         if realtime_data or not report:
-            balance_after_deduction = get_amount_after_api_call(api_name="search-by-ip", user=user)
+            balance_after_deduction = get_amount_after_api_call(api_name="hudson_search_by_ip", user=user)
             if balance_after_deduction < 0.0:
                 log_user_activity(request, UserActivity.Status.FAILED)
                 return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
@@ -327,7 +327,7 @@ def search_by_username(request):
         report = SearchByUsername.objects.filter(username=username).first()
         if report:
             if not is_called:
-                balance_after_deduction = get_amount_after_api_call(api_name='search-by-username',user=user)
+                balance_after_deduction = get_amount_after_api_call(api_name='husdone_search_by_username',user=user)
                 if balance_after_deduction<0.0:
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
@@ -341,7 +341,7 @@ def search_by_username(request):
     try:
         
         if realtime_data or not report:
-            balance_after_deduction = get_amount_after_api_call(api_name="search-by-username", user=user)
+            balance_after_deduction = get_amount_after_api_call(api_name="husdone_search_by_username", user=user)
             if balance_after_deduction < 0.0:
                 log_user_activity(request, UserActivity.Status.FAILED)
                 return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
@@ -423,7 +423,7 @@ def search_by_domain(request):
         report = SearchByDomain.objects.filter(domain=domain).first()
         if report:
             if not is_called:
-                balance_after_deduction = get_amount_after_api_call(api_name='search-by-domain',user=user)
+                balance_after_deduction = get_amount_after_api_call(api_name='hudson_search_by_domain',user=user)
                 if balance_after_deduction<0.0:
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
@@ -436,7 +436,7 @@ def search_by_domain(request):
         
     try:
         if realtime_data or not report:
-            balance_after_deduction = get_amount_after_api_call(api_name="search-by-domain", user=user)
+            balance_after_deduction = get_amount_after_api_call(api_name="hudson_search_by_domain", user=user)
             if balance_after_deduction < 0.0:
                 log_user_activity(request, UserActivity.Status.FAILED)
                 return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)

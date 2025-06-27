@@ -226,7 +226,7 @@ def verifyOTP(request):
 
 
 @api_view(['POST'])
-def change_password(request):
+def forget_password(request):
     email = request.data.get("email")
 
     if not email:
@@ -250,6 +250,7 @@ def change_password(request):
 
     # Save OTP and email in Redis
     cache.set(f"user_data_pass_reset:{email}", {
+        "email": email,
         "secret": secret_key,
         "otp_hash": otp_hash,
         "timestamp": timezone.now().isoformat()
@@ -259,7 +260,7 @@ def change_password(request):
     send_otp_email.delay(name=user.first_name + " " + user.last_name, otp=otp, user_email=email, reset_password=True)
 
     return Response(
-        create_response(True, "OTP sent to email for password reset", None),
+        create_response(True, "Please enter the OTP sent on email", None),
         status=status.HTTP_200_OK
     )
 
@@ -291,6 +292,12 @@ def verify_password_reset_otp(request):
             create_response(False, "Invalid OTP", None),
             status=status.HTTP_400_BAD_REQUEST
         )
+    
+    if(email != cached["email"]):
+        return Response(
+            create_response(False, "Email does not match", None),
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
     try:
         user = CustomUser.objects.get(email=email)
@@ -301,18 +308,19 @@ def verify_password_reset_otp(request):
         )
 
     # Update password and secret
-    user.set_password(new_password)
+    new_password_hashed = hashlib.sha256(new_password.encode()).hexdigest()
+    user.set_password(new_password_hashed)
     user.otp_secret = cached["secret"]
     user.save()
 
     # Optional: clear cache
     cache.delete(f"user_data_pass_reset:{email}")
 
-    # Optionally send password change confirmation email
-    send_welcome_email.delay(user_email=email, name=user.first_name + " " + user.last_name)
+    qr_code = generate_qr_code(email, user.otp_secret)
+
 
     return Response(
-        create_response(True, "Password reset successful", None),
+        create_response(True, "Password reset successful", {"qr_code": qr_code}),
         status=status.HTTP_200_OK
     )
 
@@ -652,13 +660,44 @@ def loginUser(request):
         "longitude": clientinfo.get('longitude', '0'),
     }
 
+    # UserSession.objects.create(
+    #     user    = user,
+    #     ipAddress = clientinfo.get('ip') or request.META.get('REMOTE_ADDR'),
+    #     device    = clientinfo.get('device', 'Unknown'),
+    #     browser   = clientinfo.get('browser', 'Unknown'),
+    #     latitude  = clientinfo.get('latitude', '0'),
+    #     longitude = clientinfo.get('longitude', '0'),
+    # )
+
     UserSession.objects.create(
-        user    = user,
-        ipAddress = clientinfo.get('ip') or request.META.get('REMOTE_ADDR'),
-        device    = clientinfo.get('device', 'Unknown'),
-        browser   = clientinfo.get('browser', 'Unknown'),
-        latitude  = clientinfo.get('latitude', '0'),
-        longitude = clientinfo.get('longitude', '0'),
+        user=user,
+        ipAddress=clientinfo.get('ip') or request.META.get('REMOTE_ADDR'),
+        device=clientinfo.get('device', 'Unknown'),
+        browser=clientinfo.get('browser', 'Unknown'),
+        latitude=clientinfo.get('latitude', '0'),
+        longitude=clientinfo.get('longitude', '0'),
+
+        userAgent=clientinfo.get('userAgent', ''),
+        platform=clientinfo.get('platform', ''),
+        language=clientinfo.get('language', ''),
+        cookiesEnabled=clientinfo.get('cookiesEnabled', True),
+        javascriptEnabled=clientinfo.get('javascriptEnabled', True),
+        touchSupport=clientinfo.get('touchSupport', False),
+        deviceType=clientinfo.get('deviceType', ''),
+        cpuCores=clientinfo.get('cpuCores'),
+        memory=clientinfo.get('memory', ''),
+        screenSize=clientinfo.get('screenSize', ''),
+        batteryLevel=clientinfo.get('batteryLevel', ''),
+        isCharging=clientinfo.get('isCharging', False),
+        gpuRenderer=clientinfo.get('gpuRenderer', ''),
+        cameras=clientinfo.get('cameras', ''),
+        microphones=clientinfo.get('microphones', ''),
+        publicIp=clientinfo.get('publicIp', ''),
+        isp=clientinfo.get('isp', ''),
+        asn=clientinfo.get('asn', ''),
+        city=clientinfo.get('city', ''),
+        country=clientinfo.get('country', ''),
+        possibleIoT=clientinfo.get('possibleIoT', False)
     )
 
     return Response(

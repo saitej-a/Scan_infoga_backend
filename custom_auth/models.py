@@ -23,6 +23,11 @@ class CustomUserManager(BaseUserManager):
         return self.create_user(email, password, **extra_fields)
 
 class CustomUser(AbstractUser):
+    # class SubscriptionPlans(models.TextChoices):
+    #     FREE = 'FREE', 'Free'
+    #     SILVER = 'SILVER', 'Silver'
+    #     GOLD = 'GOLD', 'Gold'
+    #     PLATINUM = 'PLATINUM', 'Platinum'
     username = None
     email = models.EmailField(_('email address'), unique=True)
     user_type = models.CharField(max_length=20, choices=[
@@ -33,7 +38,8 @@ class CustomUser(AbstractUser):
     ], default='USER')
     date_joined = models.DateTimeField(auto_now_add=True, null=True)
     otp_secret = models.CharField(max_length=32)  # Remove blank=True, null=True to make it required
-
+    # subscription_plan = models.CharField(max_length=20, choices=SubscriptionPlans.choices, default=SubscriptionPlans.FREE)
+    # subscription_date = models.DateTimeField(null=True, blank=True)
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
 
@@ -71,17 +77,55 @@ class DeveloperProfile(models.Model):
     def __str__(self):
         return f"{self.first_name} {self.last_name} - {self.user.email}"
 
+# class UserSession(models.Model):
+#     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     ipAddress = models.GenericIPAddressField(null=True, blank=True) 
+#     device = models.CharField(max_length=200, default='Unknown')
+#     browser = models.CharField(max_length=200, default='Unknown')
+#     latitude = models.CharField(max_length=200, default='0')
+#     longitude = models.CharField(max_length=200, default='0')
+
+#     def __str__(self):
+#         return f"{self.email} - {self.sessionStartTime}"
+
+
 class UserSession(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
-    ipAddress = models.GenericIPAddressField(null=True, blank=True) 
+
+    # Existing Fields
+    ipAddress = models.GenericIPAddressField(null=True, blank=True)
     device = models.CharField(max_length=200, default='Unknown')
     browser = models.CharField(max_length=200, default='Unknown')
     latitude = models.CharField(max_length=200, default='0')
     longitude = models.CharField(max_length=200, default='0')
 
+    # New Fields
+    userAgent = models.TextField(blank=True, null=True)
+    platform = models.CharField(max_length=100, blank=True, null=True)
+    language = models.CharField(max_length=50, blank=True, null=True)
+    cookiesEnabled = models.BooleanField(default=True)
+    javascriptEnabled = models.BooleanField(default=True)
+    touchSupport = models.BooleanField(default=False, blank=True, null=True)
+    deviceType = models.CharField(max_length=50, blank=True, null=True)
+    cpuCores = models.IntegerField(blank=True, null=True)
+    memory = models.CharField(max_length=50, blank=True, null=True)
+    screenSize = models.CharField(max_length=50, blank=True, null=True)
+    batteryLevel = models.CharField(max_length=50, blank=True, null=True)
+    isCharging = models.BooleanField(default=False, blank=True, null=True)
+    gpuRenderer = models.TextField(blank=True, null=True)
+    cameras = models.CharField(max_length=10, blank=True, null=True)
+    microphones = models.CharField(max_length=10, blank=True, null=True)
+    publicIp = models.GenericIPAddressField(null=True, blank=True)
+    isp = models.CharField(max_length=200, blank=True, null=True)
+    asn = models.CharField(max_length=50, blank=True, null=True)
+    city = models.CharField(max_length=100, blank=True, null=True)
+    country = models.CharField(max_length=100, blank=True, null=True)
+    possibleIoT = models.BooleanField(default=False, blank=True, null=True)
+
     def __str__(self):
-        return f"{self.email} - {self.sessionStartTime}"
+        return f"{self.user.email} - {self.created_at}"
 
 
 

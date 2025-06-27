@@ -292,10 +292,14 @@ def update_txn_status_to_success(request):
             status=status.HTTP_400_BAD_REQUEST
         )
     txn = Transaction.objects.get(txn_id=txn_id)
+
     txn.status = 'success'
     txn.amount = amount
     txn.updated_at = timezone.now()
     txn.save()
+
+    # user = txn.user
+
 
     # update the wallet balance for the user
     wallet = WalletBalance.objects.get(user=txn.user)

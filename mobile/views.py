@@ -360,6 +360,7 @@ def uan_history_search(request):
                 if not is_called:
                     balance_after_deduction = get_amount_after_api_call(api_name="uan_history", user=user)
                     if balance_after_deduction < 0.0:
+                        log_user_activity(request=request, status=UserActivity.Status.FAILED)
                         return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                     update_user_balance(user=user, amount=balance_after_deduction)
 
@@ -369,6 +370,7 @@ def uan_history_search(request):
         try:
             balance_after_deduction = get_amount_after_api_call(api_name="uan_history", user=user)
             if balance_after_deduction < 0.0:
+                log_user_activity(request=request, status=UserActivity.Status.FAILED)
                 return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
             api_response = fetch_uan_history_data(uan_no)
@@ -404,6 +406,10 @@ def uan_history_search(request):
     if all('error' in item for item in results):
         overall_status = status.HTTP_404_NOT_FOUND
 
+    if(overall_status == status.HTTP_404_NOT_FOUND):
+        log_user_activity(request=request, status=UserActivity.Status.FAILED)
+    else:
+        log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
     return Response(
         create_response(True, "UAN history search completed.", results),
         status=overall_status
@@ -492,6 +498,7 @@ def uan_employment_search(request):
                 if not is_called:
                     balance_after_deduction = get_amount_after_api_call(api_name="uan_history_v2", user=user)
                     if balance_after_deduction < 0.0:
+                        log_user_activity(request=request, status=UserActivity.Status.FAILED)
                         return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                     update_user_balance(user=user, amount=balance_after_deduction)
 
@@ -501,6 +508,7 @@ def uan_employment_search(request):
         try:
             balance_after_deduction = get_amount_after_api_call(api_name="uan_history_v2", user=user)
             if balance_after_deduction < 0.0:
+                log_user_activity(request=request, status=UserActivity.Status.FAILED)
                 return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
             api_response = fetch_uan_employment_data(uan)
@@ -535,6 +543,11 @@ def uan_employment_search(request):
     overall_status = status.HTTP_200_OK
     if all('error' in item for item in results):
         overall_status = status.HTTP_404_NOT_FOUND
+    
+    if(overall_status == status.HTTP_200_OK):
+        log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+    else:
+        log_user_activity(request=request, status=UserActivity.Status.FAILED)
 
     return Response(create_response(True, "UAN employment search completed.", results), status=overall_status)
 
@@ -594,7 +607,7 @@ def esic_search(request):
     user = get_user_from_token(token)
     api_name = request.path
     
-    payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+    payload = request.data
     is_called = is_called_by_user_previously(user=user, api_name=api_name, payload=payload)
 
     # Step 1: Try fetching from database if real-time is not required
@@ -605,15 +618,18 @@ def esic_search(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name="esic_details", user=user)
                 if balance_after_deduction < 0.0:
+                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 update_user_balance(user=user, amount=balance_after_deduction)
 
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
 
     # Step 2: Fallback to external API
     try:
         balance_after_deduction = get_amount_after_api_call(api_name="esic_details", user=user)
         if balance_after_deduction < 0.0:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
         fetch_result = fetch_esic_data(esic_number)
@@ -627,11 +643,14 @@ def esic_search(request):
                 )
                 update_user_balance(user=user, amount=balance_after_deduction)
 
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
         else:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
 
     except Exception as e:
+        log_user_activity(request=request, status=UserActivity.Status.FAILED)
         return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -691,7 +710,7 @@ def gst_verification_search(request):
     user = get_user_from_token(token)
     api_name = request.path
 
-    payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+    payload = request.data
     is_called = is_called_by_user_previously(user=user, api_name=api_name, payload=payload)
 
     # Step 1: Try fetching from database if real-time is not required
@@ -703,15 +722,18 @@ def gst_verification_search(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name="gst_advance", user=user)
                 if balance_after_deduction < 0.0:
+                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 update_user_balance(user=user, amount=balance_after_deduction)
 
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
 
     # Step 2: Fallback to external API
     try:
         balance_after_deduction = get_amount_after_api_call(api_name="gst_advance", user=user)
         if balance_after_deduction < 0.0:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
         api_response = fetch_gst_data(gst_no)
@@ -726,11 +748,14 @@ def gst_verification_search(request):
                 )
                 update_user_balance(user=user, amount=balance_after_deduction)
 
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
         else:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
 
     except Exception as e:
+        log_user_activity(request=request, status=UserActivity.Status.FAILED)
         return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -792,7 +817,7 @@ def gst_turnover_search(request):
     api_name = request.path
 
     # Unique tracking per GST and Year if needed
-    payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+    payload = request.data
     is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
 
     # Step 1: Try fetching from database if real-time is not required
@@ -804,15 +829,17 @@ def gst_turnover_search(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name="gst_turnover", user=user)
                 if balance_after_deduction < 0.0:
+                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 update_user_balance(user=user, amount=balance_after_deduction)
-
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
 
     # Step 2: Fallback to external API
     try:
         balance_after_deduction = get_amount_after_api_call(api_name="gst_turnover", user=user)
         if balance_after_deduction < 0.0:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
         api_response = fetch_gst_turnover_data(gst_no, year)
@@ -828,12 +855,15 @@ def gst_turnover_search(request):
                 )
                 update_user_balance(user=user, amount=balance_after_deduction)
 
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
 
         else:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
 
     except Exception as e:
+        log_user_activity(request=request, status=UserActivity.Status.FAILED)
         return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -897,7 +927,7 @@ def udyam_verification_search(request):
     api_name = request.path
 
     # Unique tracking per GST and Year if needed
-    payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+    payload = request.data
     is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload )
 
     # Step 1: Try fetching from database if real-time is not required
@@ -909,15 +939,18 @@ def udyam_verification_search(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name="verify_udyam", user=user)
                 if balance_after_deduction < 0.0:
+                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 update_user_balance(user=user, amount=balance_after_deduction)
 
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
 
     # Step 2: Fallback to external API
     try:
         balance_after_deduction = get_amount_after_api_call(api_name="verify_udyam", user=user)
         if balance_after_deduction < 0.0:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
         api_response = fetch_udyam_data(registration_no)
@@ -932,12 +965,15 @@ def udyam_verification_search(request):
                 )
                 update_user_balance(user=user, amount=balance_after_deduction)
 
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
 
         else:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
 
     except Exception as e:
+        log_user_activity(request=request, status=UserActivity.Status.FAILED)
         return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -1000,7 +1036,7 @@ def profile_advance_search(request):
     user = get_user_from_token(token)
 
     # Unique tracking per GST and Year if needed
-    payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+    payload = request.data
     is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
 
     # Step 1: Try fetching from database if real-time is not required
@@ -1012,9 +1048,10 @@ def profile_advance_search(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name="profile_advance", user=user)
                 if balance_after_deduction < 0.0:
+                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 update_user_balance(user=user, amount=balance_after_deduction)
-
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
 
     # Step 2: Fallback to external API
@@ -1023,6 +1060,7 @@ def profile_advance_search(request):
         balance_after_deduction = get_amount_after_api_call(api_name="profile_advance", user=user)
         print('After bal after ded')
         if balance_after_deduction < 0.0:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
         print("Before api resp")
@@ -1039,12 +1077,15 @@ def profile_advance_search(request):
                 )
                 update_user_balance(user=user, amount=balance_after_deduction)
 
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
 
         else:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
 
     except Exception as e:
+        log_user_activity(request=request, status=UserActivity.Status.FAILED)
         return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -1114,7 +1155,7 @@ def equifax_v3_search(request):
     token = get_token_from_header(request)
     user = get_user_from_token(token)
 
-    payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+    payload = request.data
     is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
 
     # Step 1: Try fetching from database if real-time is not required
@@ -1126,15 +1167,17 @@ def equifax_v3_search(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name="equifax_v3", user=user)
                 if balance_after_deduction < 0.0:
+                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 update_user_balance(user=user, amount=balance_after_deduction)
-
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
 
     # Step 2: Fallback to external API
     try:
         balance_after_deduction = get_amount_after_api_call(api_name="equifax_v3", user=user)
         if balance_after_deduction < 0.0:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
         api_response = fetch_equifax_data(id_number, id_type, mobile, name)
@@ -1153,13 +1196,15 @@ def equifax_v3_search(request):
                     }
                 )
                 update_user_balance(user=user, amount=balance_after_deduction)
-
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
 
         else:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
 
     except Exception as e:
+        log_user_activity(request=request, status=UserActivity.Status.FAILED)
         return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -1220,7 +1265,7 @@ def get_acc_dtls_from_mobile(request):
     token = get_token_from_header(request)
     user = get_user_from_token(token)
     
-    payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+    payload = request.data
     is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
 
     # Step 1: Try fetching from database if real-time is not required
@@ -1232,15 +1277,17 @@ def get_acc_dtls_from_mobile(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name="mobile_to_account", user=user)
                 if balance_after_deduction < 0.0:
+                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 update_user_balance(user=user, amount=balance_after_deduction)
-
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
 
     # Step 2: Fallback to external API
     try:
         balance_after_deduction = get_amount_after_api_call(api_name="mobile_to_account", user=user)
         if balance_after_deduction < 0.0:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
         api_response = fetch_mobile_to_account_data(mobile_number)
@@ -1255,12 +1302,15 @@ def get_acc_dtls_from_mobile(request):
                 )
                 update_user_balance(user=user, amount=balance_after_deduction)
 
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
 
         else:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
 
     except Exception as e:
+        log_user_activity(request=request, status=UserActivity.Status.FAILED)
         return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -1346,6 +1396,7 @@ def uan_passbook_without_otp(request):
                 if not is_called:
                     balance_after_deduction = get_amount_after_api_call(api_name="uan_passbook_without_otp", user=user)
                     if balance_after_deduction < 0.0:
+                        log_user_activity(request=request, status=UserActivity.Status.FAILED)
                         return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                     update_user_balance(user=user, amount=balance_after_deduction)
 
@@ -1355,6 +1406,7 @@ def uan_passbook_without_otp(request):
         try:
             balance_after_deduction = get_amount_after_api_call(api_name="uan_passbook_without_otp", user=user)
             if balance_after_deduction < 0.0:
+                log_user_activity(request=request, status=UserActivity.Status.FAILED)
                 return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
             api_response = get_uan_dtls_without_otp(uan)
@@ -1390,6 +1442,10 @@ def uan_passbook_without_otp(request):
     if all('error' in item for item in results):
         overall_status = status.HTTP_404_NOT_FOUND
 
+    if(overall_status == status.HTTP_200_OK):
+        log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+    else:
+        log_user_activity(request=request, status=UserActivity.Status.FAILED)
     return Response(
         create_response(True, "UAN passbook without OTP search completed.", results),
         status=overall_status
@@ -1456,7 +1512,7 @@ def mobile_to_dl_lookup(request):
     user = get_user_from_token(token)
     api_name = request.path
 
-    payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+    payload = request.data
     is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
 
     # Step 1: Try fetching from database if real-time is not required
@@ -1468,15 +1524,18 @@ def mobile_to_dl_lookup(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name="mobile_to_dl", user=user)
                 if balance_after_deduction < 0.0:
+                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 update_user_balance(user=user, amount=balance_after_deduction)
 
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
 
     # Step 2: Fallback to external API
     try:
         balance_after_deduction = get_amount_after_api_call(api_name="mobile_to_dl", user=user)
         if balance_after_deduction < 0.0:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
         api_response = fetch_mobile_to_dl_data(mobile_number, name, dob)
@@ -1491,12 +1550,15 @@ def mobile_to_dl_lookup(request):
                 )
                 update_user_balance(user=user, amount=balance_after_deduction)
 
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
 
         else:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
 
     except Exception as e:
+        log_user_activity(request=request, status=UserActivity.Status.FAILED)
         return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     
@@ -1565,7 +1627,7 @@ def pan_all_in_one(request):
     user = get_user_from_token(token)
     api_name = request.path
 
-    payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+    payload = request.data
     is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
 
     # Step 1: Try fetching from database if real-time is not required
@@ -1577,15 +1639,17 @@ def pan_all_in_one(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name="pan_all_in_one", user=user)
                 if balance_after_deduction < 0.0:
+                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 update_user_balance(user=user, amount=balance_after_deduction)
-
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
 
     # Step 2: Fallback to external API
     try:
         balance_after_deduction = get_amount_after_api_call(api_name="pan_all_in_one", user=user)
         if balance_after_deduction < 0.0:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
         api_response = fetch_pan_all_in_one_data(pan_number)
@@ -1600,12 +1664,15 @@ def pan_all_in_one(request):
                 )
                 update_user_balance(user=user, amount=balance_after_deduction)
 
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
 
         else:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
 
     except Exception as e:
+        log_user_activity(request=request, status=UserActivity.Status.FAILED)
         return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # @api_view(["POST"])
@@ -1727,7 +1794,7 @@ def digital_payment_analyser(request):
     user = get_user_from_token(token)
     api_name = request.path
 
-    payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+    payload = request.data
     is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
 
     # Step 1: Try fetching from database if real-time is not required
@@ -1742,10 +1809,12 @@ def digital_payment_analyser(request):
                 balance_after_deduction = user_balance - Decimal(serialized['billable_count']) * price_per_api
 
                 if balance_after_deduction < 0.0:
+                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
                 update_user_balance(user=user, amount=balance_after_deduction)
 
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
 
     # Step 2: Fallback to external API
@@ -1770,12 +1839,14 @@ def digital_payment_analyser(request):
                 )
                 update_user_balance(user=user, amount=wallet_obj.balance - billable_amount)
                 # update_user_balance(user=user, amount=balance_after_deduction)
-
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from external API", api_response), status=status.HTTP_200_OK)
         else:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "No digital payments found.", None), status=status.HTTP_404_NOT_FOUND)
 
     except Exception as e:
+        log_user_activity(request=request, status=UserActivity.Status.FAILED)
         return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -1858,7 +1929,7 @@ def hunter_verify(request):
     if not email:
         return Response(create_response(False, "email is required", None), status=status.HTTP_400_BAD_REQUEST)
     
-    payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+    payload = request.data
     is_called = is_called_by_user_previously(user=user, api_name=request.path,payload=payload)
     
     print("Is Called: ", is_called)
@@ -1869,10 +1940,11 @@ def hunter_verify(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name='hunterverify', user=user)
                 if balance_after_deduction<0.0:
+                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 print("Updating Balance")
                 update_user_balance(user=user, amount=balance_after_deduction)
-            
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             serialized = HunterVerifySerializer(report).data
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
 
@@ -1880,6 +1952,7 @@ def hunter_verify(request):
         if realtime_data or not report:
             balance_after_deduction = get_amount_after_api_call(api_name='hunterverify', user=user)
             if(balance_after_deduction < 0.0):
+                log_user_activity(request=request, status=UserActivity.Status.FAILED)
                 return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
         api_response = fetch_hunter_verify_data(email=email)
@@ -1891,9 +1964,11 @@ def hunter_verify(request):
             if realtime_data or not is_called:
                 update_user_balance(user=user, amount=balance_after_deduction)
 
+        log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
         return Response(create_response(True, "Data fetched from external API", api_response), status=status.HTTP_200_OK)
 
     except Exception as e:
+        log_user_activity(request=request, status=UserActivity.Status.FAILED)
         return Response(create_response(False, f"Unxpected Error: {str(e)}", None), status=status.HTTP_404_NOT_FOUND)
 
 # @api_view(["POST"])
@@ -1935,7 +2010,8 @@ def hunter_find(request):
     if not email:
         return Response(create_response(False, "email is required", None), status=status.HTTP_400_BAD_REQUEST)
 
-    payload = json.loads(request.body('utf-8')) if request.body else {}
+    # payload = json.loads(request.body('utf-8')) if request.body else {}
+    payload = request.data
     is_called = is_called_by_user_previously(user=user, apiname=request.path, payload=payload)
 
     print("Is Called: ", is_called)
@@ -1946,17 +2022,20 @@ def hunter_find(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name='hunterfind',user=user)
                 if balance_after_deduction<0.0:
+                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 print("Updating Balance")
                 update_user_balance(user=user, amount=balance_after_deduction)
 
             serialized = HunterFindSerializer(report).data
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
 
     try:
         if realtime_data or not is_called:
             balance_after_deduction = get_amount_after_api_call(api_name='hunterfind', user=user)
             if(balance_after_deduction < 0.0):
+                log_user_activity(request=request, status=UserActivity.Status.FAILED)
                 return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
         api_response = fetch_hunter_find_data(email=email)
@@ -1968,9 +2047,11 @@ def hunter_find(request):
             )
             if realtime_data or not is_called:
                 update_user_balance(user=user, amount=balance_after_deduction)
+        log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
         return Response(create_response(True, "Data fetched from external API", api_response), status=status.HTTP_200_OK)
 
     except Exception as e:
+        log_user_activity(request=request, status=UserActivity.Status.FAILED)
         return Response(create_response(False, f"Unxpected Error: {str(e)}", None), status=status.HTTP_404_NOT_FOUND)
 
 from django.shortcuts import render

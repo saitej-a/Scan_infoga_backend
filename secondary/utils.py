@@ -115,6 +115,7 @@ def fetch_payworld_data(sender_mobile):
         }
 
     except requests.exceptions.RequestException as req_err:
+        print("Error")
         return {
             "status": False,
             "message": f"Request failed: {str(req_err)}"

@@ -165,9 +165,12 @@ def fetch_paynearby_data(mobile_number):
     Fetches data from Paynearby API.
     """
     api_url = os.getenv("PAYNEARBY_API_URL")
+
+    print("API URL: ", api_url)
     
     try:
         cookie_obj = cache.get("paynearby_credentials")
+        print("Cookie: ", cookie_obj)
         if not cookie_obj or "token" not in cookie_obj:
             return {
                 "status": False,
@@ -175,7 +178,8 @@ def fetch_paynearby_data(mobile_number):
             }
 
         headers={
-            "Authorization":cookie_obj['token']
+            "Authorization":cookie_obj['token'],
+            "User-Agent": "Mozilla/5.0 (compatible; MyApp/1.0; +https://myapp.com)"
         }
         
         payload = {
@@ -188,8 +192,9 @@ def fetch_paynearby_data(mobile_number):
         "service_channel": 4,
         "checksum_data": "53a90ad3a18e87d2c7e50674d3da96152e27c6157f23cc9c09805d840e7eb8000edf238e977f3ea257094f1301a806f12784e17c0f559f4486e30d08c8f8f0ab"
     }
-        
+        print("Calling paynearby")
         response = requests.post(url=api_url, headers=headers, json=payload)
+        print("Response: ", response)
         
         if response.status_code != 200:
             return {

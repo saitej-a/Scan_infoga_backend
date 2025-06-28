@@ -9,6 +9,9 @@ from .serializers import TransactionSerializer
 from rest_framework import status
 from decimal import Decimal
 
+from custom_auth.models import CustomUser
+from payments.models import SubscriptionHistory
+
 import time
 from django.db import connection
 
@@ -301,22 +304,42 @@ def update_txn_status_to_success(request):
     user = txn.user
 
     # Determine the new subscription plan based on amount
-    if 59000 <= amount < 354000:
+    if 59000 <= amount < 236000:
         if user.subscription_plan == CustomUser.SubscriptionPlans.FREE:
             user.subscription_plan = CustomUser.SubscriptionPlans.SILVER
             user.subscription_date = timezone.now()
+
+            # Create a subscription history entry
+            SubscriptionHistory.objects.create(
+                user=user,
+                subscription_plan=CustomUser.SubscriptionPlans.SILVER,
+                txn_id=txn_id
+            )
+
             user.save()
 
-    elif 354000 <= amount < 1018000:
+    elif 236000 <= amount < 1180000:
         if user.subscription_plan in [CustomUser.SubscriptionPlans.FREE, CustomUser.SubscriptionPlans.SILVER]:
             user.subscription_plan = CustomUser.SubscriptionPlans.GOLD
             user.subscription_date = timezone.now()
+
+            SubscriptionHistory.objects.create(
+                user=user,
+                subscription_plan=CustomUser.SubscriptionPlans.GOLD,
+                txn_id=txn_id
+            )
             user.save()
 
-    elif amount >= 1018000:
+    elif amount >= 1180000:
         if user.subscription_plan != CustomUser.SubscriptionPlans.PLATINUM:
             user.subscription_plan = CustomUser.SubscriptionPlans.PLATINUM
             user.subscription_date = timezone.now()
+
+            SubscriptionHistory.objects.create(
+                user=user,
+                subscription_plan=CustomUser.SubscriptionPlans.PLATINUM,
+                txn_id=txn_id
+            )
             user.save()
 
 

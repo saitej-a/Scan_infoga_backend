@@ -1936,7 +1936,7 @@ def hunter_verify(request):
     print("Is Called: ", is_called)
 
     if not realtime_data:
-        report = HunterVerify.object.filter(email=email).first()
+        report = HunterVerify.objects.filter(email=email).first()
         if report:
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name='hunterverify', user=user)
@@ -2013,7 +2013,7 @@ def hunter_find(request):
 
     # payload = json.loads(request.body('utf-8')) if request.body else {}
     payload = request.data
-    is_called = is_called_by_user_previously(user=user, apiname=request.path, payload=payload)
+    is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
 
     print("Is Called: ", is_called)
 

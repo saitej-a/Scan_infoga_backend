@@ -2,7 +2,7 @@ from celery import shared_task
 from django import template
 from core.services.email_service import EmailService
 from secondary.models import PayworldData2, RazorpayIFSCData, PaynearbyData, RazorpayIFSCData2
-from mobile.models import UPIToAccount
+from mobile.models import UPIToAccount, UPIToAccount2
 
 @shared_task
 def send_welcome_email(user_email, name):
@@ -108,7 +108,7 @@ def fetch_and_store_upi_to_account(upi_id, api_response):
         timestamp = new_data.pop("datetime")
         new_data_dict = {timestamp: new_data}
 
-        obj, _ = UPIToAccount.objects.get_or_create(upi_id=upi_id)
+        obj, _ = UPIToAccount2.objects.get_or_create(upi_id=upi_id)
         existing = obj.result or {}
 
         def last_cleaned():

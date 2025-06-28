@@ -185,3 +185,13 @@ class UPIToAccount(models.Model):
 
     def __str__(self):
         return self.upi_id
+
+class UPIToAccount2(models.Model):
+    upi_id = models.CharField(max_length=255, primary_key=True)
+    result = models.JSONField(default=list, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.upi_id

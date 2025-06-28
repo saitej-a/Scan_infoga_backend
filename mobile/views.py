@@ -32,7 +32,8 @@ from .models import (
     LeakOSINT,
     HunterFind,
     HunterVerify,
-    UPIToAccount
+    UPIToAccount,
+    UPIToAccount2
 )
 
 
@@ -2068,30 +2069,48 @@ def send_welcome_email(user):
     send_welcome_email.delay(user_email="abhinav0427@gmail.com", name="Abhinav Srivastava")
     return Response(create_response(True, "Email sent successfully", None))
 
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def upi_to_account_data(request):
+    token = get_token_from_header(request=request)
+    user = get_user_from_token(token)
     upi_id = request.data.get('upi_id')
     realtime_data = request.data.get('realtimeData', False)
 
     if not upi_id:
         return Response(create_response(False, 'upi_id is required', None), status=status.HTTP_400_BAD_REQUEST)
 
+    payload = request.data
+    is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
+    
+    print("Is Called: ", is_called)
+
     try:
-        obj = UPIToAccount.objects.get(upi_id=upi_id)
+        obj = UPIToAccount2.objects.get(upi_id=upi_id)
         full_data = obj.result
         latest_entry = obj.result[-1] if obj.result else None
-    except UPIToAccount.DoesNotExist:
+    except UPIToAccount2.DoesNotExist:
         full_data = []
         latest_entry = None
         obj = None
+
     try:
         count = len(full_data)
         datetime_list = [list(entry.keys())[0] for entry in full_data]
         
         if not realtime_data:
             if latest_entry:
+                if not is_called:
+                    balance_after_deduction = get_amount_after_api_call(api_name='upi_to_account_data', user=user)
+                    if balance_after_deduction < 0.0:
+                        log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                        return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                    print("UPDATING")
+                    update_user_balance(user=user, amount=balance_after_deduction)
+
                 latest_timestamp = list(latest_entry.keys())[0]
+                log_user_activity(request, UserActivity.Status.SUCCESS)
                 return Response(
                     create_response(True, "Data fetched from database", {
                         "count": count,
@@ -2101,20 +2120,32 @@ def upi_to_account_data(request):
                     }),
                     status=status.HTTP_200_OK
                 )
-            else:
-                pass
-        
+
+        # For realtime data or when no cached data exists
+        if realtime_data or latest_entry is None:
+            balance_after_deduction = get_amount_after_api_call(api_name='upi_to_account_data', user=user)
+            if balance_after_deduction < 0.0:
+                log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+
         if latest_entry is None:
             result = fetch_upi_to_account(upi_id)
-            print("Latest None then real time: ",result)
+            print("Latest None then real time: ", result)
             if result.get('success'):
                 ts = result["data"].pop("datetime")
                 print(result["data"])
                 data_dict = {ts: result["data"]}
-                UPIToAccount.objects.update_or_create(
-                    upi_id=upi_id,
-                    defaults={"result": [data_dict]}
-                )
+                
+                with transaction.atomic():
+                    UPIToAccount2.objects.update_or_create(
+                        upi_id=upi_id,
+                        defaults={"result": [data_dict]}
+                    )
+                    
+                    if realtime_data or not is_called:
+                        update_user_balance(user=user, amount=balance_after_deduction)
+                
+                log_user_activity(request, UserActivity.Status.SUCCESS)
                 return Response(
                     create_response(True, "Real-time data fetched successfully", {
                         "count": 1,
@@ -2125,81 +2156,254 @@ def upi_to_account_data(request):
                     status=status.HTTP_200_OK
                 )
             else:
+                log_user_activity(request, UserActivity.Status.FAILED)
                 return Response(
                     create_response(False, result.get("message", "Failed to fetch data"), None), 
                     status=status.HTTP_404_NOT_FOUND
                 )
-    except Exception as e:
+
+        api_response = fetch_upi_to_account(upi_id)
+        fetch_and_store_upi_to_account.delay(upi_id, api_response)
+        
+        with transaction.atomic():
+            if realtime_data or not is_called:
+                update_user_balance(user=user, amount=balance_after_deduction)
+        
+        log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(
-            create_response(False, f"Unxpected Error: {str(e)}", None),
-            status=status.HTTP_404_NOT_FOUND
+            create_response(True, "Data fetched from API, comparing in background.", {
+                "count": count,
+                "datetime_list": datetime_list,
+                "datetime": api_response['data']['datetime'],
+                "data": api_response["data"]
+            }),
+            status=status.HTTP_200_OK
         )
     
-    api_response = fetch_upi_to_account(upi_id)
-    print("API response:", api_response['data'])
-    fetch_and_store_upi_to_account.delay(upi_id, api_response)
-    
-    return Response(
-        create_response(True, "Data fetched from API, comparing in background.",{
-            "count": count,
-            "datetime_list": datetime_list,
-            "datetime": api_response['data']['datetime'],
-            "data": api_response["data"]
-        }),
-        status=status.HTTP_200_OK
-    )
+    except Exception as e:
+        log_user_activity(request, UserActivity.Status.FAILED)
+        return Response(
+            create_response(False, f"Unexpected Error: {str(e)}", None),
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def upi_to_account_full_data(request):
+    token = get_token_from_header(request=request)
+    user = get_user_from_token(token)
     upi_id = request.data.get("upi_id")
+    
     if not upi_id:
         return Response(
             create_response(False, "Missing upi_id in query parameters", None),
             status=status.HTTP_400_BAD_REQUEST
         )
 
+    payload = request.data
+    is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
+    
+    print("Is Called: ", is_called)
+
     try:
-        data_obj = UPIToAccount.objects.get(upi_id=upi_id)
+        data_obj = UPIToAccount2.objects.get(upi_id=upi_id)
         full_data = [
             {"datetime": list(entry.keys())[0], "data": list(entry.values())[0]}
             for entry in data_obj.result
         ]
+        
+        if not is_called:
+            balance_after_deduction = get_amount_after_api_call(api_name='upi_to_account_full_data', user=user)
+            if balance_after_deduction < 0.0:
+                log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+            print("UPDATING")
+            update_user_balance(user=user, amount=balance_after_deduction)
+
+        log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(
             create_response(True, "Full data fetched successfully", full_data),
             status=status.HTTP_200_OK
         )
-    except UPIToAccount.DoesNotExist:
+        
+    except UPIToAccount2.DoesNotExist:
+        print("No data in database, fetching from external api")
+        
+        balance_after_deduction = get_amount_after_api_call(api_name='upi_to_account_full_data', user=user)
+        if balance_after_deduction < 0.0:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+        
         api_response = fetch_upi_to_account(upi_id)
         if api_response.get('success'):
             ts = api_response["data"].pop("datetime")
             print(api_response["data"])
             data_dict = {ts: api_response["data"]}
-            UPIToAccount.objects.update_or_create(
-                upi_id=upi_id,
-                defaults={"result": [data_dict]}
-            )
+            
+            with transaction.atomic():
+                UPIToAccount2.objects.update_or_create(
+                    upi_id=upi_id,
+                    defaults={"result": [data_dict]}
+                )
+                update_user_balance(user=user, amount=balance_after_deduction)
+            
+            log_user_activity(request, UserActivity.Status.SUCCESS)
             return Response(
-        create_response(True, "Data fetched from API, comparing in background.", [
-                {
+                create_response(True, "Real-time data fetched successfully", [{
                     "datetime": ts,
-                    "data": api_response["data"]
-                }
-            ]),
-            status=status.HTTP_200_OK
-        )
+                    "data": data_dict[ts]
+                }]),
+                status=status.HTTP_200_OK
+            )
         else:
+            log_user_activity(request, UserActivity.Status.FAILED)
             return Response(
                 create_response(False, api_response.get("message", "Failed to fetch data"), None), 
                 status=status.HTTP_404_NOT_FOUND
             )
-        
-        
+            
     except Exception as e:
+        log_user_activity(request, UserActivity.Status.FAILED)
         return Response(
             create_response(False, str(e), None),
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def upi_to_account_data(request):
+#     upi_id = request.data.get('upi_id')
+#     realtime_data = request.data.get('realtimeData', False)
+
+#     if not upi_id:
+#         return Response(create_response(False, 'upi_id is required', None), status=status.HTTP_400_BAD_REQUEST)
+
+#     try:
+#         obj = UPIToAccount.objects.get(upi_id=upi_id)
+#         full_data = obj.result
+#         latest_entry = obj.result[-1] if obj.result else None
+#     except UPIToAccount.DoesNotExist:
+#         full_data = []
+#         latest_entry = None
+#         obj = None
+#     try:
+#         count = len(full_data)
+#         datetime_list = [list(entry.keys())[0] for entry in full_data]
+        
+#         if not realtime_data:
+#             if latest_entry:
+#                 latest_timestamp = list(latest_entry.keys())[0]
+#                 return Response(
+#                     create_response(True, "Data fetched from database", {
+#                         "count": count,
+#                         "datetime_list": datetime_list,
+#                         "datetime": latest_timestamp,
+#                         "data": latest_entry[latest_timestamp]
+#                     }),
+#                     status=status.HTTP_200_OK
+#                 )
+#             else:
+#                 pass
+        
+#         if latest_entry is None:
+#             result = fetch_upi_to_account(upi_id)
+#             print("Latest None then real time: ",result)
+#             if result.get('success'):
+#                 ts = result["data"].pop("datetime")
+#                 print(result["data"])
+#                 data_dict = {ts: result["data"]}
+#                 UPIToAccount.objects.update_or_create(
+#                     upi_id=upi_id,
+#                     defaults={"result": [data_dict]}
+#                 )
+#                 return Response(
+#                     create_response(True, "Real-time data fetched successfully", {
+#                         "count": 1,
+#                         "datetime_list": [ts],
+#                         "datetime": ts,
+#                         "data": data_dict[ts]
+#                     }),
+#                     status=status.HTTP_200_OK
+#                 )
+#             else:
+#                 return Response(
+#                     create_response(False, result.get("message", "Failed to fetch data"), None), 
+#                     status=status.HTTP_404_NOT_FOUND
+#                 )
+#     except Exception as e:
+#         return Response(
+#             create_response(False, f"Unxpected Error: {str(e)}", None),
+#             status=status.HTTP_404_NOT_FOUND
+#         )
+    
+#     api_response = fetch_upi_to_account(upi_id)
+#     print("API response:", api_response['data'])
+#     fetch_and_store_upi_to_account.delay(upi_id, api_response)
+    
+#     return Response(
+#         create_response(True, "Data fetched from API, comparing in background.",{
+#             "count": count,
+#             "datetime_list": datetime_list,
+#             "datetime": api_response['data']['datetime'],
+#             "data": api_response["data"]
+#         }),
+#         status=status.HTTP_200_OK
+#     )
+
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def upi_to_account_full_data(request):
+#     upi_id = request.data.get("upi_id")
+#     if not upi_id:
+#         return Response(
+#             create_response(False, "Missing upi_id in query parameters", None),
+#             status=status.HTTP_400_BAD_REQUEST
+#         )
+
+#     try:
+#         data_obj = UPIToAccount.objects.get(upi_id=upi_id)
+#         full_data = [
+#             {"datetime": list(entry.keys())[0], "data": list(entry.values())[0]}
+#             for entry in data_obj.result
+#         ]
+#         return Response(
+#             create_response(True, "Full data fetched successfully", full_data),
+#             status=status.HTTP_200_OK
+#         )
+#     except UPIToAccount.DoesNotExist:
+#         api_response = fetch_upi_to_account(upi_id)
+#         if api_response.get('success'):
+#             ts = api_response["data"].pop("datetime")
+#             print(api_response["data"])
+#             data_dict = {ts: api_response["data"]}
+#             UPIToAccount.objects.update_or_create(
+#                 upi_id=upi_id,
+#                 defaults={"result": [data_dict]}
+#             )
+#             return Response(
+#         create_response(True, "Data fetched from API, comparing in background.", [
+#                 {
+#                     "datetime": ts,
+#                     "data": api_response["data"]
+#                 }
+#             ]),
+#             status=status.HTTP_200_OK
+#         )
+#         else:
+#             return Response(
+#                 create_response(False, api_response.get("message", "Failed to fetch data"), None), 
+#                 status=status.HTTP_404_NOT_FOUND
+#             )
+        
+        
+#     except Exception as e:
+#         return Response(
+#             create_response(False, str(e), None),
+#             status=status.HTTP_500_INTERNAL_SERVER_ERROR
+#         )
 
 
 # @api_view(['DELETE'])

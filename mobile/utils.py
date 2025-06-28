@@ -1098,6 +1098,7 @@ def fetch_upi_to_account(upi_id):
     data["datetime"] = datetime.now().isoformat() + "Z"
     
     if data['status']==1:
+        print("API response: ", data)
         return {
             'success': True,
             'data': data

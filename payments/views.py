@@ -313,7 +313,7 @@ def update_txn_status_to_success(request):
             SubscriptionHistory.objects.create(
                 user=user,
                 subscription_plan=CustomUser.SubscriptionPlans.SILVER,
-                txn_id=txn_id
+                txn_id=txn
             )
 
             user.save()
@@ -326,7 +326,7 @@ def update_txn_status_to_success(request):
             SubscriptionHistory.objects.create(
                 user=user,
                 subscription_plan=CustomUser.SubscriptionPlans.GOLD,
-                txn_id=txn_id
+                txn_id=txn
             )
             user.save()
 
@@ -338,7 +338,7 @@ def update_txn_status_to_success(request):
             SubscriptionHistory.objects.create(
                 user=user,
                 subscription_plan=CustomUser.SubscriptionPlans.PLATINUM,
-                txn_id=txn_id
+                txn_id=txn
             )
             user.save()
 

@@ -65,10 +65,11 @@ def get_alternate_mobile_numbers(request):
             result_data = api_response['data']
 
             with transaction.atomic():
-                ProfileAdvanceReport.objects.update_or_create(
-                    mobile=mobile_number,
-                    defaults={'result':result_data}
-                )
+                if result_data['status']==1:
+                    ProfileAdvanceReport.objects.update_or_create(
+                        mobile=mobile_number,
+                        defaults={'result':result_data}
+                    )
                 update_user_balance(user=user,amount=balance_after_deduction)
             
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
@@ -136,10 +137,11 @@ def get_email(request):
             result_data = api_response['data']
 
             with transaction.atomic():
-                ProfileAdvanceReport.objects.update_or_create(
-                    mobile=mobile_number,
-                    defaults={'result':result_data}
-                )
+                if result_data['status']==1:
+                    ProfileAdvanceReport.objects.update_or_create(
+                        mobile=mobile_number,
+                        defaults={'result':result_data}
+                    )
                 update_user_balance(user=user,amount=balance_after_deduction)
             
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
@@ -228,5 +230,219 @@ def get_lpg_info(request):
         return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 
                 
-         
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def get_address_profile_advance(request):
+    token = get_token_from_header(request)
+    user = get_user_from_token(token)
+    mobile_number = request.data.get("mobile_number")
+    realtime_data = request.data.get("realtimeData")
+
+    if not mobile_number:
+        return create_response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message="Mobile number is required",
+            success=False,
+        )
+    
+    payload = request.data
+    is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
+    
+    print("Is called: ",is_called)
+    
+    if not realtime_data:
+        report = ProfileAdvanceReport.objects.filter(mobile=mobile_number).first()
+        if report:
+            serialized = ProfileAdvanceReportSerializer(report).data
+
+            if not is_called:
+                balance_after_deduction = get_amount_after_api_call(api_name='digital_intelligence_address_profile_advance', user=user)
+                if balance_after_deduction<0.0:
+                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                    return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                update_user_balance(user=user, amount=balance_after_deduction)
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+            address = serialized['result']['result']['address']
+            return Response(create_response(True, "Data fetched from database", {'address':address, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+
+    
+    try:
+        balance_after_deduction = get_amount_after_api_call(api_name='digital_intelligence_address_profile_advance', user=user)
+        if balance_after_deduction<0.0:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+        
+        api_response = fetch_profile_advance_data(mobile_number)
+        
+        if api_response.get('success'):
+            result_data = api_response['data']
+
+            with transaction.atomic():
+                if result_data['status']==1:
+                    ProfileAdvanceReport.objects.update_or_create(
+                        mobile=mobile_number,
+                        defaults={'result':result_data}
+                    )
+                update_user_balance(user=user,amount=balance_after_deduction)
+            
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+            try:
+                address =result_data['result']['address']
+                return Response(create_response(True,'Data Fetched from external API',{'address':address, 'datetime':datetime.datetime.now().isoformat() + "Z"}),status=status.HTTP_200_OK)
+            except:
+                return Response(create_response(True,'Data Fetched from external API', {'address':'No Data Found'}), status=status.HTTP_200_OK)
+
+        else:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
+
+    except Exception as e:
+        log_user_activity(request=request, status=UserActivity.Status.FAILED)
+        return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                
+       
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def get_document_data_profile_advance(request):
+    token = get_token_from_header(request)
+    user = get_user_from_token(token)
+    mobile_number = request.data.get("mobile_number")
+    realtime_data = request.data.get("realtimeData")
+
+    if not mobile_number:
+        return create_response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message="Mobile number is required",
+            success=False,
+        )
+    
+    payload = request.data
+    is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
+    
+    print("Is called: ",is_called)
+    
+    if not realtime_data:
+        report = ProfileAdvanceReport.objects.filter(mobile=mobile_number).first()
+        if report:
+            serialized = ProfileAdvanceReportSerializer(report).data
+
+            if not is_called:
+                balance_after_deduction = get_amount_after_api_call(api_name='digital_intelligence_document_data_profile_advance', user=user)
+                if balance_after_deduction<0.0:
+                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                    return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                update_user_balance(user=user, amount=balance_after_deduction)
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+            doc_data=serialized['result']['result']['document_data']
+            return Response(create_response(True, "Data fetched from database", {'document_data':doc_data, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+
+    
+    try:
+        balance_after_deduction = get_amount_after_api_call(api_name='digital_intelligence_document_data_profile_advance', user=user)
+        if balance_after_deduction<0.0:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+        
+        api_response = fetch_profile_advance_data(mobile_number)
+        
+        if api_response.get('success'):
+            result_data = api_response['data']
+
+            with transaction.atomic():
+                if result_data['status']==1:
+                    ProfileAdvanceReport.objects.update_or_create(
+                        mobile=mobile_number,
+                        defaults={'result':result_data}
+                    )
+                update_user_balance(user=user,amount=balance_after_deduction)
+            
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+            try:
+                doc_data=result_data['result']['document_data']
+                return Response(create_response(True,'Data Fetched from external API',{'document_data':doc_data, 'datetime':datetime.datetime.now().isoformat() + "Z"}),status=status.HTTP_200_OK)
+            except:
+                return Response(create_response(True,'Data Fetched from external API', {'document_data':'No Data Found'}), status=status.HTTP_200_OK)
+
+        else:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
+
+    except Exception as e:
+        log_user_activity(request=request, status=UserActivity.Status.FAILED)
+        return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def get_personal_information_profile_advance(request):
+    token = get_token_from_header(request)
+    user = get_user_from_token(token)
+    mobile_number = request.data.get("mobile_number")
+    realtime_data = request.data.get("realtimeData")
+
+    if not mobile_number:
+        return create_response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message="Mobile number is required",
+            success=False,
+        )
+    
+    payload = request.data
+    is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
+    
+    print("Is called: ",is_called)
+    
+    if not realtime_data:
+        report = ProfileAdvanceReport.objects.filter(mobile=mobile_number).first()
+        if report:
+            serialized = ProfileAdvanceReportSerializer(report).data
+
+            if not is_called:
+                balance_after_deduction = get_amount_after_api_call(api_name='digital_intelligence_personal_info_profile_advance', user=user)
+                if balance_after_deduction<0.0:
+                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                    return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                update_user_balance(user=user, amount=balance_after_deduction)
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+            personal_info=serialized['result']['result']['personal_information']
+            return Response(create_response(True, "Data fetched from database", {'personal_information':personal_info, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+
+    
+    try:
+        balance_after_deduction = get_amount_after_api_call(api_name='digital_intelligence_personal_info_profile_advance', user=user)
+        if balance_after_deduction<0.0:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+        
+        api_response = fetch_profile_advance_data(mobile_number)
+        
+        if api_response.get('success'):
+            result_data = api_response['data']
+
+            with transaction.atomic():
+                if result_data['status']==1:
+                    ProfileAdvanceReport.objects.update_or_create(
+                        mobile=mobile_number,
+                        defaults={'result':result_data}
+                    )
+                update_user_balance(user=user,amount=balance_after_deduction)
+            
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+            try:
+                personal_info=result_data['result']['personal_information']
+                return Response(create_response(True,'Data Fetched from external API',{'personal_information':personal_info, 'datetime':datetime.datetime.now().isoformat() + "Z"}),status=status.HTTP_200_OK)
+            except:
+                return Response(create_response(True,'Data Fetched from external API', {'personal_information':'No Data Found'}), status=status.HTTP_200_OK)
+
+        else:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
+
+    except Exception as e:
+        log_user_activity(request=request, status=UserActivity.Status.FAILED)
+        return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+                
 

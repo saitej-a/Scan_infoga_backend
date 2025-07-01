@@ -1850,43 +1850,98 @@ def digital_payment_analyser(request):
         return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
+# def leak_osint(request):
+#     request_body = request.data.get("request_body")
+#     realtime_data = request.data.get("realtimeData", False)
+    
+#     if not request_body:
+#         return Response(create_response(False, "request_body is required", None), status=status.HTTP_400_BAD_REQUEST)
+
+#     if not realtime_data:
+#         try:
+#             report = LeakOSINT.objects.get(request_body=request_body)
+#             serialized = LeakOSINTSerializer(report).data
+#             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
+
+#         except LeakOSINT.DoesNotExist:
+#             pass
+
+#     try:
+#         token = get_token_from_header(request)
+#         user = get_user_from_token(token)
+#         is_called = is_called_by_user_previously(user=user, api_name=request.path)
+#         if not is_called or realtime_data:
+#             balance_after_deduction = get_amount_after_api_call(api_name="breach_info", user=user)
+#             if(balance_after_deduction < 0.0):
+#                 raise ValidationError("Insufficient balance.")
+#         api_response = fetch_leak_osint_data(request_body=request_body)
+#         if not is_called or realtime_data:
+#             update_user_balance(user = user, amount = balance_after_deduction)
+#         LeakOSINT.objects.update_or_create(
+#             request_body=request_body,
+#             defaults={"result": api_response}
+#         )
+#         return Response(create_response(True, "Data fetched from external API", api_response), status=status.HTTP_200_OK)
+    
+#     except Exception as e:
+#         return Response(create_response(False, str(e), None), status=status.HTTP_404_NOT_FOUND)
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def leak_osint(request):
     request_body = request.data.get("request_body")
     realtime_data = request.data.get("realtimeData", False)
-    
+
     if not request_body:
         return Response(create_response(False, "request_body is required", None), status=status.HTTP_400_BAD_REQUEST)
 
+    token = get_token_from_header(request)
+    user = get_user_from_token(token)
+    api_name = request.path
+    payload = request.data
+    is_called = is_called_by_user_previously(user=user, api_name=api_name, payload=payload)
+
+    # Step 1: Try fetching from database if real-time is not required
     if not realtime_data:
-        try:
-            report = LeakOSINT.objects.get(request_body=request_body)
+        report = LeakOSINT.objects.filter(request_body=request_body).first()
+        if report:
             serialized = LeakOSINTSerializer(report).data
+
+            if not is_called:
+                balance_after_deduction = get_amount_after_api_call(api_name="breach_info", user=user)
+                if balance_after_deduction < 0.0:
+                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                    return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                update_user_balance(user=user, amount=balance_after_deduction)
+
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
 
-        except LeakOSINT.DoesNotExist:
-            pass
-
+    # Step 2: Fallback to external API
     try:
-        token = get_token_from_header(request)
-        user = get_user_from_token(token)
-        is_called = is_called_by_user_previously(user=user, api_name=request.path)
-        if not is_called or realtime_data:
-            balance_after_deduction = get_amount_after_api_call(api_name="breach_info", user=user)
-            if(balance_after_deduction < 0.0):
-                raise ValidationError("Insufficient balance.")
+        balance_after_deduction = get_amount_after_api_call(api_name="breach_info", user=user)
+        if balance_after_deduction < 0.0:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+
         api_response = fetch_leak_osint_data(request_body=request_body)
-        if not is_called or realtime_data:
-            update_user_balance(user = user, amount = balance_after_deduction)
-        LeakOSINT.objects.update_or_create(
-            request_body=request_body,
-            defaults={"result": api_response}
-        )
+
+        with transaction.atomic():
+            LeakOSINT.objects.update_or_create(
+                request_body=request_body,
+                defaults={"result": api_response}
+            )
+            update_user_balance(user=user, amount=balance_after_deduction)
+
+        log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
         return Response(create_response(True, "Data fetched from external API", api_response), status=status.HTTP_200_OK)
-    
+
     except Exception as e:
-        return Response(create_response(False, str(e), None), status=status.HTTP_404_NOT_FOUND)
+        log_user_activity(request=request, status=UserActivity.Status.FAILED)
+        return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 # @api_view(["POST"])
 # @permission_classes([IsAuthenticated])

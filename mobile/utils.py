@@ -1025,17 +1025,23 @@ def fetch_leak_osint_data(request_body):
         "token":api_key,
         "request":request_body
     }
-    
-    response = requests.post(api_url, json=payload)
-    response.raise_for_status()
-    
-    data = response.json()
-    if response.status_code==200:
-        return {
-           'success': True,
-            'data': data
-        }
-    raise Exception(response.json()['message'] or 'External API Error')
+    try:
+        response = requests.post(api_url, json=payload)
+        response.raise_for_status()
+        
+        data = response.json()
+        print("Response: ", response.json())
+        if response.status_code==200:
+            if(data.get('Status') == 'Error'):
+                raise Exception(data.get('Error code') or 'External API Error')
+            return {
+            'success': True,
+                'data': data
+            }
+        raise Exception(response.json()['message'] or 'External API Error')
+    except requests.exceptions.RequestException as e:
+        print("Error: ", e)
+        raise Exception("External API Error")
 
 def fetch_hunter_verify_data(email):
     """Fetch hunter verify details for the mobile number"""

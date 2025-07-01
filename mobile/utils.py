@@ -326,6 +326,11 @@ def fetch_profile_advance_data(mobile_number):
             'success': True,
             'data': data
         }
+    if response.json()['status']==2:
+        return {
+            'success':True,
+            'data':data
+        }
     raise Exception(response.json()['message'] or 'Unexpected Error')
 
 ################### Equifax V3 ###################

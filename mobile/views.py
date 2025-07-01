@@ -1070,13 +1070,13 @@ def profile_advance_search(request):
 
         if api_response.get('success'):
             result_data = api_response["data"]
-            if result_data['status']==1:
-                with transaction.atomic():
+            with transaction.atomic():
+                if result_data['status']==1:
                     ProfileAdvanceReport.objects.update_or_create(
                         mobile=mobile,
                         defaults={"result": result_data}
                     )
-            update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction)
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
 

@@ -18,6 +18,7 @@ from mobile.utils import fetch_mobile360_data, fetch_profile_advance_data
 
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def get_alternate_mobile_numbers(request):
     token = get_token_from_header(request)
     user = get_user_from_token(token)
@@ -71,8 +72,11 @@ def get_alternate_mobile_numbers(request):
                 update_user_balance(user=user,amount=balance_after_deduction)
             
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
-            alt_numbers =result_data['result']['alternate_phone']
-            return Response(create_response(True,'Data Fetched from external API',{'alternate_numbers':alt_numbers, 'datetime':datetime.datetime.now().isoformat() + "Z"}),status=status.HTTP_200_OK)
+            try:
+                alt_numbers =result_data['result']['alternate_phone']
+                return Response(create_response(True,'Data Fetched from external API',{'alternate_numbers':alt_numbers, 'datetime':datetime.datetime.now().isoformat() + "Z"}),status=status.HTTP_200_OK)
+            except:
+                return Response(create_response(True,'Data Fetched from external API', {'alternate_numbers':'No Data Found'}), status=status.HTTP_200_OK)
 
         else:
             log_user_activity(request=request, status=UserActivity.Status.FAILED)
@@ -85,6 +89,7 @@ def get_alternate_mobile_numbers(request):
        
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def get_email(request):
     token = get_token_from_header(request)
     user = get_user_from_token(token)
@@ -138,8 +143,11 @@ def get_email(request):
                 update_user_balance(user=user,amount=balance_after_deduction)
             
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
-            alt_emails=result_data['result']['email']
-            return Response(create_response(True,'Data Fetched from external API',{'email':alt_emails, 'datetime':datetime.datetime.now().isoformat() + "Z"}),status=status.HTTP_200_OK)
+            try:
+                alt_emails=result_data['result']['email']
+                return Response(create_response(True,'Data Fetched from external API',{'email':alt_emails, 'datetime':datetime.datetime.now().isoformat() + "Z"}),status=status.HTTP_200_OK)
+            except:
+                return Response(create_response(True,'Data Fetched from external API', {'email':'No Data Found'}), status=status.HTTP_200_OK)
 
         else:
             log_user_activity(request=request, status=UserActivity.Status.FAILED)
@@ -147,10 +155,11 @@ def get_email(request):
 
     except Exception as e:
         log_user_activity(request=request, status=UserActivity.Status.FAILED)
-        return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)       
+        return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def get_lpg_info(request):
     token = get_token_from_header(request)
     user = get_user_from_token(token)
@@ -191,7 +200,7 @@ def get_lpg_info(request):
             log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
         
-        api_response = fetch_profile_advance_data(mobile_number)
+        api_response = fetch_mobile360_data(mobile_number)
         
         if api_response.get('success'):
             result_data = api_response['data']
@@ -204,8 +213,11 @@ def get_lpg_info(request):
                 update_user_balance(user=user,amount=balance_after_deduction)
             
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
-            lpg_info=result_data['result']['lpg_info']
-            return Response(create_response(True,'Data Fetched from external API',{'lpg_info':lpg_info, 'datetime':datetime.datetime.now().isoformat() + "Z"}),status=status.HTTP_200_OK)
+            try:
+                lpg_info=result_data['result']['lpg_info']
+                return Response(create_response(True,'Data Fetched from external API',{'lpg_info':lpg_info, 'datetime':datetime.datetime.now().isoformat() + "Z"}),status=status.HTTP_200_OK)
+            except:
+                return Response(create_response(True,'Data Fetched from external API', {'lpg_info':'No Data Found'}), status=status.HTTP_200_OK)
 
         else:
             log_user_activity(request=request, status=UserActivity.Status.FAILED)
@@ -216,6 +228,5 @@ def get_lpg_info(request):
         return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 
                 
-                
-                
+         
 

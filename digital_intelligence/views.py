@@ -444,5 +444,152 @@ def get_personal_information_profile_advance(request):
         log_user_activity(request=request, status=UserActivity.Status.FAILED)
         return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-                
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def mobile_to_gst_udyam_iec(request):
+    token = get_token_from_header(request)
+    user = get_user_from_token(token)
+    mobile_number = request.data.get("mobile_number")
+    realtime_data = request.data.get("realtimeData")
+
+    if not mobile_number:
+        return create_response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message="Mobile number is required",
+            success=False,
+        )
+    
+    payload = request.data
+    is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
+    
+    print("Is called: ",is_called)
+    
+    if not realtime_data:
+        report = Mobile360Report.objects.filter(mobile_number=mobile_number).first()
+        if report:
+            serialized = Mobile360ReportSerializer(report).data
+
+            if not is_called:
+                balance_after_deduction = get_amount_after_api_call(api_name='digital_intelligence_gst_udyam_iec', user=user)
+                if balance_after_deduction<0.0:
+                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                    return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                update_user_balance(user=user, amount=balance_after_deduction)
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+            gst_list=serialized['result']['result']['key_highlights']['gst_numbers']
+            udyam_number=serialized['result']['result']['key_highlights']['udyam_numbers']
+            iec_number=serialized['result']['result']['key_highlights']['ie_codes']
+            return Response(create_response(True, "Data fetched from database", {'gst_list':gst_list, 'udyam_number':udyam_number, 'iec_number':iec_number, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+
+    
+    try:
+        balance_after_deduction = get_amount_after_api_call(api_name='digital_intelligence_gst_udyam_iec', user=user)
+        if balance_after_deduction<0.0:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+        
+        api_response = fetch_mobile360_data(mobile_number)
+        
+        if api_response.get('success'):
+            result_data = api_response['data']
+
+            with transaction.atomic():
+                Mobile360Report.objects.update_or_create(
+                    mobile_number=mobile_number,
+                    defaults={'result':result_data}
+                )
+                update_user_balance(user=user,amount=balance_after_deduction)
+            
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+            try:
+                gst_list=result_data['result']['key_highlights']['gst_numbers']
+                udyam_number=result_data['result']['key_highlights']['udyam_numbers']
+                iec_number=result_data['result']['key_highlights']['ie_codes']
+                return Response(create_response(True,'Data Fetched from external API',{'gst_list':gst_list, 'udyam_number':udyam_number, 'iec_number':iec_number, 'datetime':datetime.datetime.now().isoformat() + "Z"}),status=status.HTTP_200_OK)
+            except:
+                return Response(create_response(True,'Data Fetched from external API', {'gst_list':'No Data Found', 'udyam_number':'No Data Found', 'iec_number':'No Data Found'}), status=status.HTTP_200_OK)
+
+        else:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
+
+    except Exception as e:
+        log_user_activity(request=request, status=UserActivity.Status.FAILED)
+        return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def mobile_to_uan_esic(request):
+    token = get_token_from_header(request)
+    user = get_user_from_token(token)
+    mobile_number = request.data.get("mobile_number")
+    realtime_data = request.data.get("realtimeData")
+
+    if not mobile_number:
+        return create_response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message="Mobile number is required",
+            success=False,
+        )
+    
+    payload = request.data
+    is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
+    
+    print("Is called: ",is_called)
+    
+    if not realtime_data:
+        report = Mobile360Report.objects.filter(mobile_number=mobile_number).first()
+        if report:
+            serialized = Mobile360ReportSerializer(report).data
+
+            if not is_called:
+                balance_after_deduction = get_amount_after_api_call(api_name='digital_intelligence_esic_uan', user=user)
+                if balance_after_deduction<0.0:
+                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                    return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                update_user_balance(user=user, amount=balance_after_deduction)
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+            esic_list=serialized['result']['result']['key_highlights']['esic_number']
+            uan_list=serialized['result']['result']['key_highlights']['uan_numbers']
+            return Response(create_response(True, "Data fetched from database", {'esic_list':esic_list, 'uan_list':uan_list, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+
+
+    
+    try:
+        balance_after_deduction = get_amount_after_api_call(api_name='digital_intelligence_esic_uan', user=user)
+        if balance_after_deduction<0.0:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+        
+        api_response = fetch_mobile360_data(mobile_number)
+        
+        if api_response.get('success'):
+            result_data = api_response['data']
+
+            with transaction.atomic():
+                Mobile360Report.objects.update_or_create(
+                    mobile_number=mobile_number,
+                    defaults={'result':result_data}
+                )
+                update_user_balance(user=user,amount=balance_after_deduction)
+            
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+            try:
+                esic_list=result_data['result']['key_highlights']['esic_number']
+                uan_list=result_data['result']['key_highlights']['uan_numbers']
+                return Response(create_response(True,'Data Fetched from external API',{'esic_list':esic_list, 'uan_list':uan_list, 'datetime':datetime.datetime.now().isoformat() + "Z"}),status=status.HTTP_200_OK)
+            except:
+                return Response(create_response(True,'Data Fetched from external API', {'esic_list':'No Data Found', 'uan_list':'No Data Found'}), status=status.HTTP_200_OK)
+
+        else:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
+
+    except Exception as e:
+        log_user_activity(request=request, status=UserActivity.Status.FAILED)
+        return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

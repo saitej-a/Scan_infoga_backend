@@ -33,4 +33,5 @@ urlpatterns = [
     path('api/ghunt/', include('ghunt_util.urls')),
     path('api/secondary/', include('secondary.urls')),
     path('api/digital-intelligence/', include('digital_intelligence.urls')),
+    path('api/holehe/', include('holehe_util.urls')),
 ]

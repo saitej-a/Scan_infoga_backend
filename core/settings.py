@@ -61,6 +61,7 @@ EXTERNAL_APPS = [
     'leak_data',
     'secondary',
     'digital_intelligence',
+    'holehe_util',
 ]
 
 INSTALLED_APPS += EXTERNAL_APPS

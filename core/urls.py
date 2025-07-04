@@ -34,4 +34,5 @@ urlpatterns = [
     path('api/secondary/', include('secondary.urls')),
     path('api/digital-intelligence/', include('digital_intelligence.urls')),
     path('api/holehe/', include('holehe_util.urls')),
+    path('api/sherlock/', include('sherlock_util.urls')),
 ]

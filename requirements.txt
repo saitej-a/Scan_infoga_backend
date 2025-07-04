@@ -64,7 +64,8 @@ sqlparse==0.5.3
 typing_extensions==4.13.2
 ua-parser==1.0.1
 ua-parser-builtins==0.18.0.post1
-urllib3==2.4.0
+# urllib3==2.4.0
+urllib3==2.0.7
 user-agents==2.2.0
 wcwidth==0.2.13
 gunicorn==20.1.0
@@ -79,3 +80,4 @@ tqdm
 holehe
 pandas
 requests_futures
+cashfree-pg==4.3.10

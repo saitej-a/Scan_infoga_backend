@@ -481,5 +481,231 @@ def is_txn_pending(request):
     )
 
 
+import os
+import uuid
+import json
+from django.conf import settings
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+from django.http import JsonResponse
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+from cashfree_pg.models.create_order_request import CreateOrderRequest
+from cashfree_pg.models.customer_details import CustomerDetails
+from cashfree_pg.models.order_meta import OrderMeta
+from cashfree_pg.api_client import Cashfree
+
+from .models import Transaction, WalletBalance
+
+# Setup SDK
+Cashfree.XClientId = settings.CASHFREE_CLIENT_ID
+Cashfree.XClientSecret = settings.CASHFREE_CLIENT_SECRET
+Cashfree.XEnvironment = Cashfree.PRODUCTION  # or Cashfree.PRODUCTION
+x_api_version = "2023-08-01"  # Cashfree’s latest API version
+
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def initiate_payment(request):
+#     amount = request.data.get('amount')
+#     user = request.user
+#     order_id = str(uuid.uuid4())
+
+#     print(f"[INITIATE PAYMENT] Initiating payment for User ID: {user.id}, Amount: {amount}, Order ID: {order_id}")
+
+#     transaction = Transaction.objects.create(
+#         txn_id=order_id,
+#         amount=amount,
+#         user=user,
+#         status=Transaction.Status.PENDING,
+#         comment="Wallet Top-Up"
+#     )
+
+#     print(f"[INITIATE PAYMENT] Transaction created with ID: {transaction.txn_id}")
+
+#     cf = Cashfree()
+
+#     # customer = CustomerDetails(
+#     #     customer_id=str(user.id),
+#     #     customer_email=user.email
+#     # )
+
+#     customer = CustomerDetails(
+#         customer_id=f"user_{user.id}",  # Ensures minimum 3 characters
+#         customer_email=user.email,
+#         customer_phone="9999999999"  # Provide fallback if missing
+#     )
+
+#     order_meta = OrderMeta(
+#         return_url=f"https://dev.scaninfoga.com/payment-success?order_id={order_id}",
+#         notify_url="https://backend.scaninfoga.com/api/payments/cashfree-webhook"
+#     )
+
+#     request_obj = CreateOrderRequest(
+#         order_id=order_id,
+#         order_amount=float(amount),
+#         order_currency="INR",
+#         customer_details=customer,
+#         order_meta=order_meta
+#     )
+
+#     print(f"[INITIATE PAYMENT] Sending request to Cashfree with Order ID: {order_id}")
+
+#     response = cf.PGCreateOrder(x_api_version, request_obj)
+
+#     print(f"[CASHFREE RESPONSE] Status Code: {response.status_code}")
+#     print(f"[CASHFREE RESPONSE] Response Data: {response.data.__dict__}")
+
+#     if response.status_code == 200 and response.data.payment_session_id:
+#         print(f"[PAYMENT SESSION] Payment session created: {response.data.payment_session_id}")
+#         return Response({'paymentSessionId': response.data.payment_session_id})
+#     else:
+#         print("[ERROR] Payment initiation failed.")
+#         return Response({'error': 'Payment initiation failed.'}, status=400)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def initiate_payment(request):
+    amount = request.data.get('amount')
+    user = request.user
+    order_id = str(uuid.uuid4())
+
+    print(f"[INITIATE PAYMENT] Initiating payment for User ID: {user.id}, Amount: {amount}, Order ID: {order_id}")
+
+    # Cache the payment details instead of saving in DB
+    cache_key = f'payment_{order_id}'
+    cache_data = {
+        'user_id': user.id,
+        'amount': amount,
+        'status': 'PENDING'
+    }
+    cache.set(cache_key, cache_data, timeout=15 * 60)  # Cache for 15 minutes
+
+    print(f"[INITIATE PAYMENT] Payment data cached with key: {cache_key}")
+
+    cf = Cashfree()
+
+    customer = CustomerDetails(
+        customer_id=f"user_{user.id}",
+        customer_email=user.email,
+        customer_phone="9999999999"
+    )
+
+    order_meta = OrderMeta(
+        return_url=f"https://dev.scaninfoga.com/payment-success?order_id={order_id}",
+        notify_url="https://backend.scaninfoga.com/api/payments/cashfree-webhook"
+    )
+
+    request_obj = CreateOrderRequest(
+        order_id=order_id,
+        order_amount=float(amount),
+        order_currency="INR",
+        customer_details=customer,
+        order_meta=order_meta
+    )
+
+    print(f"[INITIATE PAYMENT] Sending request to Cashfree with Order ID: {order_id}")
+
+    response = cf.PGCreateOrder(x_api_version, request_obj)
+
+    print(f"[CASHFREE RESPONSE] Status Code: {response.status_code}")
+    print(f"[CASHFREE RESPONSE] Response Data: {response.data.__dict__}")
+
+    if response.status_code == 200 and response.data.payment_session_id:
+        print(f"[PAYMENT SESSION] Payment session created: {response.data.payment_session_id}")
+        return Response({'paymentSessionId': response.data.payment_session_id, 'orderId': order_id})
+    else:
+        print("[ERROR] Payment initiation failed.")
+        return Response({'error': 'Payment initiation failed.'}, status=400)
 
 
+@csrf_exempt
+@require_POST
+def cashfree_webhook(request):
+    print("[WEBHOOK] Webhook triggered.")
+    data = json.loads(request.body)
+    print(f"[WEBHOOK DATA] {data}")
+
+    order_id = data.get('data', {}).get('order', {}).get('order_id')
+    payment_status = data.get('data', {}).get('payment', {}).get('payment_status')
+    payment_id = data.get('data', {}).get('payment', {}).get('cf_payment_id')
+
+    payment_mode_data = data.get('data', {}).get('payment', {}).get('payment_method', {})
+    if 'upi' in payment_mode_data:
+        payment_mode = 'UPI'
+    else:
+        payment_mode = Transaction.PaymentMode.UNKNOWN
+
+    print(f"[WEBHOOK] Processing Order ID: {order_id}, Status: {payment_status}, Payment ID: {payment_id}")
+
+    cache_key = f'payment_{order_id}'
+    cached_data = cache.get(cache_key)
+
+    if not cached_data:
+        print("[ERROR] Payment details not found in cache.")
+        return JsonResponse({'error': 'Payment details not found.'}, status=404)
+
+    try:
+        user_id = cached_data['user_id']
+        amount = cached_data['amount']
+        user = CustomUser.objects.get(id=user_id)
+
+        if payment_status == 'SUCCESS':
+            txn_status = Transaction.Status.SUCCESS
+        else:
+            txn_status = Transaction.Status.FAILED
+
+        transaction = Transaction.objects.create(
+            txn_id=order_id,
+            amount=amount,
+            user=user,
+            status=txn_status,
+            comment="Wallet Top-Up",
+            cashfree_payment_id=payment_id,
+            payment_mode=payment_mode
+        )
+
+        print(f"[WEBHOOK] Transaction created: {transaction.txn_id} with status: {transaction.status}")
+
+        if txn_status == Transaction.Status.SUCCESS:
+            wallet, created = WalletBalance.objects.get_or_create(user=user)
+            credited_amount = transaction.amount
+            wallet.balance += credited_amount
+            wallet.save()
+
+            print(f"[WEBHOOK] Wallet updated. Amount credited: {credited_amount}")
+        else:
+            print("[WEBHOOK] Payment failed. Transaction recorded.")
+
+        # Clean up the cache
+        cache.delete(cache_key)
+
+        return JsonResponse({'status': 'success'})
+
+    except CustomUser.DoesNotExist:
+        print("[ERROR] User not found for cached payment.")
+        return JsonResponse({'error': 'User not found.'}, status=404)
+
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def verify_payment(request):
+    order_id = request.GET.get('order_id')
+    print(f"[VERIFY PAYMENT] Verifying payment for Order ID: {order_id}")
+
+    try:
+        txn = Transaction.objects.get(txn_id=order_id)
+        print(f"[VERIFY PAYMENT] Transaction found. Status: {txn.status}")
+
+        return Response({
+            'status': txn.status,
+            # 'payment_mode': txn.payment_mode,
+            # 'cashfree_payment_id': txn.cashfree_payment_id
+        })
+    except Transaction.DoesNotExist:
+        print("[VERIFY PAYMENT] Transaction not found.")
+        return Response({'status': 'not_found'}, status=404)
+
+        

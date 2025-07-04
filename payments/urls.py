@@ -10,5 +10,8 @@ urlpatterns = [
     path("updateTxnToSuccess", views.update_txn_status_to_success, name="update_txn_to_success"),
     path("updateTxnToFailed", views.update_txn_status_to_failed, name="update_txn_to_failed"),
     path("getWalletBalance", views.get_wallet_balance, name="get_wallet_balance"),
-    path("isTxnPending", views.is_txn_pending, name="is_txn_pending")
+    path("isTxnPending", views.is_txn_pending, name="is_txn_pending"),
+    path('initiate-payment', views.initiate_payment),
+    path('cashfree-webhook', views.cashfree_webhook),
+    path('verify-payment', views.verify_payment),
 ]

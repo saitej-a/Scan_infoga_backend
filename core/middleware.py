@@ -22,6 +22,7 @@ class GlobalExceptionMiddleware:
         return response
 
     def process_exception(self, request, exception):
+        print("Exception from middleware: ", request.path, str(exception))
         return JsonResponse(
             create_response(
                 status=False,

@@ -22,4 +22,5 @@ urlpatterns = [
     path('updateBookmarkStatus', views.update_bookmark_status, name='update-bookmark-status'),
     path('forget-password', views.forget_password, name="forget-password"),
     path('verify-password-reset-otp', views.verify_password_reset_otp, name="verify-password-reset-otp"),
+    path('update-phone', views.update_phone, name="update-phone"),
 ]

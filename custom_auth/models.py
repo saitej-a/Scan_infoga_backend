@@ -37,6 +37,7 @@ class CustomUser(AbstractUser):
         ('ADMIN', 'Admin')
     ], default='USER')
     date_joined = models.DateTimeField(auto_now_add=True, null=True)
+    phone = models.CharField(max_length=10, null=True, blank=True)
     otp_secret = models.CharField(max_length=32)  # Remove blank=True, null=True to make it required
     subscription_plan = models.CharField(max_length=20, choices=SubscriptionPlans.choices, default=SubscriptionPlans.FREE)
     subscription_date = models.DateTimeField(null=True, blank=True)

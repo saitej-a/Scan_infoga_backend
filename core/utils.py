@@ -36,3 +36,44 @@ def get_user_from_token(token):
     email = payload.get("email")
     user = CustomUser.objects.get(email=email)
     return user
+
+import math
+
+def paginate_queryset(request, queryset, serializer_class):
+    try:
+        page = int(request.query_params.get('page', 1))
+        if page < 1:
+            page = 1
+    except (ValueError, TypeError):
+        page = 1
+
+    try:
+        page_size = int(request.query_params.get('page_size', 10))
+        if page_size < 1:
+            page_size = 10
+    except (ValueError, TypeError):
+        page_size = 10
+
+    total_count = queryset.count()
+    total_pages = math.ceil(total_count / page_size)
+
+    offset = (page - 1) * page_size
+
+    # ✅ Only the required rows are fetched from the DB
+    paginated_queryset = queryset[offset:offset + page_size]
+
+    serialized_data = serializer_class(paginated_queryset, many=True).data
+
+    pagination_details = {
+        "count": total_count,
+        "next": page + 1 if page < total_pages else None,
+        "previous": page - 1 if page > 1 else None,
+        "total_pages": total_pages,
+        "current_page": page,
+        "page_size": page_size
+    }
+
+    return {
+        "result": serialized_data,
+        "paginationDetails": pagination_details
+    }

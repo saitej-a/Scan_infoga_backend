@@ -1,8 +1,14 @@
 from django.shortcuts import render
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
-from core.utils import create_response, get_token_from_header, get_user_from_token
+from core.utils import (
+        create_response, 
+        get_token_from_header, 
+        get_user_from_token,
+        paginate_queryset,
+    )
 from .models import Transaction, WalletBalance
 from core.permissions import IsAdminUserType
 from .serializers import TransactionSerializer
@@ -17,6 +23,12 @@ from django.db import connection
 
 
 from django.utils import timezone
+
+class TransactionPagination(PageNumberPagination):
+    page_size = 10  # Default page size
+    page_size_query_param = 'page_size'  # Allows user to pass ?page_size=...
+    max_page_size = 100  # Optional: Limit to prevent very large pages
+
 
 
 # Create your views here.
@@ -209,64 +221,45 @@ def get_failed_txns(request):
         }
     ))
 
-
 # @api_view(['GET'])
 # @permission_classes([IsAuthenticated])
-# def get_failed_txns(request):
-#     count = request.query_params.get('count', 20)
-#     page = request.query_params.get('page', 1)
-    
-#     try:
-#         count = int(count)
-#         page = int(page)
-#     except ValueError:
-#         return Response(
-#             create_response(
-#                 status=False,
-#                 message="Invalid count or page number",
-#                 data=None
-#             ),
-#             status=status.HTTP_400_BAD_REQUEST
-#         )
-    
-#     start = (page - 1) * count
-#     end = start + count
-    
-#     # txns = Transaction.objects.filter(status='failed')[start:end]
-#     txns = Transaction.objects.filter(status='failed').select_related('user')[start:end]
-#     total_count = Transaction.objects.filter(status='failed').count()
+# def get_all_txns(request):
+#     token = get_token_from_header(request)
+#     user = get_user_from_token(token)
+#     if(user.user_type != 'admin'):
+#         txns = Transaction.objects.filter(user=user)
+#     else:
+#         txns = Transaction.objects.all()
     
 #     serialized_txns = TransactionSerializer(txns, many=True)
 #     return Response(
 #         create_response(
 #             status=True,
-#             message="Failed transactions retrieved successfully",
-#             data={
-#                 'transactions': serialized_txns.data,
-#                 'total_count': total_count,
-#                 'page': page,
-#                 'count': count
-#             }
+#             message="All transactions retrieved successfully",
+#             data=serialized_txns.data
 #         ),
 #         status=status.HTTP_200_OK
 #     )
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_all_txns(request):
     token = get_token_from_header(request)
     user = get_user_from_token(token)
-    if(user.user_type != 'admin'):
-        txns = Transaction.objects.filter(user=user)
+
+    if user.user_type != 'admin':
+        queryset = Transaction.objects.filter(user=user).order_by('-created_at')
     else:
-        txns = Transaction.objects.all()
-    
-    serialized_txns = TransactionSerializer(txns, many=True)
+        queryset = Transaction.objects.all().order_by('-created_at')
+
+    paginated_data = paginate_queryset(request, queryset, TransactionSerializer)
+
     return Response(
         create_response(
             status=True,
-            message="All transactions retrieved successfully",
-            data=serialized_txns.data
+            message="Transactions retrieved successfully",
+            data=paginated_data
         ),
         status=status.HTTP_200_OK
     )
@@ -396,33 +389,6 @@ def update_txn_status_to_failed(request):
         status=status.HTTP_200_OK
     )
 
-# @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
-# def get_wallet_balance(request):
-#     token = get_token_from_header(request)
-#     user = get_user_from_token(token)
-#     try:
-#         wallet = WalletBalance.objects.get(user=user)
-#         last_success_txn = Transaction.objects.filter(user = user, status = Transaction.Status.SUCCESS).order_by('-created_at').first()
-
-#     except WalletBalance.DoesNotExist:
-#         return Response(
-#             create_response(
-#                 status=False,
-#                 message="Wallet balance not found for user",
-#                 data=None
-#             ),
-#             status=status.HTTP_404_NOT_FOUND
-#         )
-#     return Response(
-#         create_response(
-#             status=True,
-#             message="Wallet balance retrieved successfully",
-#             data={"balance": wallet.balance}
-#         ),
-#         status=status.HTTP_200_OK
-#     )
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -488,16 +454,11 @@ from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 
 from cashfree_pg.models.create_order_request import CreateOrderRequest
 from cashfree_pg.models.customer_details import CustomerDetails
 from cashfree_pg.models.order_meta import OrderMeta
 from cashfree_pg.api_client import Cashfree
-
-from .models import Transaction, WalletBalance
 
 # Setup SDK
 Cashfree.XClientId = settings.CASHFREE_CLIENT_ID
@@ -505,70 +466,17 @@ Cashfree.XClientSecret = settings.CASHFREE_CLIENT_SECRET
 Cashfree.XEnvironment = Cashfree.PRODUCTION  # or Cashfree.PRODUCTION
 x_api_version = "2023-08-01"  # Cashfree’s latest API version
 
-# @api_view(['POST'])
-# @permission_classes([IsAuthenticated])
-# def initiate_payment(request):
-#     amount = request.data.get('amount')
-#     user = request.user
-#     order_id = str(uuid.uuid4())
-
-#     print(f"[INITIATE PAYMENT] Initiating payment for User ID: {user.id}, Amount: {amount}, Order ID: {order_id}")
-
-#     transaction = Transaction.objects.create(
-#         txn_id=order_id,
-#         amount=amount,
-#         user=user,
-#         status=Transaction.Status.PENDING,
-#         comment="Wallet Top-Up"
-#     )
-
-#     print(f"[INITIATE PAYMENT] Transaction created with ID: {transaction.txn_id}")
-
-#     cf = Cashfree()
-
-#     # customer = CustomerDetails(
-#     #     customer_id=str(user.id),
-#     #     customer_email=user.email
-#     # )
-
-#     customer = CustomerDetails(
-#         customer_id=f"user_{user.id}",  # Ensures minimum 3 characters
-#         customer_email=user.email,
-#         customer_phone="9999999999"  # Provide fallback if missing
-#     )
-
-#     order_meta = OrderMeta(
-#         return_url=f"https://dev.scaninfoga.com/payment-success?order_id={order_id}",
-#         notify_url="https://backend.scaninfoga.com/api/payments/cashfree-webhook"
-#     )
-
-#     request_obj = CreateOrderRequest(
-#         order_id=order_id,
-#         order_amount=float(amount),
-#         order_currency="INR",
-#         customer_details=customer,
-#         order_meta=order_meta
-#     )
-
-#     print(f"[INITIATE PAYMENT] Sending request to Cashfree with Order ID: {order_id}")
-
-#     response = cf.PGCreateOrder(x_api_version, request_obj)
-
-#     print(f"[CASHFREE RESPONSE] Status Code: {response.status_code}")
-#     print(f"[CASHFREE RESPONSE] Response Data: {response.data.__dict__}")
-
-#     if response.status_code == 200 and response.data.payment_session_id:
-#         print(f"[PAYMENT SESSION] Payment session created: {response.data.payment_session_id}")
-#         return Response({'paymentSessionId': response.data.payment_session_id})
-#     else:
-#         print("[ERROR] Payment initiation failed.")
-#         return Response({'error': 'Payment initiation failed.'}, status=400)
+from django.core.cache import cache
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def initiate_payment(request):
     amount = request.data.get('amount')
     user = request.user
+
+    if not user.phone:
+        return Response(create_response(False, 'Phone number is required. Please update the number from profile.', None), status=status.HTTP_400_BAD_REQUEST)
+
     order_id = str(uuid.uuid4())
 
     print(f"[INITIATE PAYMENT] Initiating payment for User ID: {user.id}, Amount: {amount}, Order ID: {order_id}")
@@ -586,10 +494,12 @@ def initiate_payment(request):
 
     cf = Cashfree()
 
+
+
     customer = CustomerDetails(
         customer_id=f"user_{user.id}",
         customer_email=user.email,
-        customer_phone="9999999999"
+        customer_phone= user.phone
     )
 
     order_meta = OrderMeta(
@@ -614,10 +524,11 @@ def initiate_payment(request):
 
     if response.status_code == 200 and response.data.payment_session_id:
         print(f"[PAYMENT SESSION] Payment session created: {response.data.payment_session_id}")
-        return Response({'paymentSessionId': response.data.payment_session_id, 'orderId': order_id})
+        return Response(create_response(True, 'Payment session created', {'paymentSessionId': response.data.payment_session_id, 'orderId': order_id}))
+        # return Response({'paymentSessionId': response.data.payment_session_id, 'orderId': order_id})
     else:
         print("[ERROR] Payment initiation failed.")
-        return Response({'error': 'Payment initiation failed.'}, status=400)
+        return Response(create_response(False, 'Payment initiation failed', None), status=400)
 
 
 @csrf_exempt
@@ -662,17 +573,19 @@ def cashfree_webhook(request):
             user=user,
             status=txn_status,
             comment="Wallet Top-Up",
-            cashfree_payment_id=payment_id,
-            payment_mode=payment_mode
+            cf_response = data.get('data', {}),
+            credited_amount = Decimal(amount)*Decimal('0.8')
         )
 
         print(f"[WEBHOOK] Transaction created: {transaction.txn_id} with status: {transaction.status}")
 
         if txn_status == Transaction.Status.SUCCESS:
+            print("TXN SUCCESS")
             wallet, created = WalletBalance.objects.get_or_create(user=user)
-            credited_amount = transaction.amount
+            credited_amount = Decimal(transaction.amount)*Decimal('0.8')
             wallet.balance += credited_amount
             wallet.save()
+            print("SAVED")
 
             print(f"[WEBHOOK] Wallet updated. Amount credited: {credited_amount}")
         else:
@@ -685,7 +598,8 @@ def cashfree_webhook(request):
 
     except CustomUser.DoesNotExist:
         print("[ERROR] User not found for cached payment.")
-        return JsonResponse({'error': 'User not found.'}, status=404)
+        return Response(create_response(False, 'User not found', None), status=404)
+        # return JsonResponse({'error': 'User not found.'}, status=404)
 
 
 
@@ -701,11 +615,11 @@ def verify_payment(request):
 
         return Response({
             'status': txn.status,
-            # 'payment_mode': txn.payment_mode,
-            # 'cashfree_payment_id': txn.cashfree_payment_id
+            'payment_mode': txn.cf_response['payment']['payment_group'],
+            'cashfree_payment_id': txn.txn_id
         })
     except Transaction.DoesNotExist:
         print("[VERIFY PAYMENT] Transaction not found.")
-        return Response({'status': 'not_found'}, status=404)
+        return Response(create_response(False, 'Payment not found', None), status=404)
 
         

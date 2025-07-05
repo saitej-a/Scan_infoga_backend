@@ -17,7 +17,7 @@ from .models import UserSession, CustomUser, Bookmark
 # from .models import CustomUser
 from user_agents import parse
 from django.utils import timezone
-from core.utils import create_response
+from core.utils import create_response, paginate_queryset
 from google.oauth2 import id_token
 from google.auth.transport import requests
 from django.conf import settings
@@ -659,17 +659,9 @@ def loginUser(request):
         "latitude": clientinfo.get('latitude', '0'),
         "longitude": clientinfo.get('longitude', '0'),
         "subscriptionPlan": user.subscription_plan,
-        "subscriptionDate": user.subscription_date
+        "subscriptionDate": user.subscription_date,
+        "phone": user.phone,
     }
-
-    # UserSession.objects.create(
-    #     user    = user,
-    #     ipAddress = clientinfo.get('ip') or request.META.get('REMOTE_ADDR'),
-    #     device    = clientinfo.get('device', 'Unknown'),
-    #     browser   = clientinfo.get('browser', 'Unknown'),
-    #     latitude  = clientinfo.get('latitude', '0'),
-    #     longitude = clientinfo.get('longitude', '0'),
-    # )
 
     UserSession.objects.create(
         user=user,
@@ -1147,23 +1139,43 @@ def get_user_location_map(request):
             ),
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+# @api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+# def get_user_session(request):
+#     token = get_token_from_header(request)
+#     user = get_user_from_token(token)
+
+#     session_list = UserSession.objects.filter(user=user)
+#     serialized = UserSessionSerializer(session_list, many=True)
+
+#     return Response(
+#         create_response(
+#             status=True,
+#             message="User sessions fetched successfully",
+#             data=serialized.data
+#         ),
+#         status=status.HTTP_200_OK
+#     )
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_user_session(request):
     token = get_token_from_header(request)
     user = get_user_from_token(token)
 
-    session_list = UserSession.objects.filter(user=user)
-    serialized = UserSessionSerializer(session_list, many=True)
+    queryset = UserSession.objects.filter(user=user).order_by('-created_at')
+
+    paginated_data = paginate_queryset(request, queryset, UserSessionSerializer)
 
     return Response(
         create_response(
             status=True,
             message="User sessions fetched successfully",
-            data=serialized.data
+            data=paginated_data
         ),
         status=status.HTTP_200_OK
     )
+
 
 
 @api_view(['GET'])
@@ -1390,3 +1402,17 @@ def update_bookmark_status(request):
     bookmark.save()
 
     return Response(create_response(True, 'Bookmark status updated successfully', None), status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def update_phone(request):
+    token = get_token_from_header(request)
+    user = get_user_from_token(token)
+    phone = request.data.get('phone')
+    if not phone:
+        return Response(create_response(False, 'Phone number is required', None), status=status.HTTP_400_BAD_REQUEST)
+    
+    user.phone = phone
+    user.save()
+    return Response(create_response(True, 'Phone number updated successfully', None), status=status.HTTP_200_OK)

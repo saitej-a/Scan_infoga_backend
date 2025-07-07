@@ -369,7 +369,7 @@ def get_document_data_profile_advance(request):
                 }
                 return Response(create_response(True, "Data fetched from database", {'data':{'document_data':clean_doc_data}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
             except:
-                return Response(create_response(True,'Data fetched from database', {'data':{'document_data':[]}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+                return Response(create_response(True,'Data fetched from database', {'data':{'document_data':{}}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
 
 
     
@@ -402,7 +402,7 @@ def get_document_data_profile_advance(request):
                 return Response(create_response(True,'Data Fetched from external API',{'data':{'document_data':clean_doc_data}, 'datetime':datetime.datetime.now().isoformat() + "Z"}),status=status.HTTP_200_OK)
 
             except:
-                return Response(create_response(True,'Data Fetched from external API', {'data':{'document_data':[]}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+                return Response(create_response(True,'Data Fetched from external API', {'data':{'document_data':{}}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
 
 
         else:

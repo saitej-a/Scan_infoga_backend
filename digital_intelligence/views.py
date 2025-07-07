@@ -49,8 +49,13 @@ def get_alternate_mobile_numbers(request):
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 update_user_balance(user=user, amount=balance_after_deduction)
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
-            alt_numbers = serialized['result']['result']['alternate_phone']
-            return Response(create_response(True, "Data fetched from database", {'data':{'alternate_numbers':alt_numbers}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+            try:
+                alt_numbers = serialized['result']['result']['alternate_phone']
+                return Response(create_response(True, "Data fetched from database", {'data':{'alternate_numbers':alt_numbers}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+            
+            except:
+                return Response(create_response(True,'Data fetched from database', {'data':{'alternate_numbers':[]}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+
 
     
     try:
@@ -78,7 +83,7 @@ def get_alternate_mobile_numbers(request):
                 return Response(create_response(True,'Data Fetched from external API',{'data':{'alternate_numbers':alt_numbers}, 'datetime':datetime.datetime.now().isoformat() + "Z"}),status=status.HTTP_200_OK)
 
             except:
-                return Response(create_response(True,'Data Fetched from external API', {'data':{'alternate_numbers':'No Data Found'}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+                return Response(create_response(True,'Data Fetched from external API', {'data':{'alternate_numbers':[]}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
 
         else:
             log_user_activity(request=request, status=UserActivity.Status.FAILED)
@@ -122,9 +127,14 @@ def get_email(request):
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 update_user_balance(user=user, amount=balance_after_deduction)
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
-            alt_emails=serialized['result']['result']['email']
-            clean_email=[email['value'] for email in alt_emails]
-            return Response(create_response(True, "Data fetched from database", {'data':{'email':clean_email}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+            try:
+                alt_emails=serialized['result']['result']['email']
+                clean_email=[email['value'] for email in alt_emails]
+                return Response(create_response(True, "Data fetched from database", {'data':{'email':clean_email}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+            
+            except:
+                return Response(create_response(True,'Data fetched from database', {'data':{'email':[]}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+
 
 
     
@@ -154,7 +164,7 @@ def get_email(request):
                 return Response(create_response(True,'Data Fetched from external API',{'data':{'email':clean_email}, 'datetime':datetime.datetime.now().isoformat() + "Z"}),status=status.HTTP_200_OK)
 
             except:
-                return Response(create_response(True,'Data Fetched from external API', {'data':{'email':'No Data Found'}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+                return Response(create_response(True,'Data Fetched from external API', {'data':{'email':[]}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
 
 
         else:
@@ -198,8 +208,11 @@ def get_lpg_info(request):
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 update_user_balance(user=user, amount=balance_after_deduction)
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
-            lpg_info=serialized['result']['result']['lpg_info']['data']
-            return Response(create_response(True, "Data fetched from database", {'data':{'lpg_info':lpg_info}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+            try:
+                lpg_info=serialized['result']['result']['lpg_info']['data']
+                return Response(create_response(True, "Data fetched from database", {'data':{'lpg_info':lpg_info}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+            except:
+                return Response(create_response(True,'Data fetched from database', {'data':{'lpg_info':[]}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
 
 
     
@@ -227,7 +240,7 @@ def get_lpg_info(request):
                 return Response(create_response(True,'Data Fetched from external API',{'data':{'lpg_info':lpg_info}, 'datetime':datetime.datetime.now().isoformat() + "Z"}),status=status.HTTP_200_OK)
 
             except:
-                return Response(create_response(True,'Data Fetched from external API', {'data':{'lpg_info':'No Data Found'}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+                return Response(create_response(True,'Data Fetched from external API', {'data':{'lpg_info':[]}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
 
 
         else:
@@ -272,8 +285,11 @@ def get_address_profile_advance(request):
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 update_user_balance(user=user, amount=balance_after_deduction)
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
-            address = serialized['result']['result']['address']
-            return Response(create_response(True, "Data fetched from database", {'data':{'address':address}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+            try:
+                address = serialized['result']['result']['address']
+                return Response(create_response(True, "Data fetched from database", {'data':{'address':address}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+            except:
+                return Response(create_response(True,'Data fetched from database', {'data':{'address':[]}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
 
 
     
@@ -301,7 +317,7 @@ def get_address_profile_advance(request):
                 address =result_data['result']['address']
                 return Response(create_response(True,'Data Fetched from external API',{'data':{'address':address}, 'datetime':datetime.datetime.now().isoformat() + "Z"}),status=status.HTTP_200_OK)
             except:
-                return Response(create_response(True,'Data Fetched from external API', {'data':{'address':'No Data Found'}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+                return Response(create_response(True,'Data Fetched from external API', {'data':{'address':[]}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
 
         else:
             log_user_activity(request=request, status=UserActivity.Status.FAILED)
@@ -345,12 +361,15 @@ def get_document_data_profile_advance(request):
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 update_user_balance(user=user, amount=balance_after_deduction)
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
-            doc_data=serialized['result']['result']['document_data']
-            clean_doc_data = {
-                key: [entry["value"].strip() for entry in value_list]
-                for key, value_list in doc_data.items()
-            }
-            return Response(create_response(True, "Data fetched from database", {'data':{'document_data':clean_doc_data}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+            try:
+                doc_data=serialized['result']['result']['document_data']
+                clean_doc_data = {
+                    key: [entry["value"].strip() for entry in value_list]
+                    for key, value_list in doc_data.items()
+                }
+                return Response(create_response(True, "Data fetched from database", {'data':{'document_data':clean_doc_data}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+            except:
+                return Response(create_response(True,'Data fetched from database', {'data':{'document_data':[]}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
 
 
     
@@ -383,7 +402,7 @@ def get_document_data_profile_advance(request):
                 return Response(create_response(True,'Data Fetched from external API',{'data':{'document_data':clean_doc_data}, 'datetime':datetime.datetime.now().isoformat() + "Z"}),status=status.HTTP_200_OK)
 
             except:
-                return Response(create_response(True,'Data Fetched from external API', {'data':{'document_data':'No Data Found'}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+                return Response(create_response(True,'Data Fetched from external API', {'data':{'document_data':[]}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
 
 
         else:
@@ -427,8 +446,12 @@ def get_personal_information_profile_advance(request):
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 update_user_balance(user=user, amount=balance_after_deduction)
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
-            personal_info=serialized['result']['result']['personal_information']
-            return Response(create_response(True, "Data fetched from database", {'data':{'personal_information':personal_info}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+            try:
+                personal_info=serialized['result']['result']['personal_information']
+                return Response(create_response(True, "Data fetched from database", {'data':{'personal_information':personal_info}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+            except:
+                return Response(create_response(True,'Data fetched from database', {'data':{'personal_information':[]}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+
 
 
     
@@ -457,7 +480,7 @@ def get_personal_information_profile_advance(request):
                 return Response(create_response(True,'Data Fetched from external API',{'data':{'personal_information':personal_info}, 'datetime':datetime.datetime.now().isoformat() + "Z"}),status=status.HTTP_200_OK)
 
             except:
-                return Response(create_response(True,'Data Fetched from external API', {'data':{'personal_information':'No Data Found'}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+                return Response(create_response(True,'Data Fetched from external API', {'data':{'personal_information':[]}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
 
 
         else:
@@ -502,10 +525,13 @@ def mobile_to_gst_udyam_iec(request):
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 update_user_balance(user=user, amount=balance_after_deduction)
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
-            gst_list=serialized['result']['result']['key_highlights']['gst_numbers']
-            udyam_number=serialized['result']['result']['key_highlights']['udyam_numbers']
-            iec_number=serialized['result']['result']['key_highlights']['ie_codes']
-            return Response(create_response(True, "Data fetched from database", {'data':{'gst_list':gst_list, 'udyam_number':udyam_number, 'iec_number':iec_number}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+            try:
+                gst_list=serialized['result']['result']['key_highlights']['gst_numbers']
+                udyam_number=serialized['result']['result']['key_highlights']['udyam_numbers']
+                iec_number=serialized['result']['result']['key_highlights']['ie_codes']
+                return Response(create_response(True, "Data fetched from database", {'data':{'gst_list':gst_list, 'udyam_number':udyam_number, 'iec_number':iec_number}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+            except:
+                return Response(create_response(True,'Data fetched from database', {'data':{'gst_list':[], 'udyam_number':[], 'iec_number':[]}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
 
 
     
@@ -535,7 +561,7 @@ def mobile_to_gst_udyam_iec(request):
                 return Response(create_response(True,'Data Fetched from external API',{'data':{'gst_list':gst_list, 'udyam_number':udyam_number, 'iec_number':iec_number}, 'datetime':datetime.datetime.now().isoformat() + "Z"}),status=status.HTTP_200_OK)
 
             except:
-                return Response(create_response(True,'Data Fetched from external API', {'data':{'gst_list':'No Data Found', 'udyam_number':'No Data Found', 'iec_number':'No Data Found'}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+                return Response(create_response(True,'Data Fetched from external API', {'data':{'gst_list':[], 'udyam_number':[], 'iec_number':[]}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
 
         else:
             log_user_activity(request=request, status=UserActivity.Status.FAILED)
@@ -579,9 +605,12 @@ def mobile_to_uan_esic(request):
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 update_user_balance(user=user, amount=balance_after_deduction)
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
-            esic_list=serialized['result']['result']['key_highlights']['esic_number']
-            uan_list=serialized['result']['result']['key_highlights']['uan_numbers']
-            return Response(create_response(True, "Data fetched from database", {'data':{'esic_list':esic_list, 'uan_list':uan_list}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+            try:
+                esic_list=serialized['result']['result']['key_highlights']['esic_number']
+                uan_list=serialized['result']['result']['key_highlights']['uan_numbers']
+                return Response(create_response(True, "Data fetched from database", {'data':{'esic_list':esic_list, 'uan_list':uan_list}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+            except:
+                return Response(create_response(True,'Data fetched from database', {'data':{'esic_list':[], 'uan_list':[]}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)                
 
 
 
@@ -611,7 +640,7 @@ def mobile_to_uan_esic(request):
                 return Response(create_response(True,'Data Fetched from external API',{'data':{'esic_list':esic_list, 'uan_list':uan_list}, 'datetime':datetime.datetime.now().isoformat() + "Z"}),status=status.HTTP_200_OK)
 
             except:
-                return Response(create_response(True,'Data Fetched from external API', {'data':{'esic_list':'No Data Found', 'uan_list':'No Data Found'}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+                return Response(create_response(True,'Data Fetched from external API', {'data':{'esic_list':[], 'uan_list':[]}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
 
         else:
             log_user_activity(request=request, status=UserActivity.Status.FAILED)

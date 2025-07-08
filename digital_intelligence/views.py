@@ -51,7 +51,8 @@ def get_alternate_mobile_numbers(request):
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             try:
                 alt_numbers = serialized['result']['result']['alternate_phone']
-                return Response(create_response(True, "Data fetched from database", {'data':{'alternate_numbers':alt_numbers}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
+                cleaned_alt_numbers = [entry['value'] for entry in alt_numbers]
+                return Response(create_response(True, "Data fetched from database", {'data':{'alternate_numbers':cleaned_alt_numbers}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
             
             except:
                 return Response(create_response(True,'Data fetched from database', {'data':{'alternate_numbers':[]}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
@@ -80,7 +81,8 @@ def get_alternate_mobile_numbers(request):
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             try:
                 alt_numbers =result_data['result']['alternate_phone']
-                return Response(create_response(True,'Data Fetched from external API',{'data':{'alternate_numbers':alt_numbers}, 'datetime':datetime.datetime.now().isoformat() + "Z"}),status=status.HTTP_200_OK)
+                cleaned_alt_numbers = [entry['values'] for entry in alt_numbers]
+                return Response(create_response(True,'Data Fetched from external API',{'data':{'alternate_numbers':cleaned_alt_numbers}, 'datetime':datetime.datetime.now().isoformat() + "Z"}),status=status.HTTP_200_OK)
 
             except:
                 return Response(create_response(True,'Data Fetched from external API', {'data':{'alternate_numbers':[]}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)

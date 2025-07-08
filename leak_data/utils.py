@@ -58,6 +58,26 @@ def get_jobseeker_dynamodb_table(table_name=None):
 
     return dynamodb_resource.Table(table_name)
 
+def get_corporate_dataset_dynamodb_table(table_name=None):
+    if dynamodb_resource is None:
+        initialize_dynamodb_clients()
+        if dynamodb_resource is None:
+            raise Exception("DynamoDB resource is not initialized. Check AWS configuration.")
+    if table_name is None:
+        table_name = settings.DYNAMODB_CORPORATE_TABLE_NAME
+
+    return dynamodb_resource.Table(table_name)
+
+def get_zomato_dataset_dynamodb_table(table_name=None):
+    if dynamodb_resource is None:
+        initialize_dynamodb_clients()
+        if dynamodb_resource is None:
+            raise Exception("DynamoDB resource is not initialized. Check AWS configuration.")
+    if table_name is None:
+        table_name = settings.DYNAMODB_ZOMATO_TABLE_NAME
+
+    return dynamodb_resource.Table(table_name)
+
 def get_dynamodb_client():
     """Returns the low-level DynamoDB client."""
     if dynamodb_client is None:

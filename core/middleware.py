@@ -13,7 +13,7 @@ class GlobalExceptionMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        if not (request.path.startswith("/api/mobile/") or request.path.startswith("/api/digital-intelligence/") or request.path.startswith("/api/secondary/")):
+        if not (request.path.startswith("/api/mobile/") or request.path.startswith("/api/digital-intelligence/") or request.path.startswith("/api/secondary/") or request.path.startswith("/api/leak-data/")):
             print("Log called from middleware")
             print(request.path)
             self.log_user_activity(request)

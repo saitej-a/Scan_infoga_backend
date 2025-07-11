@@ -102,7 +102,7 @@ ALLOWED_HOSTS = ['172.31.27.231', '*', 'localhost']
 
 
 CORS_ALLOW_HEADERS = list(default_headers) + [
-    'clientinfo',  # ❗ add your custom header name here, lowercase
+    'clientinfo',  
 ]
 
 # JWT settings

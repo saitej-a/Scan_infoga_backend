@@ -32,7 +32,7 @@ async def login_with_base64_creds(encoded_creds: str) -> Tuple[bool, str]:
             if not oauth_token:
                 return False, "Invalid authentication data: oauth_token not found"
         except Exception as e:
-            return False, f"Failed to decode authentication data: {str(e)}"
+            return False, f"Failed to decode authentication data: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data."
         
         # Initialize HTTP client and GHunt credentials
         as_client = get_httpx_client()
@@ -53,7 +53,7 @@ async def login_with_base64_creds(encoded_creds: str) -> Tuple[bool, str]:
             print(f"[+] Master token services access: {', '.join(services)}")
         except Exception as e:
             await as_client.aclose()
-            return False, f"Authentication failed: {str(e)}"
+            return False, f"Authentication failed: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data."
         
         # Save the master token and generate cookies/OSIDs
         ghunt_creds.android.master_token = master_token

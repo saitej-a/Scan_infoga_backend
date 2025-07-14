@@ -24,7 +24,7 @@ def fetch_hudson_search_by_email(email):
             'data':data
         }
     
-    raise Exception(f"Error fetching data for email {email}. Status code: {response.status_code}")
+    raise Exception(f"Error fetching data for email {email}. Status code: {response.status_code}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")
 
 
 def fetch_hudson_search_by_ip(ip):
@@ -45,7 +45,7 @@ def fetch_hudson_search_by_ip(ip):
             'data':data
         }
     
-    raise Exception(f"Error fetching data for ip {ip}. Status code: {response.status_code}")  
+    raise Exception(f"Error fetching data for ip {ip}. Status code: {response.status_code}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")  
 
 def fetch_hudson_search_by_username(username):
     api_url = os.getenv("HUDSONROCK_SEARCH_BY_USERNAME_URL")
@@ -65,7 +65,7 @@ def fetch_hudson_search_by_username(username):
             'data':data
         }
     
-    raise Exception(f"Error fetching data for username {username}. Status code: {response.status_code}")  
+    raise Exception(f"Error fetching data for username {username}. Status code: {response.status_code}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")  
 
 
 def fetch_hudson_search_by_domain(domain):
@@ -84,4 +84,4 @@ def fetch_hudson_search_by_domain(domain):
             'data':data
         }
     
-    raise Exception(f"Error fetching data for domain {domain}. Status code: {response.status_code}")  
+    raise Exception(f"Error fetching data for domain {domain}. Status code: {response.status_code}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")  

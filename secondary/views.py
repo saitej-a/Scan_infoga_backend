@@ -33,7 +33,8 @@ def set_cookie(request):
         }, timeout=14400)   # 4 hours
         return Response(create_response(True, "Cookie saved successfully", None), status=200)
     except Exception as e:
-        return Response(create_response(False, str(e), None), status=500)
+        return Response(create_response(False, f"Unexpected Error: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None), status=500)
+        # return Response(create_response(False, str(e) , None), status=500)
 
 
 @api_view(['POST'])
@@ -54,7 +55,7 @@ def set_paynearby_credentials(request):
         }, timeout=14400)   # 4 hours
         return Response(create_response(True, "Credentials saved successfully", None), status=200)
     except Exception as e:
-        return Response(create_response(False, str(e), None), status=500)
+        return Response(create_response(False, f"Unexpected Error: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None), status=500)
 
 # @api_view(['POST'])
 # def payworld_data(request):
@@ -218,7 +219,7 @@ def payworld_data(request):
     except Exception as e:
         log_user_activity(request, UserActivity.Status.FAILED)
         return Response(
-            create_response(False, str(e), None),
+            create_response(False, f"Unexpected Error: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None),
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
@@ -299,7 +300,7 @@ def get_full_payworld_data(request):
     except Exception as e:
         log_user_activity(request, UserActivity.Status.FAILED)
         return Response(
-            create_response(False, str(e), None),
+            create_response(False, f"Unexpected Error: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None),
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
@@ -616,7 +617,7 @@ def razorpay_ifsc_data(request):
     except Exception as e:
         log_user_activity(request, UserActivity.Status.FAILED)
         return Response(
-            create_response(False, str(e), None),
+            create_response(False, f"Unexpected Error: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None),
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
@@ -697,7 +698,7 @@ def get_full_razorpay_ifsc_data(request):
     except Exception as e:
         log_user_activity(request, UserActivity.Status.FAILED)
         return Response(
-            create_response(False, str(e), None),
+            create_response(False, f"Unexpected Error: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None),
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
@@ -939,7 +940,7 @@ def paynearby_data(request):
     except Exception as e:
         log_user_activity(request, UserActivity.Status.FAILED)
         return Response(
-            create_response(False, str(e), None),
+            create_response(False, f"Unexpected Error: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None),
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
@@ -1016,7 +1017,7 @@ def get_full_paynearby_data(request):
     except Exception as e:
         log_user_activity(request, UserActivity.Status.FAILED)
         return Response(
-            create_response(False, str(e), None),
+            create_response(False, f"Unexpected Error: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None),
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 

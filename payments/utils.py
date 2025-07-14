@@ -12,9 +12,9 @@ def get_amount_after_api_call(user, api_name):
         wallet = WalletBalance.objects.get(user=user)
         api_pricing = ApiPricing.objects.get(api_name=api_name)
     except WalletBalance.DoesNotExist:
-        raise ValidationError("Wallet not found for user.")
+        raise ValidationError("Wallet not found for user." if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")
     except ApiPricing.DoesNotExist:
-        raise ValidationError(f"Pricing not found for API '{api_name}'.")
+        raise ValidationError(f"Pricing not found for API '{api_name}'." if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")
 
     balance = wallet.balance
     price = api_pricing.price

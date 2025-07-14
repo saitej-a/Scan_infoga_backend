@@ -64,7 +64,7 @@ def fetch_payworld_data(sender_mobile):
         if not cookie_obj or "cookie" not in cookie_obj:
             return {
                 "status": False,
-                "message": "Payworld session cookie not found in cache"
+                "message": "Payworld session cookie not found in cache" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error"
             }
 
         params = {
@@ -88,7 +88,7 @@ def fetch_payworld_data(sender_mobile):
         if response.status_code != 200:
             return {
                 "status": False,
-                "message": f"External API HTTP {response.status_code}"
+                "message": f"External API HTTP {response.status_code} error." if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error"
             }
 
         result = response.json()
@@ -103,7 +103,7 @@ def fetch_payworld_data(sender_mobile):
         if "data" not in result:
             return {
                 "status": False,
-                "message": "Data field missing in API response"
+                "message": "Data field missing in API response." if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error"
             }
 
         data = result["data"]
@@ -118,19 +118,19 @@ def fetch_payworld_data(sender_mobile):
         print("Error")
         return {
             "status": False,
-            "message": f"Request failed: {str(req_err)}"
+            "message": f"Request failed: {str(req_err)}." if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error"
         }
 
     except ValueError as json_err:
         return {
             "status": False,
-            "message": f"Invalid JSON response from Payworld: {json_err}"
+            "message": f"Invalid JSON response from Payworld: {json_err}." if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error"
         }
 
     except Exception as e:
         return {
             "status": False,
-            "message": f"Unexpected error: {str(e)}"
+            "message": f"Unexpected error: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data."
         }
 
 
@@ -158,7 +158,7 @@ def fetch_razorpay_ifsc_data(ifsc_code):
         }
 
     except Exception as e:
-        raise Exception(f"Failed to fetch data from Razorpay IFSC API: {str(e)}")
+        raise Exception(f"Failed to fetch data from Razorpay IFSC API: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.")
 
 def fetch_paynearby_data(mobile_number):
     """
@@ -239,7 +239,7 @@ def fetch_paynearby_data(mobile_number):
     except Exception as e:
         return {
             "status": False,
-            "message": f"Unexpected error: {str(e)}"
+            "message": f"Unexpected error: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data."
         }
 
         

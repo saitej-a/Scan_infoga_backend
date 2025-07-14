@@ -10,6 +10,7 @@ from typing import *
 import inspect
 import json
 from datetime import datetime, timezone
+import os
 
 
 class CalendarHttp(GAPI):
@@ -89,7 +90,7 @@ class CalendarHttp(GAPI):
         }
 
         if not params_templates.get(params_template):
-            raise GHuntParamsTemplateError(f"The asked template {params_template} for the endpoint {endpoint.name} wasn't recognized by GHunt.")
+            raise GHuntParamsTemplateError(f"The asked template {params_template} for the endpoint {endpoint.name} wasn't recognized by GHunt." if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")
 
         params = params_templates[params_template]
         if page_token:

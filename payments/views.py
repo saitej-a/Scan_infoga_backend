@@ -503,7 +503,7 @@ def initiate_payment(request):
     )
 
     order_meta = OrderMeta(
-        return_url=f"https://dev.scaninfoga.com/payment-success?order_id={order_id}",
+        return_url=f"https://scaninfoga.com/payment-success?order_id={order_id}",
         notify_url="https://backend.scaninfoga.com/api/payments/cashfree-webhook"
     )
 

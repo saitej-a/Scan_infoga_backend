@@ -12,6 +12,7 @@ from django.db.models.functions import Coalesce
 from .serializers import UserRegistrationSerializer, CorporateRegistrationSerializer, DeveloperRegistrationSerializer, UserSessionSerializer, UserListSerializer, BookmarkSerializer
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
+import os
 import hashlib
 from .models import UserSession, CustomUser, Bookmark
 # from .models import CustomUser
@@ -40,93 +41,6 @@ from payments.utils import create_wallet
 
 from payments.models import WalletBalance, Transaction
 from django.db.models import Sum, F, OuterRef, Subquery, DecimalField, Q, When, Case, Value
-
-# @api_view(['POST'])
-# def registerUser(request):
-#     serializer = UserRegistrationSerializer(data=request.data)
-#     if serializer.is_valid():
-#         user = serializer.save()
-#         # Generate secret key and QR code after user is created
-#         secret_key = pyotp.random_base32()
-#         user.otp_secret = secret_key
-#         user.save()
-
-#         # create wallet for user after user is created 
-#         # and by default add 2000 credit
-#         create_wallet(user)
-        
-#         # Generate QR code
-#         qr_code = generate_qr_code(user.email, secret_key)
-        
-#         response_data = serializer.data
-#         response_data['qr_code'] = qr_code
-        
-#         return Response(
-#             create_response(
-#                 status=True,
-#                 message="User registered successfully. Please scan the QR code to setup 2FA.",
-#                 data=response_data
-#             ),
-#             status=status.HTTP_201_CREATED
-#         )
-#     return Response(
-#         create_response(
-#             status=False,
-#             message="Registration failed",
-#             data=serializer.errors
-#         ),
-#         status=status.HTTP_400_BAD_REQUEST
-#     )
-
-# @api_view(['POST'])
-# def registerUser(request):
-#     serializer = UserRegistrationSerializer(data=request.data)
-#     if serializer.is_valid():
-#         user = serializer.save()
-        
-#         # Generate secret key and QR code after user is created
-#         secret_key = pyotp.random_base32()
-#         user.otp_secret = secret_key
-#         user.save()
-
-#         # Generate OTP and save it to the OTP model
-#         otp_obj = OTP.objects.create(user=user)
-#         otp = otp_obj.generate_otp()  # OTP is now generated and stored hashed in DB
-        
-#         # Send OTP via Email
-#         context = {"otp": otp, "name": user.}
-#         email_sent = EmailService.send_email(template_name="otp_template", to_email=user.email, context=context)
-        
-#         if email_sent:
-#             response_data = serializer.data
-#             response_data['otp'] = otp  # Include the OTP in the response (for testing)
-            
-#             return Response(
-#                 create_response(
-#                     status=True,
-#                     message="User registered successfully. OTP sent to email.",
-#                     data=response_data
-#                 ),
-#                 status=status.HTTP_201_CREATED
-#             )
-#         else:
-#             return Response(
-#                 create_response(
-#                     status=False,
-#                     message="Failed to send OTP email",
-#                     data=None
-#                 ),
-#                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
-#             )
-#     return Response(
-#         create_response(
-#             status=False,
-#             message="Registration failed",
-#             data=serializer.errors
-#         ),
-#         status=status.HTTP_400_BAD_REQUEST
-#     )
-
 
 @api_view(['POST'])
 def registerUser(request):
@@ -323,162 +237,6 @@ def verify_password_reset_otp(request):
         create_response(True, "Password reset successful", {"qr_code": qr_code}),
         status=status.HTTP_200_OK
     )
-
-
-
-# def change_password(request):
-#     email = request.data.get("email")
-#     password = request.data.get("newPassword")
-
-#     if not email:
-#         return Response(
-#             create_response(False, "Email is required", None),
-#             status=status.HTTP_400_BAD_REQUEST
-#         )
-    
-#     user = CustomUser.objects.get(email=email)
-#     if not user:
-#         return Response(
-#             create_response(False, "User not found", None),
-#             status=status.HTTP_400_BAD_REQUEST
-#         )
-
-#     secret_key = pyotp.random_base32()
-#     otp = ''.join([str(random.randint(0, 9)) for _ in range(6)])
-#     otp_hash = hashlib.sha256(otp.encode()).hexdigest()
-
-
-#       # Save user data and otp in Redis
-#     cache.set(f"user_data_pass_reset:{email}", {
-#         "data": user_data,
-#         "secret": secret_key,
-#         "otp_hash": otp_hash,
-#         "timestamp": timezone.now().isoformat()
-#     }, timeout=3600)  # 60 minutes
-
-
-
-# @api_view(['POST'])
-# def verifyOTP(request):
-#     otp = request.data.get('otp')
-#     user_email = request.data.get('email')
-    
-#     # Get the user from the email
-#     try:
-#         user = User.objects.get(email=user_email)
-#     except User.DoesNotExist:
-#         return Response(
-#             create_response(
-#                 status=False,
-#                 message="User not found",
-#                 data=None
-#             ),
-#             status=status.HTTP_400_BAD_REQUEST
-#         )
-
-#     # Fetch the OTP from the database
-#     try:
-#         otp_obj = OTP.objects.filter(user=user).latest('created_at')
-#         if otp_obj.is_expired():
-#             return Response(
-#                 create_response(
-#                     status=False,
-#                     message="OTP expired",
-#                     data=None
-#                 ),
-#                 status=status.HTTP_400_BAD_REQUEST
-#             )
-#     except OTP.DoesNotExist:
-#         return Response(
-#             create_response(
-#                 status=False,
-#                 message="OTP not found",
-#                 data=None
-#             ),
-#             status=status.HTTP_400_BAD_REQUEST
-#         )
-
-#     # Hash the entered OTP and compare with stored hash
-#     otp_hash = hashlib.sha256(otp.encode()).hexdigest()
-#     send_welcome_email.delay(user_email="abhinav0427@gmail.com", name="Abhinav Srivastava")
-#     if otp_hash == otp_obj.otp_hash:
-#         qr_code = generate_qr_code(user.email, user.otp_secret)
-#         return Response(
-#             create_response(
-#                 status=True,
-#                 message="OTP verified successfully",
-#                 data={"qr_code": qr_code}
-#             ),
-#             status=status.HTTP_200_OK
-#         )
-#     else:
-#         return Response(
-#             create_response(
-#                 status=False,
-#                 message="Invalid OTP",
-#                 data=None
-#             ),
-#             status=status.HTTP_400_BAD_REQUEST
-#         )
-
-# @api_view(['POST'])
-# def resendOTP(request):
-#     user_email = request.data.get('email')
-    
-#     # Get the user from the email
-#     try:
-#         user = User.objects.get(email=user_email)
-#     except User.DoesNotExist:
-#         return Response(
-#             create_response(
-#                 status=False,
-#                 message="User not found",
-#                 data=None
-#             ),
-#             status=status.HTTP_400_BAD_REQUEST
-#         )
-
-#     # Fetch the latest OTP or create a new one
-#     otp_obj, created = OTP.objects.get_or_create(user=user)
-    
-#     if created:
-#         otp = otp_obj.generate_otp()  # Generate and save OTP if it's the first time
-#     else:
-#         if otp_obj.is_expired():
-#             otp = otp_obj.generate_otp()  # Generate a new OTP if expired
-#         else:
-#             return Response(
-#                 create_response(
-#                     status=False,
-#                     message="OTP is still valid, please wait until it expires",
-#                     data=None
-#                 ),
-#                 status=status.HTTP_400_BAD_REQUEST
-#             )
-
-#     # Send OTP via Email
-#     context = {"otp": otp}
-#     email_sent = EmailService.send_email("otp_email", user.email, from_email="no-reply@scaninfoga.com", context=context)
-    
-#     if email_sent:
-#         return Response(
-#             create_response(
-#                 status=True,
-#                 message="OTP resent successfully",
-#                 data=None
-#             ),
-#             status=status.HTTP_200_OK
-#         )
-#     else:
-#         return Response(
-#             create_response(
-#                 status=False,
-#                 message="Failed to resend OTP",
-#                 data=None
-#             ),
-#             status=status.HTTP_500_INTERNAL_SERVER_ERROR
-#         )
-
 
 @api_view(['POST'])
 def resendOTP(request):
@@ -756,9 +514,9 @@ def googleAuth(request):
 
         # Additional verification
         if idInfo['aud'] != settings.GOOGLE_OAUTH_CLIENT_ID:
-            raise ValueError('Invalid audience')
+            raise ValueError('Invalid audience' if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")
         if idInfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
-            raise ValueError('Invalid issuer')
+            raise ValueError('Invalid issuer' if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")
 
         email = idInfo['email']
         firstName = idInfo.get('given_name', '')
@@ -1177,7 +935,6 @@ def get_user_session(request):
     )
 
 
-
 @api_view(['GET'])
 def get_all_users(request):
     try:
@@ -1315,6 +1072,7 @@ def get_all_users(request):
         ),
         status=status.HTTP_200_OK
     )
+    
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_bookmark(request):
@@ -1374,7 +1132,7 @@ def delete_bookmark_by_id(request):
         return Response(create_response(False, 'Bookmark not found', None), status=status.HTTP_404_NOT_FOUND)
 
     except Exception as e:
-        return Response(create_response(False, f'An error occurred: {str(e)}', None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(create_response(False, f'An error occurred: {str(e)}' if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error deleting bookmark.", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(["POST"])

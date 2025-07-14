@@ -45,7 +45,7 @@ async def login_with_base64_creds(encoded_creds: str) -> Tuple[bool, str]:
             if not oauth_token:
                 raise GHuntAuthenticationError("Invalid authentication data: oauth_token not found")
         except Exception as e:
-            raise GHuntAuthenticationError(f"Failed to decode authentication data: {str(e)}")
+            raise GHuntAuthenticationError(f"Failed to decode authentication data: {str(e)}") if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data."
         
         as_client = get_httpx_client()
         ghunt_creds = GHuntCreds()
@@ -57,7 +57,7 @@ async def login_with_base64_creds(encoded_creds: str) -> Tuple[bool, str]:
             )
         except Exception as e:
             await as_client.aclose()
-            return False, f"Authentication failed: {str(e)}"
+            return False, f"Authentication failed: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data."
         
         ghunt_creds.android.master_token = master_token
         
@@ -67,16 +67,16 @@ async def login_with_base64_creds(encoded_creds: str) -> Tuple[bool, str]:
             await auth.gen_cookies_and_osids(as_client, ghunt_creds)
         except Exception as e:
             await as_client.aclose()
-            return False, f"Failed to generate cookies/OSIDs: {str(e)}"
+            return False, f"Failed to generate cookies/OSIDs: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data."
         
         try:
             ghunt_creds.save_creds()
         except Exception as e:
             await as_client.aclose()
-            return False, f"Failed to save credentials: {str(e)}"
+            return False, f"Failed to save credentials: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data."
         
         await as_client.aclose()
-        return True, "Authentication successful!"
+        return True, "Authentication successful!" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Success"
         
     except GHuntAuthenticationError as e:
         raise e

@@ -66,7 +66,7 @@ def fetch_and_store_payworld_data(sender_mobile, api_response):
 
     except Exception as e:
         import traceback
-        return {"status": False, "message": str(e), "traceback": traceback.format_exc()}
+        return {"status": False, "message": str(e) if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", "traceback": traceback.format_exc()}
 
 
 @shared_task
@@ -98,7 +98,7 @@ def fetch_and_store_razorpay_data(ifsc_code, api_response):
 
     except Exception as e:
         import traceback
-        return {"status": False, "message": str(e), "traceback": traceback.format_exc()}
+        return {"status": False, "message": str(e) if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", "traceback": traceback.format_exc()}
 
 
 @shared_task
@@ -130,7 +130,7 @@ def fetch_and_store_upi_to_account(upi_id, api_response):
 
     except Exception as e:
         import traceback
-        return {"status": False, "message": str(e), "traceback": traceback.format_exc()}
+        return {"status": False, "message": str(e) if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", "traceback": traceback.format_exc()}
 
 
 @shared_task
@@ -162,5 +162,5 @@ def fetch_and_store_paynearby_data(mobile_number, api_response):
 
     except Exception as e:
         import traceback
-        return {"status": False, "message": str(e), "traceback": traceback.format_exc()}
+        return {"status": False, "message": str(e) if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", "traceback": traceback.format_exc()}
         

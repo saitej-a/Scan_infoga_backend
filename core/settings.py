@@ -21,7 +21,7 @@ from dotenv import load_dotenv
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-load_dotenv()
+load_dotenv(override=True)
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 GHUNT_CREDS_PATH = os.path.join(BASE_DIR, 'secrets', 'creds.m')
@@ -31,10 +31,13 @@ GHUNT_CREDS_PATH = os.path.join(BASE_DIR, 'secrets', 'creds.m')
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-yyr!ycnt3t8(cgrz3vydwxv%^e9=p-nd8d1oypmk75q2^whoty'
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
+
+
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 # ALLOWED_HOSTS = ['16.171.113.56', 'localhost', '127.0.0.1']
 
 
@@ -70,20 +73,15 @@ INSTALLED_APPS += EXTERNAL_APPS
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
-    'django.middleware.common.CommonMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  # ✅ must be early
+    'django.middleware.common.CommonMiddleware',  # ✅ move here
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'core.middleware.GlobalLoggingMiddleware',  # Add this line
+    'core.middleware.GlobalLoggingMiddleware',
 ]
 
-EXTERNAL_MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
-]
-
-MIDDLEWARE += EXTERNAL_MIDDLEWARE
 
 
 LOGGING = {
@@ -136,8 +134,24 @@ DYNAMODB_CORPORATE_TABLE_NAME = os.environ.get('AWS_DYNAMODB_CORPORATE_TABLE_NAM
 DYNAMODB_ZOMATO_TABLE_NAME=os.environ.get('AWS_DYNAMODB_ZOMATO_TABLE_NAME')
 
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = True  # Set to True only in development
-ALLOWED_HOSTS = ['172.31.27.231', '*', 'localhost']
+CORS_ALLOW_ALL_ORIGINS = False  # Set to True only in development
+CORS_ALLOWED_ORIGINS = os.getenv("DJANGO_CORS_ALLOWED_ORIGINS", "").split(",")
+print("DJANGO_CORS_ALLOWED_ORIGINS =", os.getenv("DJANGO_CORS_ALLOWED_ORIGINS", "NOT SET"))
+ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "").split(",")
+
+import re
+from django.http import HttpRequest
+
+_original_get_host = HttpRequest.get_host
+
+def patched_get_host(self):
+    host = _original_get_host(self)
+    if re.match(r"^10\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?$", host):
+        return host
+    return host
+
+HttpRequest.get_host = patched_get_host
+
 
 
 CORS_ALLOW_HEADERS = list(default_headers) + [
@@ -181,6 +195,8 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'core.wsgi.application'
+
+print("DB PASS: ", os.getenv("DB_PASSWORD"))
 
 DATABASES = {
     'default': {

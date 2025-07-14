@@ -4,7 +4,7 @@ from datetime import datetime
 def transform_api_response(api_data, mobile_number):
     """Transform API response to match our expected format"""
     if not isinstance(api_data, dict):
-        raise ValueError("API data must be a dictionary")
+        raise ValueError("API data must be a dictionary" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")
         
     # Create a copy to avoid modifying the original data
     transformed_data = api_data.copy()
@@ -28,7 +28,8 @@ def transform_api_response(api_data, mobile_number):
 def prepare_client_response(api_data, mobile_number=None):
     """Prepare the response for the client"""
     if not isinstance(api_data, dict):
-        raise ValueError("API data must be a dictionary")
+        raise ValueError("API data must be a dictionary" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")
+
         
     return {
         "mobileNumber": mobile_number or api_data.get('mobile_number'),

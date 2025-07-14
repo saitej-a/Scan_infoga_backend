@@ -41,7 +41,7 @@ def fetch_mobile360_data(mobile_number):
             'success': True,
             'data': client_response
         }
-    raise Exception(response.json()['message'] or 'Unexpected Error')
+    raise Exception((response.json()['message'] or 'Unexpected Error') if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")
 
 def fetch_uan_history_data(uan_no):
     """
@@ -84,7 +84,7 @@ def fetch_uan_history_data(uan_no):
     except Exception as e:
         return {
             'success': False,
-            'error': f"Unexpected error: {str(e)}"
+            'error': f"Unexpected error: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data."
         }
 
 ################### UAN Employment History ###################
@@ -145,7 +145,7 @@ def fetch_uan_employment_data(uan_no):
     except Exception as e:
         return {
             'success': False,
-            'error': f"Unexpected error: {str(e)}"
+            'error': f"Unexpected error: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data."
         }
         
 ##################### ESIC ##################
@@ -177,7 +177,7 @@ def fetch_esic_data(mobile_number):
             'success': True,
             'data': data
         }
-    raise Exception(response.json()['message'] or 'Unexpected Error')
+    raise Exception((response.json()['message'] or 'Unexpected Error') if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")
     
 
 ##################### GST Advance ##################
@@ -460,7 +460,7 @@ def get_uan_dtls_without_otp(uan_no):
     except Exception as e:
         return {
             'success': False,
-            'error': f"Unexpected error: {str(e)}"
+            'error': f"Unexpected error: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data."
         }
 
 def fetch_mobile_to_dl_data(mobile_number, name, dob):
@@ -914,7 +914,7 @@ async def fetch_digital_payment_data_async(session, api_url, headers, payload, m
                 'success': False,
                 'upi_handle': upi_handle,
                 'platform': platform,
-                'error': f"Error getting the data from API: {str(e)}",
+                'error': f"Error getting the data from API: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.",
                 'billable': False
             }
         }
@@ -1033,7 +1033,7 @@ def fetch_leak_osint_data(request_body):
         print("Response: ", response.json())
         if response.status_code==200:
             if(data.get('Status') == 'Error'):
-                raise Exception(data.get('Error code') or 'External API Error')
+                raise Exception((data.get('Error code') or 'External API Error') if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")
             return {
             'success': True,
                 'data': data
@@ -1041,7 +1041,7 @@ def fetch_leak_osint_data(request_body):
         raise Exception(response.json()['message'] or 'External API Error')
     except requests.exceptions.RequestException as e:
         print("Error: ", e)
-        raise Exception("External API Error")
+        raise Exception("External API Error" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")
 
 def fetch_hunter_verify_data(email):
     """Fetch hunter verify details for the mobile number"""

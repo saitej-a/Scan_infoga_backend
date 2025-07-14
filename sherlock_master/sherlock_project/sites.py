@@ -134,7 +134,7 @@ class SitesInformation:
                 site_data = response.json()
             except Exception as error:
                 raise ValueError(
-                    f"Problem parsing json contents at '{data_file_path}':  {error}."
+                    f"Problem parsing json contents at '{data_file_path}':  {error}." if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data."
                 )
 
         else:
@@ -145,7 +145,7 @@ class SitesInformation:
                         site_data = json.load(file)
                     except Exception as error:
                         raise ValueError(
-                            f"Problem parsing json contents at '{data_file_path}':  {error}."
+                            f"Problem parsing json contents at '{data_file_path}':  {error}." if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data."
                         )
 
             except FileNotFoundError:

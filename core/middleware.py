@@ -94,6 +94,11 @@ from custom_auth.models import CustomUser as User
 from user_activities.models import UserActivity
 from .utils import create_response
 
+from dotenv import load_dotenv
+
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
+load_dotenv()
+
 logger = logging.getLogger("django.request")
 MAX_BODY_LENGTH = 1000  # Limit large body logs
 
@@ -101,8 +106,16 @@ class GlobalLoggingMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
 
+    
     def __call__(self, request):
         request.start_time = time.time()
+
+        # Enforce allowed origin / referer
+        if not self.is_allowed_request(request):
+            return JsonResponse(
+                {"detail": "Forbidden: requests must originate from scaninfoga.com"},
+                status=403
+            )
 
         # Always log request (basic info, no body)
         self.log_request(request)
@@ -121,7 +134,7 @@ class GlobalLoggingMiddleware:
             return JsonResponse(
                 create_response(
                     status=False,
-                    message=str(e),
+                    message=str(e) if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Some error occured. Please contact support",
                     data=None
                 ),
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -131,6 +144,91 @@ class GlobalLoggingMiddleware:
         self.log_response(request, response)
 
         return response
+
+    
+    # def is_allowed_request(self, request):
+    #     """
+    #     Only allow requests from `https://scaninfoga.com` based on Origin or Referer.
+    #     Block requests with no headers (like curl/Postman by default).
+    #     """
+    #     allowed_origin = "https://scaninfoga.com"
+    #     origin = request.headers.get("Origin", "")
+    #     referer = request.headers.get("Referer", "")
+
+    #     # Debug logging can help during rollout
+    #     logger.info(f"Origin: {origin} | Referer: {referer}")
+
+    #     # If either Origin or Referer present but not allowed → block
+    #     if origin and not origin.startswith(allowed_origin):
+    #         return False
+
+    #     if referer and not referer.startswith(allowed_origin):
+    #         return False
+
+    #     # If neither present → block (curl, Postman, scripts)
+    #     if not origin and not referer:
+    #         return False
+
+    #     return True
+
+    def is_allowed_request(self, request):
+        allowed_origin = "https://scaninfoga.com"
+        origin = request.headers.get("Origin", "")
+        referer = request.headers.get("Referer", "")
+
+        # Allow webhook paths explicitly
+        webhook_paths = [
+            "/api/payments/cashfree-webhook",
+        ]
+
+        if request.path in webhook_paths:
+            return True
+
+        # Normal origin checks for all other requests
+        if origin and not origin.startswith(allowed_origin):
+            return False
+
+        if referer and not referer.startswith(allowed_origin):
+            return False
+
+        if not origin and not referer:
+            return False
+
+        return True
+
+
+
+
+    # def __call__(self, request):
+    #     request.start_time = time.time()
+
+    #     # Always log request (basic info, no body)
+    #     self.log_request(request)
+
+    #     if not (
+    #         request.path.startswith("/api/mobile/") or
+    #         request.path.startswith("/api/digital-intelligence/") or
+    #         request.path.startswith("/api/secondary/")
+    #     ):
+    #         self.log_user_activity(request)
+
+    #     try:
+    #         response = self.get_response(request)
+    #     except Exception as e:
+    #         logger.exception(f"[EXCEPTION] {request.method} {request.get_full_path()}: {str(e)}")
+    #         return JsonResponse(
+    #             create_response(
+    #                 status=False,
+    #                 message=str(e) if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Some error occured. Please contact support",
+    #                 data=None
+    #             ),
+    #             status=status.HTTP_500_INTERNAL_SERVER_ERROR
+    #         )
+
+    #     # Conditionally log response
+    #     self.log_response(request, response)
+
+    #     return response
 
     def log_request(self, request):
         query_params = dict(request.GET)
@@ -203,4 +301,5 @@ class GlobalLoggingMiddleware:
                 logger.warning(f"User not found from token for path {request.path}, skipping UserActivity log")
 
         except Exception as e:
+            # log_user_activity(request, UserActivity.Status.FAILED)
             logger.error(f"Exception in log_user_activity: {str(e)}", exc_info=True)

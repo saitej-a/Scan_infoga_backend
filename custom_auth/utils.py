@@ -26,18 +26,20 @@ def fetch_route(starting_point_lng, starting_point_lat, ending_point_lng, ending
         try:
             return response.json()
         except json.JSONDecodeError as e:
-            raise Exception(f"Error parsing JSON {e}")
+            raise Exception(f"Error parsing JSON {e}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")
     else:
-        raise Exception(f"API request failed with status code: {response.status_code} and response text: {response.text}")
+        raise Exception(f"API request failed with status code: {response.status_code} and response text: {response.text}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")
+
 
 def extract_route_coordinates(route_data):
     try:
         if not route_data or 'routes' not in route_data:
-            raise ValueError('Invalid route data structure - no routes found')
+            raise ValueError('Invalid route data structure - no routes found' if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")
         if not route_data['routes'] or not route_data['routes'][0]['legs']:
-            raise ValueError('Invalid route data structure - no legs found')
+            raise ValueError('Invalid route data structure - no legs found' if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")
         if not route_data['routes'][0]['legs'][0]['steps']:
-            raise ValueError('Invalid route data structure - no steps found')
+            raise ValueError('Invalid route data structure - no steps found' if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")
+
         
         steps = route_data['routes'][0]['legs'][0]['steps']
         coordinates = []
@@ -54,15 +56,16 @@ def extract_route_coordinates(route_data):
 
         return '|'.join(coordinates)
     except Exception as e:
-        print(f"Error extracting coordinates: {e}")
+        # Log the exception (you can use logging here)
+        logger.error(f"Error extracting coordinates: {e}")
         return None
 
 def extract_start_end_coordinates(route_data):
     try:
         if not route_data or 'routes' not in route_data:
-            raise ValueError('Invalid route data structure - no routes found')
+            raise ValueError('Invalid route data structure - no routes found' if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")
         if not route_data['routes'] or not route_data['routes'][0]['legs']:
-            raise ValueError('Invalid route data structure - no legs found')
+            raise ValueError('Invalid route data structure - no legs found' if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")
         
         leg = route_data['routes'][0]['legs'][0]
         start_lng = leg['start_location']['lng']
@@ -72,7 +75,8 @@ def extract_start_end_coordinates(route_data):
 
         return f"{start_lng},{start_lat}|{end_lng},{end_lat}"
     except Exception as e:
-        print(f"Error extracting start/end coordinates: {e}")
+        # Log the exception (you can use logging here)
+        logger.error(f"Error extracting start/end coordinates: {e}")
         return None
     
 def fetch_address_lat_and_lng(address):
@@ -91,9 +95,9 @@ def fetch_address_lat_and_lng(address):
         try:
             return response.json()
         except json.JSONDecodeError as e:
-            raise Exception(f"Error parsing JSON {e}")
+            raise Exception(f"Error parsing JSON {e}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")
     else:
-        raise Exception(f"API request failed with  status code: {response.status_code} and response text: {response.text}")
+        raise Exception(f"API request failed with status code: {response.status_code} and response text: {response.text}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")
     
 def extract_total_duration(route_data):
     try:
@@ -121,7 +125,9 @@ def extract_total_duration(route_data):
             'seconds': seconds,
         }
     except Exception as e:
-        raise Exception(f"Error extracting total distance: {e}")
+        # Log the exception (you can use logging here)
+        logger.error(f"Error extracting total duration: {e}")
+        raise Exception(f"Error extracting total duration: {e}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")
 
 
 def extract_total_distance(route_data):
@@ -137,7 +143,7 @@ def extract_total_distance(route_data):
             'distance_miles': distance_miles,
         }
     except Exception as e:
-        raise Exception(f"Error extracting total distance: {e}")
+        raise Exception(f"Error extracting total distance: {e}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "PRODUCTION")
 
 
 def fetch_map(starting_point_lng, starting_point_lat, address):
@@ -162,7 +168,7 @@ def fetch_map(starting_point_lng, starting_point_lat, address):
 
     path = extract_route_coordinates(route_data)
     if path is None:
-        raise Exception('Invalid route data structure.')
+        raise Exception('Invalid route data structure.' if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")
     
     headers = {
         'Content-Type': 'application/json',
@@ -192,7 +198,8 @@ def fetch_map(starting_point_lng, starting_point_lat, address):
                 
         }
     else:
-        raise Exception(f'API request failed with status code: {response.status_code}')
+        raise Exception(f'API request failed with status code: {response.status_code}' if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")
+
     
 
 def fetch_location_map(lat, lng):
@@ -227,5 +234,4 @@ def fetch_location_map(lat, lng):
                 
         }
     else:
-        raise Exception(f'API request failed with status code: {response.status_code}')
-        
+        raise Exception(f'API request failed with status code: {response.status_code}' if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")

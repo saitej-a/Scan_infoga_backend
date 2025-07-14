@@ -1,6 +1,7 @@
 from holehe_tool.localuseragent import ua
 import random
 import string
+import os
 import requests  # Adjust if using a different HTTP library
 
 async def facebook(email, client, out):
@@ -21,7 +22,7 @@ async def facebook(email, client, out):
     try:
         response = await client.get("https://www.facebook.com/accounts/emailsignup/", headers=headers)
         if response.status_code == 404:
-            raise Exception("Endpoint not found")
+            raise Exception("Endpoint not found" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")
 
         # Extract CSRF token from the response
         token = response.text.split('{"config":{"csrf_token":"')[1].split('"')[0]

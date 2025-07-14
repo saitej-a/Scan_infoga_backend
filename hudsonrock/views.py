@@ -56,7 +56,7 @@ def save_hudson_data(request):
         return Response(
             create_response(
                 status=False,
-                message=str(e),
+                message=str(e) if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.",
                 data=None
             ),
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -114,7 +114,7 @@ def get_hudson_data(request):
         return Response(
             create_response(
                 status=False,
-                message=str(e),
+                message=str(e) if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.",
                 data=None
             ),
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -179,7 +179,7 @@ def search_by_email(request):
         return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
     except Exception as e:
         log_user_activity(request, UserActivity.Status.FAILED)
-        return Response(create_response(False, str(e), None), status=status.HTTP_404_NOT_FOUND)
+        return Response(create_response(False, str(e) if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None), status=status.HTTP_404_NOT_FOUND)
 
 
 # @api_view(['POST'])
@@ -275,7 +275,7 @@ def search_by_ip(request):
 
     except Exception as e:
         log_user_activity(request, UserActivity.Status.FAILED)
-        return Response(create_response(False, str(e), None), status=status.HTTP_404_NOT_FOUND)
+        return Response(create_response(False, str(e) if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None), status=status.HTTP_404_NOT_FOUND)
 
 
 # @api_view(['POST'])
@@ -370,7 +370,7 @@ def search_by_username(request):
 
     except Exception as e:
         log_user_activity(request, UserActivity.Status.FAILED)
-        return Response(create_response(False, str(e), None), status=status.HTTP_404_NOT_FOUND)
+        return Response(create_response(False, str(e) if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None), status=status.HTTP_404_NOT_FOUND)
 
 
 # @api_view(['POST'])
@@ -464,7 +464,7 @@ def search_by_domain(request):
 
     except Exception as e:
         log_user_activity(request, UserActivity.Status.FAILED)
-        return Response(create_response(False, str(e), None), status=status.HTTP_404_NOT_FOUND)
+        return Response(create_response(False, str(e) if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None), status=status.HTTP_404_NOT_FOUND)
 
 
 # @api_view(['POST'])

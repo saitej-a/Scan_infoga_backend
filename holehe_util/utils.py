@@ -25,7 +25,7 @@ async def check_email_on_sites(email, timeout=10, only_used=False, no_password_r
     """
     # Validate email format
     if not is_email(email):
-        raise ValueError("Invalid email format")
+        raise ValueError("Invalid email format" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")
     
     # Create a class to mimic args for get_functions
     class Args:

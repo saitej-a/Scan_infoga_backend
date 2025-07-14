@@ -301,7 +301,7 @@ def sherlock(
                 elif request_method == "PUT":
                     request = session.put
                 else:
-                    raise RuntimeError(f"Unsupported request_method for {url}")
+                    raise RuntimeError(f"Unsupported request_method for {url}." if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")
 
             if request_payload is not None:
                 request_payload = interpolate_string(request_payload, username)
@@ -475,7 +475,7 @@ def sherlock(
         else:
             # It should be impossible to ever get here...
             raise ValueError(
-                f"Unknown Error Type '{error_type}' for " f"site '{social_network}'"
+                f"Unknown Error Type '{error_type}' for " f"site '{social_network}'." if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error"
             )
 
         if dump_response:
@@ -549,7 +549,7 @@ def timeout_check(value):
 
     if float_value <= 0:
         raise ArgumentTypeError(
-            f"Invalid timeout value: {value}. Timeout must be a positive number."
+            f"Invalid timeout value: {value}. Timeout must be a positive number." if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error"
         )
 
     return float_value

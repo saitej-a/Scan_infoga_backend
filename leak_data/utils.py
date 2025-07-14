@@ -40,7 +40,7 @@ def get_leaked_credentials_dynamodb_table(table_name=None):
     if dynamodb_resource is None:
         initialize_dynamodb_clients()
         if dynamodb_resource is None:
-            raise Exception("DynamoDB resource is not initialized. Check AWS configuration.")
+            raise Exception("DynamoDB resource is not initialized. Check AWS configuration." if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")
 
     if table_name is None:
         table_name = settings.DYNAMODB_LEAKED_TABLE_NAME
@@ -51,7 +51,8 @@ def get_jobseeker_dynamodb_table(table_name=None):
     if dynamodb_resource is None:
         initialize_dynamodb_clients()
         if dynamodb_resource is None:
-            raise Exception("DynamoDB resource is not initialized. Check AWS configuration.")
+            raise Exception("DynamoDB resource is not initialized. Check AWS configuration." if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")
+
 
     if table_name is None:
         table_name = settings.DYNAMODB_JOBSEEKER_TABLE_NAME
@@ -62,7 +63,8 @@ def get_corporate_dataset_dynamodb_table(table_name=None):
     if dynamodb_resource is None:
         initialize_dynamodb_clients()
         if dynamodb_resource is None:
-            raise Exception("DynamoDB resource is not initialized. Check AWS configuration.")
+            raise Exception("DynamoDB resource is not initialized. Check AWS configuration." if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")
+
     if table_name is None:
         table_name = settings.DYNAMODB_CORPORATE_TABLE_NAME
 
@@ -72,7 +74,7 @@ def get_zomato_dataset_dynamodb_table(table_name=None):
     if dynamodb_resource is None:
         initialize_dynamodb_clients()
         if dynamodb_resource is None:
-            raise Exception("DynamoDB resource is not initialized. Check AWS configuration.")
+            raise Exception("DynamoDB resource is not initialized. Check AWS configuration." if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")
     if table_name is None:
         table_name = settings.DYNAMODB_ZOMATO_TABLE_NAME
 
@@ -83,5 +85,5 @@ def get_dynamodb_client():
     if dynamodb_client is None:
         initialize_dynamodb_clients()
         if dynamodb_client is None:
-            raise Exception("DynamoDB client is not initialized. Check AWS configuration.")
+            raise Exception("DynamoDB client is not initialized. Check AWS configuration." if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")
     return dynamodb_client

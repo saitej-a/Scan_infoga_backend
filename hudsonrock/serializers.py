@@ -9,7 +9,7 @@ class HudsonRockDataSerializer(serializers.ModelSerializer):
     def validate_data_type(self, value):
         valid_types = ['email', 'domain']  # Add other valid types
         if value not in valid_types:
-            raise serializers.ValidationError(f"Invalid data type. Must be one of {valid_types}")
+            raise serializers.ValidationError(f"Invalid data type. Must be one of {valid_types}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Internal server error")
         return value
 
 class SearchByEmailSerializer(serializers.ModelSerializer):

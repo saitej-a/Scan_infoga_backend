@@ -214,7 +214,8 @@ def mobile_360_search(request):
         
     except Exception as e:
         log_user_activity(request, UserActivity.Status.FAILED)
-        return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(create_response(False, f"Unexpected error: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 # New API to get mobile number call count
@@ -257,7 +258,7 @@ def mobile_360_call_count(request):
             
     except Exception as e:
         return Response(
-            create_response(False, f"Unexpected error: {str(e)}", None), 
+            create_response(False, f"Unexpected error: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None), 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
@@ -400,7 +401,7 @@ def uan_history_search(request):
             results.append({
                 "uan": uan_no,
                 "source": "external_api",
-                "error": f"Unexpected error: {str(e)}"
+                "error": f"Unexpected error: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data."
             })
 
     overall_status = status.HTTP_200_OK
@@ -538,7 +539,7 @@ def uan_employment_search(request):
             results.append({
                 "uan": uan,
                 "source": "api",
-                "error": f"Unexpected error: {str(e)}"
+                "error": f"Unexpected error: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data."
             })
 
     overall_status = status.HTTP_200_OK
@@ -652,7 +653,8 @@ def esic_search(request):
 
     except Exception as e:
         log_user_activity(request=request, status=UserActivity.Status.FAILED)
-        return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(create_response(False, f"Unexpected error: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 # @api_view(["POST"])
@@ -757,7 +759,8 @@ def gst_verification_search(request):
 
     except Exception as e:
         log_user_activity(request=request, status=UserActivity.Status.FAILED)
-        return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(create_response(False, f"Unexpected error: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 # @api_view(["POST"])
@@ -865,7 +868,8 @@ def gst_turnover_search(request):
 
     except Exception as e:
         log_user_activity(request=request, status=UserActivity.Status.FAILED)
-        return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(create_response(False, f"Unexpected error: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 # @api_view(["POST"])
@@ -971,11 +975,11 @@ def udyam_verification_search(request):
 
         else:
             log_user_activity(request=request, status=UserActivity.Status.FAILED)
-            return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
+            return Response(create_response(False, "External API did not respond or returned an error." if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     except Exception as e:
         log_user_activity(request=request, status=UserActivity.Status.FAILED)
-        return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(create_response(False, f"Unexpected error: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # @api_view(["POST"])
@@ -1082,11 +1086,11 @@ def profile_advance_search(request):
 
         else:
             log_user_activity(request=request, status=UserActivity.Status.FAILED)
-            return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
+            return Response(create_response(False, "External API did not respond or returned an error." if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     except Exception as e:
         log_user_activity(request=request, status=UserActivity.Status.FAILED)
-        return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(create_response(False, f"Unexpected error: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # @api_view(["POST"])
@@ -1201,11 +1205,11 @@ def equifax_v3_search(request):
 
         else:
             log_user_activity(request=request, status=UserActivity.Status.FAILED)
-            return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
+            return Response(create_response(False, "External API did not respond or returned an error." if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     except Exception as e:
         log_user_activity(request=request, status=UserActivity.Status.FAILED)
-        return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(create_response(False, f"Unexpected error: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 
@@ -1307,11 +1311,11 @@ def get_acc_dtls_from_mobile(request):
 
         else:
             log_user_activity(request=request, status=UserActivity.Status.FAILED)
-            return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
+            return Response(create_response(False, "External API did not respond or returned an error." if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     except Exception as e:
         log_user_activity(request=request, status=UserActivity.Status.FAILED)
-        return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(create_response(False, f"Unexpected error: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # @api_view(["POST"])
@@ -1559,7 +1563,8 @@ def mobile_to_dl_lookup(request):
 
     except Exception as e:
         log_user_activity(request=request, status=UserActivity.Status.FAILED)
-        return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(create_response(False, f"Unexpected error: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
     
 # @api_view(["POST"])
@@ -1669,11 +1674,11 @@ def pan_all_in_one(request):
 
         else:
             log_user_activity(request=request, status=UserActivity.Status.FAILED)
-            return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
+            return Response(create_response(False, "External API did not respond or returned an error." if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None), status=status.HTTP_404_NOT_FOUND)
 
     except Exception as e:
         log_user_activity(request=request, status=UserActivity.Status.FAILED)
-        return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(create_response(False, f"Unexpected error: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # @api_view(["POST"])
 # @permission_classes([IsAuthenticated])
@@ -1847,7 +1852,8 @@ def digital_payment_analyser(request):
 
     except Exception as e:
         log_user_activity(request=request, status=UserActivity.Status.FAILED)
-        return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(create_response(False, f"Unexpected error: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 # @api_view(["POST"])
@@ -1940,7 +1946,8 @@ def leak_osint(request):
 
     except Exception as e:
         log_user_activity(request=request, status=UserActivity.Status.FAILED)
-        return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(create_response(False, f"Unexpected error: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 # @api_view(["POST"])
@@ -2024,7 +2031,8 @@ def hunter_verify(request):
 
     except Exception as e:
         log_user_activity(request=request, status=UserActivity.Status.FAILED)
-        return Response(create_response(False, f"Unxpected Error: {str(e)}", None), status=status.HTTP_404_NOT_FOUND)
+        return Response(create_response(False, f"Unxpected Error: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None), status=status.HTTP_404_NOT_FOUND)
+
 
 # @api_view(["POST"])
 # @permission_classes([IsAuthenticated])
@@ -2107,7 +2115,8 @@ def hunter_find(request):
 
     except Exception as e:
         log_user_activity(request=request, status=UserActivity.Status.FAILED)
-        return Response(create_response(False, f"Unxpected Error: {str(e)}", None), status=status.HTTP_404_NOT_FOUND)
+        return Response(create_response(False, f"Unxpected Error: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None), status=status.HTTP_404_NOT_FOUND)
+
 
 from django.shortcuts import render
 from core.services.email_service import EmailService  # Import the email service
@@ -2237,7 +2246,7 @@ def upi_to_account_data(request):
     except Exception as e:
         log_user_activity(request, UserActivity.Status.FAILED)
         return Response(
-            create_response(False, f"Unexpected Error: {str(e)}", None),
+            create_response(False, f"Unexpected Error: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None),
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
@@ -2320,7 +2329,7 @@ def upi_to_account_full_data(request):
     except Exception as e:
         log_user_activity(request, UserActivity.Status.FAILED)
         return Response(
-            create_response(False, str(e), None),
+            create_response(False, f"Unexpected Error: {str(e)}" if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error fetching data.", None),
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 

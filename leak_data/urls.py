@@ -8,4 +8,5 @@ urlpatterns = [
     path('get-corporate', views.get_corporate_data, name='get-corporate-data'),
     path('get-zomato', views.get_zomato_data, name='get-zomato-data'),
     path('get-cbse', views.get_cbse_data, name='get-cbse-data'),
+    path('get-olx', views.get_olx_data, name='get-olx-data'),
 ]

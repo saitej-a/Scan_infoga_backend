@@ -83,67 +83,6 @@ from core.tasks import (
     fetch_and_store_upi_to_account,
 )
 
-
-# @api_view(["POST"])
-# @permission_classes([IsAuthenticated])
-# def mobile_360_search(request):
-#     token = get_token_from_header(request)
-#     user = get_user_from_token(token)
-#     mobile_number = request.data.get("mobile_number")
-#     realtime_data = request.data.get("realtimeData", False)
-
-#     if not mobile_number:
-#         return Response(create_response(False, "mobile_number is required", None), status=status.HTTP_400_BAD_REQUEST)
-
-#     payload = request.data
-#     is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
-
-#     # Try fetching from cache/database if realtime is not requested
-#     if not realtime_data:
-#         report = Mobile360Report.objects.filter(mobile_number=mobile_number).first()
-#         if report:
-#             # Deduct balance if first time call
-#             if not is_called:
-#                 balance_after_deduction = get_amount_after_api_call(api_name="mobile360", user=user)
-#                 if balance_after_deduction < 0.0:
-#                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
-#                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
-#                 print("UPDATING")
-#                 update_user_balance(user=user, amount=balance_after_deduction)
-
-#             serialized = Mobile360ReportSerializer(report).data
-#             log_user_activity(request, UserActivity.Status.SUCCESS)
-#             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
-
-#     try:
-#         # Balance check and deduction only if realtime call or new fetch
-#         if realtime_data or not report:
-#             balance_after_deduction = get_amount_after_api_call(api_name="mobile360", user=user)
-#             if balance_after_deduction < 0.0:
-#                 log_user_activity(request, UserActivity.Status.FAILED)
-#                 return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
-
-#         # Fetch from external API
-#         result_data = fetch_mobile360_data(mobile_number)
-
-#         # Save or update the report
-#         with transaction.atomic():
-#             Mobile360Report.objects.update_or_create(
-#                 mobile_number=mobile_number,
-#                 defaults={"result": result_data['data']}
-#             )
-
-#             # Deduct balance only for realtime or first time external call
-#             if realtime_data or not is_called:
-#                 update_user_balance(user=user, amount=balance_after_deduction)
-
-#         log_user_activity(request, UserActivity.Status.SUCCESS)
-#         return Response(create_response(True, "Data fetched from external API", result_data['data']), status=status.HTTP_200_OK)
-
-#     except Exception as e:
-#         log_user_activity(request, UserActivity.Status.FAILED)
-#         return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def mobile_360_search(request):
@@ -159,17 +98,19 @@ def mobile_360_search(request):
     is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
     
     # Try fetching from cache/database if realtime is not requested
+    api_name = "mobile360"
+
     if not realtime_data:
         report = Mobile360Report.objects.filter(mobile_number=mobile_number).first()
         if report:
             # Deduct balance if first time call
             if not is_called:
-                balance_after_deduction = get_amount_after_api_call(api_name="mobile360", user=user)
+                balance_after_deduction = get_amount_after_api_call(api_name=api_name, user=user)
                 if balance_after_deduction < 0.0:
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 print("UPDATING")
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name=api_name)
                 
             # Increment count on successful cached data fetch
             report.count += 1
@@ -183,7 +124,7 @@ def mobile_360_search(request):
         # Balance check and deduction only if realtime call or new fetch
         report = Mobile360Report.objects.filter(mobile_number=mobile_number).first()
         if realtime_data or not report:
-            balance_after_deduction = get_amount_after_api_call(api_name="mobile360", user=user)
+            balance_after_deduction = get_amount_after_api_call(api_name=api_name, user=user)
             if balance_after_deduction < 0.0:
                 log_user_activity(request, UserActivity.Status.FAILED)
                 return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
@@ -207,7 +148,7 @@ def mobile_360_search(request):
             
             # Deduct balance only for realtime or first time external call
             if realtime_data or not is_called:
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name=api_name)
         
         log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(create_response(True, "Data fetched from external API", result_data['data']), status=status.HTTP_200_OK)

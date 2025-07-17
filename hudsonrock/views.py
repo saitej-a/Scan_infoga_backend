@@ -145,7 +145,7 @@ def search_by_email(request):
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 print("UPDATING")
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="hudson_search_by_email")
 
             serialized = SearchByEmailSerializer(report).data
             log_user_activity(request, UserActivity.Status.SUCCESS)
@@ -172,7 +172,7 @@ def search_by_email(request):
             )
             
             print("UPdating user balance")
-            update_user_balance(user=user, amount=balance_after_deduction)
+            update_user_balance(user=user, amount=balance_after_deduction, api_name="hudson_search_by_email")
             print("Updated")
         
         log_user_activity(request, UserActivity.Status.SUCCESS)
@@ -238,7 +238,7 @@ def search_by_ip(request):
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 print("UPDATING")
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="hudson_search_by_ip")
 
             serialized = SearchByIPSerializer(report).data
             log_user_activity(request, UserActivity.Status.SUCCESS)
@@ -268,7 +268,7 @@ def search_by_ip(request):
 
             # Deduct balance only for realtime or first time external call
             if realtime_data or not is_called:
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="hudson_search_by_ip")
         
         log_user_activity(request, UserActivity.Status.SUCCESS)    
         return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
@@ -335,7 +335,7 @@ def search_by_username(request):
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 print("UPDATING")
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="husdone_search_by_username")
             
             serialized = SearchByUsernameSerializer(report).data
             log_user_activity(request, UserActivity.Status.SUCCESS)  
@@ -363,7 +363,7 @@ def search_by_username(request):
             )
             
             if realtime_data or not is_called:
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="husdone_search_by_username")
         
         log_user_activity(request, UserActivity.Status.SUCCESS)  
         return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
@@ -431,7 +431,7 @@ def search_by_domain(request):
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 print("UPDATING")
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="hudson_search_by_domain")
             
             serialized = SearchByDomainSerializer(report).data
             log_user_activity(request, UserActivity.Status.SUCCESS)
@@ -457,7 +457,7 @@ def search_by_domain(request):
             )
             
             if realtime_data or not is_called:
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="hudson_search_by_domain")
         
         log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)

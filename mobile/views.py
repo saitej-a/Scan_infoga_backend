@@ -304,7 +304,7 @@ def uan_history_search(request):
                     if balance_after_deduction < 0.0:
                         log_user_activity(request=request, status=UserActivity.Status.FAILED)
                         return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
-                    update_user_balance(user=user, amount=balance_after_deduction)
+                    update_user_balance(user=user, amount=balance_after_deduction,api_name="uan_history")
 
         if fetched_from_db and not realtime_data:
             continue  # Skip external API if fetched from DB and not requesting real-time data
@@ -323,7 +323,7 @@ def uan_history_search(request):
                         uan=uan_no,
                         defaults={"result": api_response["data"].get("result", {})}
                     )
-                    update_user_balance(user=user, amount=balance_after_deduction)
+                    update_user_balance(user=user, amount=balance_after_deduction,api_name="uan_history")
 
                 results.append({
                     "uan": uan_no,
@@ -442,7 +442,7 @@ def uan_employment_search(request):
                     if balance_after_deduction < 0.0:
                         log_user_activity(request=request, status=UserActivity.Status.FAILED)
                         return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
-                    update_user_balance(user=user, amount=balance_after_deduction)
+                    update_user_balance(user=user, amount=balance_after_deduction,api_name="uan_history_v2")
 
         if fetched_from_db and not realtime_data:
             continue  # Skip API if already fetched from DB and not requesting real-time data
@@ -461,7 +461,7 @@ def uan_employment_search(request):
                         uan=uan,
                         defaults={"result": api_response["data"].get("result", {})}
                     )
-                    update_user_balance(user=user, amount=balance_after_deduction)
+                    update_user_balance(user=user, amount=balance_after_deduction,api_name="uan_history_v2")
 
                 results.append({
                     "uan": uan,
@@ -562,7 +562,7 @@ def esic_search(request):
                 if balance_after_deduction < 0.0:
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="esic_details")
 
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
@@ -583,7 +583,7 @@ def esic_search(request):
                     esic_number=esic_number,
                     defaults={"result": result_data}
                 )
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="esic_details")
 
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
@@ -666,7 +666,7 @@ def gst_verification_search(request):
                 if balance_after_deduction < 0.0:
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="gst_advance")
 
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
@@ -688,7 +688,7 @@ def gst_verification_search(request):
                     gst_no=gst_no,
                     defaults={"result": result_data}
                 )
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="gst_advance")
 
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
@@ -773,7 +773,7 @@ def gst_turnover_search(request):
                 if balance_after_deduction < 0.0:
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction,api_name="gst_turnover")
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
 
@@ -795,7 +795,7 @@ def gst_turnover_search(request):
                     year=year,
                     defaults={"result": result_data}
                 )
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="gst_turnover")
 
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
@@ -883,7 +883,7 @@ def udyam_verification_search(request):
                 if balance_after_deduction < 0.0:
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="verify_udyam")
 
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
@@ -905,7 +905,7 @@ def udyam_verification_search(request):
                     registration_no=registration_no,
                     defaults={"result": result_data}
                 )
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="verify_udyam")
 
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
@@ -992,7 +992,8 @@ def profile_advance_search(request):
                 if balance_after_deduction < 0.0:
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="profile_advance")
+
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
 
@@ -1017,7 +1018,8 @@ def profile_advance_search(request):
                         mobile=mobile,
                         defaults={"result": result_data}
                     )
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="profile_advance")
+
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
 
@@ -1110,7 +1112,8 @@ def equifax_v3_search(request):
                 if balance_after_deduction < 0.0:
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="equifax_v3")
+
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
 
@@ -1136,7 +1139,8 @@ def equifax_v3_search(request):
                         "result": result_data
                     }
                 )
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="equifax_v3")
+
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
 
@@ -1220,7 +1224,8 @@ def get_acc_dtls_from_mobile(request):
                 if balance_after_deduction < 0.0:
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="mobile_to_account")
+
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
 
@@ -1241,7 +1246,8 @@ def get_acc_dtls_from_mobile(request):
                     mobile_number=mobile_number,
                     defaults={"result": result_data}
                 )
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="mobile_to_account")
+
 
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
@@ -1339,7 +1345,8 @@ def uan_passbook_without_otp(request):
                     if balance_after_deduction < 0.0:
                         log_user_activity(request=request, status=UserActivity.Status.FAILED)
                         return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
-                    update_user_balance(user=user, amount=balance_after_deduction)
+                    update_user_balance(user=user, amount=balance_after_deduction, api_name="uan_passbook_without_otp")
+
 
         if fetched_from_db and not realtime_data:
             continue  # Skip API if fetched from DB and no real-time requested
@@ -1358,7 +1365,8 @@ def uan_passbook_without_otp(request):
                         uan=uan,
                         defaults={"result": api_response["data"]}
                     )
-                    update_user_balance(user=user, amount=balance_after_deduction)
+                    update_user_balance(user=user, amount=balance_after_deduction, api_name="uan_passbook_without_otp")
+
 
                 results.append({
                     "uan": uan,
@@ -1467,7 +1475,8 @@ def mobile_to_dl_lookup(request):
                 if balance_after_deduction < 0.0:
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="mobile_to_dl")
+
 
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
@@ -1489,7 +1498,8 @@ def mobile_to_dl_lookup(request):
                     mobile_number=mobile_number,
                     defaults={"result": result_data}
                 )
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="mobile_to_dl")
+
 
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
@@ -1582,7 +1592,8 @@ def pan_all_in_one(request):
                 if balance_after_deduction < 0.0:
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="pan_all_in_one")
+
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
 
@@ -1603,7 +1614,8 @@ def pan_all_in_one(request):
                     pan_number=pan_number,
                     defaults={"result": result_data}
                 )
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="pan_all_in_one")
+
 
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from external API", result_data), status=status.HTTP_200_OK)
@@ -1753,7 +1765,7 @@ def digital_payment_analyser(request):
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name='digital_payment_id_analyzer')
 
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
@@ -1778,7 +1790,8 @@ def digital_payment_analyser(request):
                     mobile_number=mobile_number,
                     defaults={"result": api_response, "billable_count": billable_count}
                 )
-                update_user_balance(user=user, amount=wallet_obj.balance - billable_amount)
+                update_user_balance(user=user, amount=wallet_obj.balance - billable_amount, api_name='digital_payment_id_analyzer')
+
                 # update_user_balance(user=user, amount=balance_after_deduction)
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from external API", api_response), status=status.HTTP_200_OK)
@@ -1855,7 +1868,8 @@ def leak_osint(request):
                 if balance_after_deduction < 0.0:
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="breach_info")
+
 
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
@@ -1874,7 +1888,8 @@ def leak_osint(request):
                 request_body=request_body,
                 defaults={"result": api_response}
             )
-            update_user_balance(user=user, amount=balance_after_deduction)
+            update_user_balance(user=user, amount=balance_after_deduction, api_name="breach_info")
+
 
         log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
         return Response(create_response(True, "Data fetched from external API", api_response), status=status.HTTP_200_OK)
@@ -1939,7 +1954,8 @@ def hunter_verify(request):
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 print("Updating Balance")
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="hunterverify")
+
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             serialized = HunterVerifySerializer(report).data
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
@@ -1958,7 +1974,8 @@ def hunter_verify(request):
                 defaults={"result": api_response}
             )
             if realtime_data or not is_called:
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="hunterverify")
+
 
         log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
         return Response(create_response(True, "Data fetched from external API", api_response), status=status.HTTP_200_OK)
@@ -2021,7 +2038,8 @@ def hunter_find(request):
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 print("Updating Balance")
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="hunterfind")
+
 
             serialized = HunterFindSerializer(report).data
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
@@ -2042,7 +2060,8 @@ def hunter_find(request):
                 defaults={"result": api_response}
             )
             if realtime_data or not is_called:
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="hunterfind")
+
         log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
         return Response(create_response(True, "Data fetched from external API", api_response), status=status.HTTP_200_OK)
 
@@ -2102,7 +2121,8 @@ def upi_to_account_data(request):
                         log_user_activity(request=request, status=UserActivity.Status.FAILED)
                         return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                     print("UPDATING")
-                    update_user_balance(user=user, amount=balance_after_deduction)
+                    update_user_balance(user=user, amount=balance_after_deduction, api_name="upi_to_account_data")
+
 
                 latest_timestamp = list(latest_entry.keys())[0]
                 log_user_activity(request, UserActivity.Status.SUCCESS)
@@ -2138,7 +2158,8 @@ def upi_to_account_data(request):
                     )
                     
                     if realtime_data or not is_called:
-                        update_user_balance(user=user, amount=balance_after_deduction)
+                        update_user_balance(user=user, amount=balance_after_deduction, api_name="upi_to_account_data")
+
                 
                 log_user_activity(request, UserActivity.Status.SUCCESS)
                 return Response(
@@ -2162,7 +2183,8 @@ def upi_to_account_data(request):
         
         with transaction.atomic():
             if realtime_data or not is_called:
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="upi_to_account_data")
+
         
         log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(
@@ -2214,7 +2236,8 @@ def upi_to_account_full_data(request):
                 log_user_activity(request=request, status=UserActivity.Status.FAILED)
                 return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
             print("UPDATING")
-            update_user_balance(user=user, amount=balance_after_deduction)
+            update_user_balance(user=user, amount=balance_after_deduction, api_name="upi_to_account_full_data")
+
 
         log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(
@@ -2241,7 +2264,8 @@ def upi_to_account_full_data(request):
                     upi_id=upi_id,
                     defaults={"result": [data_dict]}
                 )
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="upi_to_account_full_data")
+
             
             log_user_activity(request, UserActivity.Status.SUCCESS)
             return Response(

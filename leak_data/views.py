@@ -185,7 +185,7 @@ def get_password(request):
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="leak_data_get_password")
 
 
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
@@ -246,7 +246,8 @@ def get_job_seeker_data(request):
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="leak_data_get_job_seeker_data")
+
 
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from Database.", response_data), status=status.HTTP_200_OK)
@@ -306,7 +307,8 @@ def get_corporate_data(request):
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="leak_data_get_corporate_data")
+
 
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from Database.", response_data), status=status.HTTP_200_OK)
@@ -365,7 +367,8 @@ def get_zomato_data(request):
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="leak_data_get_zomato_data")
+
 
 
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
@@ -425,7 +428,8 @@ def get_cbse_data(request):
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="leak_data_get_cbse_data")
+
 
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from Database.", response_data), status=status.HTTP_200_OK)
@@ -628,7 +632,8 @@ def get_olx_data(request):
                         status=status.HTTP_402_PAYMENT_REQUIRED
                     )
 
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="leak_data_get_olx_data")
+
 
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
 

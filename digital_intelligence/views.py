@@ -533,7 +533,8 @@ def mobile_to_gst_udyam_iec(request):
                 if balance_after_deduction<0.0:
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name='digital_intelligence_gst_udyam_iec')
+
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             try:
                 gst_list=serialized['result']['result']['key_highlights']['gst_numbers']
@@ -561,7 +562,8 @@ def mobile_to_gst_udyam_iec(request):
                     mobile_number=mobile_number,
                     defaults={'result':result_data}
                 )
-                update_user_balance(user=user,amount=balance_after_deduction)
+                update_user_balance(user=user,amount=balance_after_deduction, api_name='digital_intelligence_gst_udyam_iec')
+
             
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             try:
@@ -613,7 +615,8 @@ def mobile_to_uan_esic(request):
                 if balance_after_deduction<0.0:
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction,api_name='digital_intelligence_esic_uan')
+
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             try:
                 esic_list=serialized['result']['result']['key_highlights']['esic_number']
@@ -641,7 +644,8 @@ def mobile_to_uan_esic(request):
                     mobile_number=mobile_number,
                     defaults={'result':result_data}
                 )
-                update_user_balance(user=user,amount=balance_after_deduction)
+                update_user_balance(user=user,amount=balance_after_deduction, api_name='digital_intelligence_esic_uan')
+
             
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             try:

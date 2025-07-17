@@ -35,4 +35,5 @@ urlpatterns = [
     path('api/digital-intelligence/', include('digital_intelligence.urls')),
     path('api/holehe/', include('holehe_util.urls')),
     path('api/sherlock/', include('sherlock_util.urls')),
+    path('api/admin/', include('admin_app.urls')),
 ]

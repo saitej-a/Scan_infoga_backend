@@ -153,3 +153,76 @@ class BookmarkSerializer(serializers.ModelSerializer):
 
     def get_id(self, obj):
         return obj.formatted_id
+
+
+class UserSessionDataSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserSession
+        fields = [
+            'ipAddress',
+            'device',
+            'browser',
+            'latitude',
+            'longitude',
+            'userAgent',
+            'platform',
+            'language',
+            'cookiesEnabled',
+            'javascriptEnabled',
+            'touchSupport',
+            'deviceType',
+            'cpuCores',
+            'memory',
+            'screenSize',
+            'batteryLevel',
+            'isCharging',
+            'gpuRenderer',
+            'cameras',
+            'microphones',
+            'publicIp',
+            'isp',
+            'asn',
+            'city',
+            'country',
+            'possibleIoT',
+            'created_at'
+        ]
+
+class CustomUserSerializer(serializers.ModelSerializer):
+    firstName = serializers.SerializerMethodField()
+    lastName = serializers.SerializerMethodField()
+    sessionData = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CustomUser
+        fields = [
+            'email',
+            'firstName',
+            'lastName',
+            'user_type',
+            'date_joined',
+            'subscription_plan',
+            'subscription_date',
+            'phone',
+            'sessionData',
+        ]
+
+    def get_firstName(self, obj):
+        if obj.user_type == 'CORPORATE' and hasattr(obj, 'corporate_profile'):
+            return obj.corporate_profile.first_name
+        elif obj.user_type == 'DEVELOPER' and hasattr(obj, 'developer_profile'):
+            return obj.developer_profile.first_name
+        return obj.first_name or ''
+
+    def get_lastName(self, obj):
+        if obj.user_type == 'CORPORATE' and hasattr(obj, 'corporate_profile'):
+            return obj.corporate_profile.last_name
+        elif obj.user_type == 'DEVELOPER' and hasattr(obj, 'developer_profile'):
+            return obj.developer_profile.last_name
+        return obj.last_name or ''
+
+    def get_sessionData(self, obj):
+        oldest_session = UserSession.objects.filter(user=obj).order_by('created_at').first()
+        if oldest_session:
+            return UserSessionDataSerializer(oldest_session).data
+        return None

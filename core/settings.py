@@ -155,7 +155,7 @@ HttpRequest.get_host = patched_get_host
 
 
 CORS_ALLOW_HEADERS = list(default_headers) + [
-    'clientinfo',  # ❗ add your custom header name here, lowercase
+    'clientinfo',  
 ]
 
 # JWT settings

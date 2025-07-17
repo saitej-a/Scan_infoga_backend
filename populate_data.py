@@ -3,10 +3,10 @@ import django
 import datetime
 
 # Setup Django environment
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')  # Replace with your project name
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
-from hudsonrock.models import HudsonRockData  # Replace with your app name
+from hudsonrock.models import HudsonRockData
 
 # Sample data
 sample_data = {

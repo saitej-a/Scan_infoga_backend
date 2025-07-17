@@ -1,4 +1,4 @@
-from .models import WalletBalance, ApiPricing
+from .models import WalletBalance, ApiPricing, WalletHistory
 from decimal import Decimal
 from django.db import transaction
 from django.core.exceptions import ValidationError
@@ -24,12 +24,23 @@ def get_amount_after_api_call(user, api_name):
 
     return balance - price  # returns Decimal
 
-def update_user_balance(user, amount: Decimal):
+def update_user_balance(user, amount: Decimal, api_name: str):
     if amount < 0:
         raise ValidationError("Balance cannot be negative.")
+
+    api_pricing = ApiPricing.objects.get(api_name=api_name)
 
     with transaction.atomic():
         wallet = WalletBalance.objects.select_for_update().get(user=user)
         wallet.balance = amount
         wallet.save()
+
+        WalletHistory.objects.create(
+            user=user,
+            txn_type=WalletHistory.TxnType.DEBIT,
+            amount=api_pricing.price,
+            balance_after = wallet.balance,
+            comment=f"Debit for API {endpoint}",
+            api_pricing=api_pricing
+        )
 

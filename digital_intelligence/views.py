@@ -37,17 +37,17 @@ def get_alternate_mobile_numbers(request):
     
     print("Is called: ",is_called)
     
+    api_name='digital_intelligence_alternate_mobile_number'
     if not realtime_data:
         report = ProfileAdvanceReport.objects.filter(mobile=mobile_number).first()
         if report:
             serialized = ProfileAdvanceReportSerializer(report).data
-
             if not is_called:
-                balance_after_deduction = get_amount_after_api_call(api_name='digital_intelligence_alternate_mobile_number', user=user)
+                balance_after_deduction = get_amount_after_api_call(api_name=api_name, user=user)
                 if balance_after_deduction<0.0:
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name=api_name)
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             try:
                 alt_numbers = serialized['result']['result']['alternate_phone']
@@ -60,7 +60,7 @@ def get_alternate_mobile_numbers(request):
 
     
     try:
-        balance_after_deduction = get_amount_after_api_call(api_name='digital_intelligence_alternate_mobile_number', user=user)
+        balance_after_deduction = get_amount_after_api_call(api_name=api_name, user=user)
         if balance_after_deduction<0.0:
             log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
@@ -76,7 +76,8 @@ def get_alternate_mobile_numbers(request):
                         mobile=mobile_number,
                         defaults={'result':result_data}
                     )
-                update_user_balance(user=user,amount=balance_after_deduction)
+                update_user_balance(user=user,amount=balance_after_deduction, api_name=api_name)
+
             
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             try:
@@ -115,7 +116,7 @@ def get_email(request):
     payload = request.data
     is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
     
-    print("Is called: ",is_called)
+    api_name = 'digital_intelligence_email'
     
     if not realtime_data:
         report = ProfileAdvanceReport.objects.filter(mobile=mobile_number).first()
@@ -123,11 +124,12 @@ def get_email(request):
             serialized = ProfileAdvanceReportSerializer(report).data
 
             if not is_called:
-                balance_after_deduction = get_amount_after_api_call(api_name='digital_intelligence_email', user=user)
+                balance_after_deduction = get_amount_after_api_call(api_name=api_name, user=user)
                 if balance_after_deduction<0.0:
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name=api_name)
+
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             try:
                 alt_emails=serialized['result']['result']['email']
@@ -137,11 +139,9 @@ def get_email(request):
             except:
                 return Response(create_response(True,'Data fetched from database', {'data':{'email':[]}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
 
-
-
     
     try:
-        balance_after_deduction = get_amount_after_api_call(api_name='digital_intelligence_email', user=user)
+        balance_after_deduction = get_amount_after_api_call(api_name=api_name, user=user)
         if balance_after_deduction<0.0:
             log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
@@ -157,7 +157,7 @@ def get_email(request):
                         mobile=mobile_number,
                         defaults={'result':result_data}
                     )
-                update_user_balance(user=user,amount=balance_after_deduction)
+                update_user_balance(user=user,amount=balance_after_deduction, api_name=api_name)
             
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             try:
@@ -197,18 +197,19 @@ def get_lpg_info(request):
     is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
     
     print("Is called: ",is_called)
-    
+    api_name="digital_intelligence_lpg_info"
     if not realtime_data:
         report = Mobile360Report.objects.filter(mobile_number=mobile_number).first()
         if report:
             serialized = Mobile360ReportSerializer(report).data
 
             if not is_called:
-                balance_after_deduction = get_amount_after_api_call(api_name='digital_intelligence_lpg_info', user=user)
+                balance_after_deduction = get_amount_after_api_call(api_name=api_name, user=user)
                 if balance_after_deduction<0.0:
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name=api_name)
+
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             try:
                 lpg_info=serialized['result']['result']['lpg_info']['data']
@@ -219,7 +220,7 @@ def get_lpg_info(request):
 
     
     try:
-        balance_after_deduction = get_amount_after_api_call(api_name='digital_intelligence_lpg_info', user=user)
+        balance_after_deduction = get_amount_after_api_call(api_name=api_name, user=user)
         if balance_after_deduction<0.0:
             log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
@@ -234,7 +235,7 @@ def get_lpg_info(request):
                     mobile_number=mobile_number,
                     defaults={'result':result_data}
                 )
-                update_user_balance(user=user,amount=balance_after_deduction)
+                update_user_balance(user=user,amount=balance_after_deduction, api_name=api_name)
             
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             try:
@@ -274,18 +275,19 @@ def get_address_profile_advance(request):
     is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
     
     print("Is called: ",is_called)
-    
+    api_name="digital_intelligence_address_profile_advance"
+
     if not realtime_data:
         report = ProfileAdvanceReport.objects.filter(mobile=mobile_number).first()
         if report:
             serialized = ProfileAdvanceReportSerializer(report).data
 
             if not is_called:
-                balance_after_deduction = get_amount_after_api_call(api_name='digital_intelligence_address_profile_advance', user=user)
+                balance_after_deduction = get_amount_after_api_call(api_name=api_name, user=user)
                 if balance_after_deduction<0.0:
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name=api_name)
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             try:
                 address = serialized['result']['result']['address']
@@ -296,7 +298,7 @@ def get_address_profile_advance(request):
 
     
     try:
-        balance_after_deduction = get_amount_after_api_call(api_name='digital_intelligence_address_profile_advance', user=user)
+        balance_after_deduction = get_amount_after_api_call(api_name=api_name, user=user)
         if balance_after_deduction<0.0:
             log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
@@ -312,7 +314,8 @@ def get_address_profile_advance(request):
                         mobile=mobile_number,
                         defaults={'result':result_data}
                     )
-                update_user_balance(user=user,amount=balance_after_deduction)
+                update_user_balance(user=user,amount=balance_after_deduction, api_name=api_name)
+
             
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             try:
@@ -349,19 +352,20 @@ def get_document_data_profile_advance(request):
     payload = request.data
     is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
     
-    print("Is called: ",is_called)
-    
+    api_name="digital_intelligence_document_data_profile_advance"
+
     if not realtime_data:
         report = ProfileAdvanceReport.objects.filter(mobile=mobile_number).first()
         if report:
             serialized = ProfileAdvanceReportSerializer(report).data
-
+            
             if not is_called:
-                balance_after_deduction = get_amount_after_api_call(api_name='digital_intelligence_document_data_profile_advance', user=user)
+                balance_after_deduction = get_amount_after_api_call(api_name=api_name, user=user)
                 if balance_after_deduction<0.0:
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name=api_name)
+
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             try:
                 doc_data=serialized['result']['result']['document_data']
@@ -376,7 +380,7 @@ def get_document_data_profile_advance(request):
 
     
     try:
-        balance_after_deduction = get_amount_after_api_call(api_name='digital_intelligence_document_data_profile_advance', user=user)
+        balance_after_deduction = get_amount_after_api_call(api_name=api_name, user=user)
         if balance_after_deduction<0.0:
             log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
@@ -392,7 +396,7 @@ def get_document_data_profile_advance(request):
                         mobile=mobile_number,
                         defaults={'result':result_data}
                     )
-                update_user_balance(user=user,amount=balance_after_deduction)
+                update_user_balance(user=user,amount=balance_after_deduction, api_name=api_name)
             
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             try:
@@ -436,17 +440,21 @@ def get_personal_information_profile_advance(request):
     
     print("Is called: ",is_called)
     
+    api_name="digital_intelligence_personal_info_profile_advance"
+    
+
     if not realtime_data:
         report = ProfileAdvanceReport.objects.filter(mobile=mobile_number).first()
         if report:
             serialized = ProfileAdvanceReportSerializer(report).data
 
             if not is_called:
-                balance_after_deduction = get_amount_after_api_call(api_name='digital_intelligence_personal_info_profile_advance', user=user)
+                balance_after_deduction = get_amount_after_api_call(api_name=api_name, user=user)
                 if balance_after_deduction<0.0:
                     log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name=api_name)
+
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             try:
                 personal_info=serialized['result']['result']['personal_information']
@@ -458,7 +466,7 @@ def get_personal_information_profile_advance(request):
 
     
     try:
-        balance_after_deduction = get_amount_after_api_call(api_name='digital_intelligence_personal_info_profile_advance', user=user)
+        balance_after_deduction = get_amount_after_api_call(api_name=api_name, user=user)
         if balance_after_deduction<0.0:
             log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
@@ -474,7 +482,7 @@ def get_personal_information_profile_advance(request):
                         mobile=mobile_number,
                         defaults={'result':result_data}
                     )
-                update_user_balance(user=user,amount=balance_after_deduction)
+                update_user_balance(user=user,amount=balance_after_deduction, api_name=api_name)
             
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             try:

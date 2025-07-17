@@ -56,3 +56,24 @@ class SubscriptionHistory(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.api_name}"
+
+class WalletHistory(models.Model):
+    class TransactionType(models.TextChoices):
+        CREDIT = 'credit', 'Credit'
+        DEBIT = 'debit', 'Debit'
+
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='wallet_history')
+    wallet = models.ForeignKey(WalletBalance, on_delete=models.CASCADE, related_name='history')
+    txn_type = models.CharField(max_length=10, choices=TransactionType.choices, db_index=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    balance_after = models.DecimalField(max_digits=10, decimal_places=2)  # ⭐️ New field
+    comment = models.CharField(max_length=255, null=True, blank=True)
+
+    transaction = models.ForeignKey(Transaction, on_delete=models.SET_NULL, null=True, blank=True, related_name='wallet_history')
+    api_pricing = models.ForeignKey(ApiPricing, on_delete=models.SET_NULL, null=True, blank=True, related_name='wallet_history')
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.txn_type} - {self.amount}"
+

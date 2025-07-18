@@ -118,7 +118,7 @@ class UserSession(models.Model):
     gpuRenderer = models.TextField(blank=True, null=True)
     cameras = models.CharField(max_length=10, blank=True, null=True)
     microphones = models.CharField(max_length=10, blank=True, null=True)
-    publicIp = models.GenericIPAddressField(null=True, blank=True)
+    publicIp = models.CharField(null=True, blank=True)
     isp = models.CharField(max_length=200, blank=True, null=True)
     asn = models.CharField(max_length=50, blank=True, null=True)
     city = models.CharField(max_length=100, blank=True, null=True)
@@ -127,8 +127,6 @@ class UserSession(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.created_at}"
-
-
 
 class OTP(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)

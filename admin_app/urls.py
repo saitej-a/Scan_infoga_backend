@@ -7,5 +7,7 @@ urlpatterns = [
     path('get-login-history', views.get_login_history, name='get-login-history'),
     path('get-user-bookmark-list', views.get_bookmarks_by_user, name='get-bookmarks'),
     path('get-user-wallet-balance', views.get_user_wallet_balance, name='get-wallet-balance'),
+    path('wallet-update', views.wallet_update, name='wallet-update'),
+    path('get-user-activity', views.get_user_activity, name='get-user-activity'),
 
 ]

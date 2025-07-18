@@ -3,6 +3,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from decimal import Decimal
+from django.db import transaction
+import uuid
 
 from payments.models import (
     WalletHistory,
@@ -21,6 +23,10 @@ from custom_auth.serializers import (
     UserSessionDataSerializer,
     BookmarkSerializer
 )
+
+from user_activities.models import UserActivity
+
+from user_activities.serializers import UserActivitySerializer
 
 from payments.serializers import WalletHistorySerializer
 
@@ -229,7 +235,7 @@ def wallet_update(request):
     # Ensure wallet exists
     wallet, created = WalletBalance.objects.get_or_create(user=user)
 
-    with db_transaction.atomic():
+    with transaction.atomic():
         if txn_type == 'credit':
             wallet.balance += amount
         elif txn_type == 'debit':
@@ -324,3 +330,35 @@ def get_user_wallet_balance(request):
             ),
             status=status.HTTP_404_NOT_FOUND
         )
+
+
+@api_view(['GET'])
+# @permission_classes([IsAuthenticated])  # Uncomment if you want auth
+def get_user_activity(request):
+    user_id = request.query_params.get('user_id')
+    if not user_id:
+        return Response(
+            create_response(message="user_id is required", status=False),
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        user = CustomUser.objects.get(id=user_id)
+    except CustomUser.DoesNotExist:
+        return Response(
+            create_response(message="User not found", status=False),
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    queryset = UserActivity.objects.filter(email=user.email).order_by('-activity_time')
+
+    paginated_data = paginate_queryset(request, queryset, UserActivitySerializer)
+
+    return Response(
+        create_response(
+            status=True,
+            message="User activity retrieved successfully",
+            data=paginated_data
+        ),
+        status=status.HTTP_200_OK
+    )

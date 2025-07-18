@@ -2,14 +2,14 @@ from rest_framework.response import Response
 from rest_framework import status
 from botocore.exceptions import ClientError
 from boto3.dynamodb.conditions import Key
-
+import re
 
 from payments.utils import get_amount_after_api_call, update_user_balance
 from user_activities.models import UserActivity
 from user_activities.utils import is_called_by_user_previously, log_user_activity
 
-from .utils import get_cbse_dataset_dynamodb_table, get_corporate_dataset_dynamodb_table, get_leaked_credentials_dynamodb_table,get_jobseeker_dynamodb_table, get_olx_dataset_dynamodb_table, get_zomato_dataset_dynamodb_table
-from .serializers import DynamoDBItemSerializer, DynamoDBOLXItemSerializer
+from .utils import get_cbse_dataset_dynamodb_table, get_corporate_dataset_dynamodb_table, get_india_mart_dataset_dynamodb_table, get_leaked_credentials_dynamodb_table,get_jobseeker_dynamodb_table, get_olx_dataset_dynamodb_table, get_zomato_dataset_dynamodb_table
+from .serializers import DynamoDBItemSerializer, DynamoDBItemSerializer2
 from core.utils import create_response, get_token_from_header, get_user_from_token
 
 from rest_framework.decorators import api_view, permission_classes
@@ -191,7 +191,7 @@ def get_password(request):
             return Response(create_response(True, "Data fetched from Database.", response_data), status=status.HTTP_200_OK)
 
         else:
-            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(True, "Data not found in database.", None), status=status.HTTP_200_OK)
 
     except ClientError as e:
@@ -252,7 +252,7 @@ def get_job_seeker_data(request):
             return Response(create_response(True, "Data fetched from Database.", response_data), status=status.HTTP_200_OK)
 
         else:
-            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(True, "Data not found in database.", None), status=status.HTTP_200_OK)
 
     except ClientError as e:
@@ -313,7 +313,7 @@ def get_corporate_data(request):
             return Response(create_response(True, "Data fetched from Database.", response_data), status=status.HTTP_200_OK)
 
         else:
-            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(True, "Data not found in database.", None), status=status.HTTP_200_OK)
 
     except ClientError as e:
@@ -374,7 +374,7 @@ def get_zomato_data(request):
             return Response(create_response(True, "Data fetched from Database.", response_data), status=status.HTTP_200_OK)
 
         else:
-            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(True, "Data not found in database.", None), status=status.HTTP_200_OK)
 
     except ClientError as e:
@@ -393,6 +393,7 @@ def get_zomato_data(request):
 
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def get_cbse_data(request):
     mobno = request.data.get('mobile')
     if not mobno:
@@ -434,7 +435,7 @@ def get_cbse_data(request):
             return Response(create_response(True, "Data fetched from Database.", response_data), status=status.HTTP_200_OK)
 
         else:
-            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(True, "Data not found in database.", None), status=status.HTTP_200_OK)
     except ClientError as e:
         log_user_activity(request=request, status=UserActivity.Status.FAILED)
@@ -569,6 +570,7 @@ def get_cbse_data(request):
 
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def get_olx_data(request):
     mobno = request.data.get('mobile')
     if not mobno:
@@ -608,7 +610,7 @@ def get_olx_data(request):
         # print(items)
 
         if items:
-            serialized = DynamoDBOLXItemSerializer.serialize(items)
+            serialized = DynamoDBItemSerializer2.serialize(items)
             # Deduplicate by all fields except `id`
             unique_items = []
             seen = set()
@@ -641,10 +643,10 @@ def get_olx_data(request):
                 status=status.HTTP_200_OK
             )
         else:
-            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(
                 create_response(False, "Mobile number not found in the database.", None),
-                status=status.HTTP_404_NOT_FOUND
+                status=status.HTTP_200_OK
             )
 
     except ClientError as e:
@@ -665,4 +667,115 @@ def get_olx_data(request):
         return Response(
             create_response(False, f"An unexpected error occurred: {e}", None),
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def get_india_mart_data(request):
+    request_body = request.data.get('request_body')
+    if not request_body:
+        return Response(
+            create_response(False, "Request body is required.", None),
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    token = get_token_from_header(request)
+    user = get_user_from_token(token)
+    api_name = request.path
+    payload = request.data
+
+    is_called = is_called_by_user_previously(user=user, api_name=api_name, payload=payload)
+
+    input_str = str(request_body).strip()
+    email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    mobile_regex = r'^[6-9]\d{9}$'
+
+    table = get_india_mart_dataset_dynamodb_table()
+
+    try:
+        if re.match(email_regex, input_str):
+            query_field = 'email_id'
+            gsi_name = 'email_id-index'
+            key_value = input_str
+
+        elif re.match(mobile_regex, input_str):
+            response_mob = table.query(
+                IndexName='mobile_number-index',
+                KeyConditionExpression=Key('mobile_number').eq(input_str)
+            )
+            response_alt = table.query(
+                IndexName='alt_mobile_number-index',
+                KeyConditionExpression=Key('alt_mobile_number').eq(input_str)
+            )
+
+            items = response_mob.get('Items', []) + response_alt.get('Items', [])
+
+            return process_india_mart_results(
+                items, user, is_called, request,
+                not_found_msg="Mobile number not found in the database."
+            )
+
+        else:
+            return Response(
+                create_response(
+                    False,
+                    "Invalid input. Provide a valid email or 10-digit Indian mobile number.",
+                    {"value": input_str}
+                ),
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        response_email = table.query(
+            IndexName=gsi_name,
+            KeyConditionExpression=Key(query_field).eq(key_value)
+        )
+        items = response_email.get('Items', [])
+
+        return process_india_mart_results(
+            items, user, is_called, request,
+            not_found_msg="Email not found in the database."
+        )
+
+    except Exception as e:
+        log_user_activity(request=request, status=UserActivity.Status.FAILED)
+        return Response(
+            create_response(False, f"Server error: {str(e)}", None),
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+def process_india_mart_results(items, user, is_called, request, not_found_msg):
+    if items:
+        serialized = DynamoDBItemSerializer2.serialize(items)
+
+        unique_items = []
+        seen = set()
+        for item in serialized:
+            dedup_key = tuple((k, v) for k, v in item.items() if k != "id")
+            if dedup_key not in seen:
+                seen.add(dedup_key)
+                unique_items.append(item)
+
+        if not is_called:
+            balance_after = get_amount_after_api_call(api_name="leak_data_get_india_mart_data", user=user)
+            if balance_after < 0.0:
+                log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                return Response(
+                    create_response(False, "Insufficient balance.", None),
+                    status=status.HTTP_402_PAYMENT_REQUIRED
+                )
+            # update_user_balance(user=user, amount=balance_after, api_name="leak_data_get_india_mart_data")
+
+        log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+
+        return Response(
+            create_response(True, "Data fetched from the database.", unique_items),
+            status=status.HTTP_200_OK
+        )
+    else:
+        log_user_activity(request=request, status=UserActivity.Status.FAILED)
+        return Response(
+            create_response(False, not_found_msg, None),
+            status=status.HTTP_200_OK
         )

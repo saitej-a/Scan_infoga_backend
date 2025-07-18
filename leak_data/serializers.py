@@ -25,7 +25,7 @@ class DynamoDBItemSerializer(serializers.Serializer):
                 data[key] = str(value)
         return data
 
-class DynamoDBOLXItemSerializer:
+class DynamoDBItemSerializer2:
     """Simple serializer without DRF serializers"""
     @staticmethod
     def serialize(items):

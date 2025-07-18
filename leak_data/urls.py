@@ -9,4 +9,5 @@ urlpatterns = [
     path('get-zomato', views.get_zomato_data, name='get-zomato-data'),
     path('get-cbse', views.get_cbse_data, name='get-cbse-data'),
     path('get-olx', views.get_olx_data, name='get-olx-data'),
+    path('get-india-mart', views.get_india_mart_data, name='get-india-mart-data'),
 ]

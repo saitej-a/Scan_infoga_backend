@@ -24,6 +24,8 @@ from custom_auth.serializers import (
     BookmarkSerializer
 )
 
+# djb
+
 from user_activities.models import UserActivity
 
 from user_activities.serializers import UserActivitySerializer

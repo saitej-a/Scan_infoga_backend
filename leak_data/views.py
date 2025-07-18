@@ -765,7 +765,7 @@ def process_india_mart_results(items, user, is_called, request, not_found_msg):
                     create_response(False, "Insufficient balance.", None),
                     status=status.HTTP_402_PAYMENT_REQUIRED
                 )
-            # update_user_balance(user=user, amount=balance_after, api_name="leak_data_get_india_mart_data")
+            update_user_balance(user=user, amount=balance_after, api_name="leak_data_get_india_mart_data")
 
         log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
 

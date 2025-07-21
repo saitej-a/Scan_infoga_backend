@@ -1,6 +1,5 @@
 import datetime
 from django.shortcuts import render
-from re import T
 from rest_framework.response import Response
 from rest_framework import status
 from botocore.exceptions import ClientError

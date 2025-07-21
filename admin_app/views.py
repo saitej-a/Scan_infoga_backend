@@ -24,6 +24,8 @@ from custom_auth.serializers import (
     BookmarkSerializer
 )
 
+# djb
+
 from user_activities.models import UserActivity
 
 from user_activities.serializers import UserActivitySerializer
@@ -36,12 +38,36 @@ from core.utils import create_response, paginate_queryset
 
 # Create your views here.
 
+# @api_view(['GET'])
+# # @permission_classes([IsAuthenticated])
+# def wallet_history_list(request):
+#     user_id = request.query_params.get('user_id')
+#     if not user_id:
+#         return Response(create_response(message="user_id is required", status=False), status=status.HTTP_400_BAD_REQUEST)
+
+#     try:
+#         user = CustomUser.objects.get(id=user_id)
+#     except CustomUser.DoesNotExist:
+#         return Response(
+#             create_response(message="User not found", status=False),
+#             status=status.HTTP_404_NOT_FOUND
+#         )
+
+#     history = WalletHistory.objects.filter(user=user).order_by('-created_at').select_related('api_pricing')
+#     serializer = WalletHistorySerializer(history, many=True)
+#     return Response(create_response(data=serializer.data, message="Wallet history fetched successfully", status=True), status=status.HTTP_200_OK)
+
+
+
 @api_view(['GET'])
 # @permission_classes([IsAuthenticated])
 def wallet_history_list(request):
     user_id = request.query_params.get('user_id')
     if not user_id:
-        return Response(create_response(message="user_id is required", status=False), status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            create_response(message="user_id is required", status=False),
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
     try:
         user = CustomUser.objects.get(id=user_id)
@@ -51,9 +77,22 @@ def wallet_history_list(request):
             status=status.HTTP_404_NOT_FOUND
         )
 
-    history = WalletHistory.objects.filter(user=user).order_by('-created_at').select_related('api_pricing')
-    serializer = WalletHistorySerializer(history, many=True)
-    return Response(create_response(data=serializer.data, message="Wallet history fetched successfully", status=True), status=status.HTTP_200_OK)
+    queryset = WalletHistory.objects.filter(user=user).order_by('-created_at').select_related('api_pricing')
+
+    paginated_data = paginate_queryset(request, queryset, WalletHistorySerializer)
+
+    return Response(
+        create_response(
+            status=True,
+            message="Wallet history fetched successfully",
+            data=paginated_data
+        ),
+        status=status.HTTP_200_OK
+    )
+
+
+
+
 
 @api_view(['GET'])
 # @permission_classes([IsAuthenticated])
@@ -362,3 +401,99 @@ def get_user_activity(request):
         ),
         status=status.HTTP_200_OK
     )
+
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+
+from .models import Note
+from .serializers import NoteSerializer
+from custom_auth.models import CustomUser
+from core.utils import create_response  # Assuming this is where your helper is defined
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def user_note(request):
+    if request.method == 'GET':
+        user_id = request.query_params.get('user_id')
+        if not user_id:
+            return Response(
+                create_response(
+                    status=False,
+                    message="user_id is required",
+                    data=None
+                ),
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        try:
+            user = CustomUser.objects.get(pk=user_id)
+            note = Note.objects.get(user=user)
+            serializer = NoteSerializer(note)
+            return Response(
+                create_response(
+                    status=True,
+                    message="Note retrieved successfully",
+                    data=serializer.data
+                ),
+                status=status.HTTP_200_OK
+            )
+        except CustomUser.DoesNotExist:
+            return Response(
+                create_response(
+                    status=False,
+                    message="User not found",
+                    data=None
+                ),
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Note.DoesNotExist:
+            return Response(
+                create_response(
+                    status=False,
+                    message="Note not found",
+                    data=None
+                ),
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+    elif request.method == 'POST':
+        user_id = request.data.get('user_id')
+        note_text = request.data.get('note')
+
+        if not user_id or note_text is None:
+            return Response(
+                create_response(
+                    status=False,
+                    message="user_id and note are required",
+                    data=None
+                ),
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            user = CustomUser.objects.get(pk=user_id)
+        except CustomUser.DoesNotExist:
+            return Response(
+                create_response(
+                    status=False,
+                    message="User not found",
+                    data=None
+                ),
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        note_obj, created = Note.objects.get_or_create(user=user)
+        note_obj.note = note_text
+        note_obj.save()
+
+        serializer = NoteSerializer(note_obj)
+        return Response(
+            create_response(
+                status=True,
+                message="Note created" if created else "Note updated",
+                data=serializer.data
+            ),
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
+        )

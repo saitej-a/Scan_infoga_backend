@@ -620,7 +620,7 @@ def loginUser(request):
             status=status.HTTP_200_OK
         )
 
-    # Third step: Verify OTP and generate token
+    # # Third step: Verify OTP and generate token
     totp = pyotp.TOTP(user.otp_secret)
     if not totp.verify(otp):
         return Response(

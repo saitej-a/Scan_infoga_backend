@@ -9,5 +9,7 @@ urlpatterns = [
     path('get-user-wallet-balance', views.get_user_wallet_balance, name='get-wallet-balance'),
     path('wallet-update', views.wallet_update, name='wallet-update'),
     path('get-user-activity', views.get_user_activity, name='get-user-activity'),
+    path('user-note', views.user_note, name='user-note'),
+
 
 ]

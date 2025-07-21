@@ -3,7 +3,7 @@ name: Deploy to AWS EC2
 on:
   push:
     branches:
-      - test
+      - developement
 
 jobs:
   deploy:
@@ -36,7 +36,9 @@ jobs:
 
       - name: Create .env file on EC2
         run: |
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "echo '${{ secrets.ENV_FILE }}' > /home/ubuntu/back-app/.env"
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} \
+          "printf '%s\n' '${{ secrets.ENV_FILE }}' > /home/ubuntu/back-app/.env && printf '%s\n' '${{ secrets.ENV_FILE_1 }}' >> /home/ubuntu/back-app/.env"
+
 
       - name: Install dependencies and run migrations on EC2
         run: |

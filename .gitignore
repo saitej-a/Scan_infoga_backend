@@ -54,3 +54,12 @@ test_qr.py
 test_qr_code.png
 
 pgdata/
+
+
+__pycache__/
+*.pyc
+# Byte-compiled files
+__pycache__/
+*.pyc
+# Virtualenv
+venv/

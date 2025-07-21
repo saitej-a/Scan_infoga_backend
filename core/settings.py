@@ -63,7 +63,8 @@ EXTERNAL_APPS = [
     'digital_intelligence',
     'holehe_util',
     'sherlock_util',
-    'admin_app'
+    'admin_app',
+    'verify',
 ]
 
 INSTALLED_APPS += EXTERNAL_APPS

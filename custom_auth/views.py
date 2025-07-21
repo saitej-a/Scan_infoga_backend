@@ -146,6 +146,7 @@ def registerUser(request):
         # Generate secret and OTP
         secret_key = pyotp.random_base32()
         otp = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+        print("THIS IS OTP", otp)
         otp_hash = hashlib.sha256(otp.encode()).hexdigest()
 
         # Save user data and otp in Redis
@@ -512,14 +513,15 @@ def resendOTP(request):
     timestamp = timezone.datetime.fromisoformat(cached['timestamp'])
     elapsed = (timezone.now() - timestamp).total_seconds()
 
-    if elapsed < 300:  # Allow resend only if more than 5 minutes passed
-        return Response(
-            create_response(False, "OTP is still valid. Please wait before requesting a new OTP.", None),
-            status=status.HTTP_400_BAD_REQUEST
-        )
+    # if elapsed < 300:  # Allow resend only if more than 5 minutes passed
+    #     return Response(
+    #         create_response(False, "OTP is still valid. Please wait before requesting a new OTP.", None),
+    #         status=status.HTTP_400_BAD_REQUEST
+    #     )
 
     # Generate new OTP
     otp = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+    print("THIS IS NEW OTP", otp)
     otp_hash = hashlib.sha256(otp.encode()).hexdigest()
 
     cached['otp_hash'] = otp_hash

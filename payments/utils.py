@@ -37,11 +37,16 @@ def update_user_balance(user, amount: Decimal, api_name: str):
 
         WalletHistory.objects.create(
             wallet = wallet,
-            user=user,
+            user=user, 
             txn_type=WalletHistory.TransactionType.DEBIT,
             amount=api_pricing.price,
             balance_after = wallet.balance,
+            wallet=wallet,
+            txn_type=WalletHistory.TransactionType.DEBIT,
+            amount=api_pricing.price,
+            balance_after=wallet.balance,
             comment=f"Debit for API {api_name}",
             api_pricing=api_pricing
         )
+
 

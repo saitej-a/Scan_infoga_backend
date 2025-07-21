@@ -4,6 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from decimal import Decimal
 from django.db import transaction
+from django.db.models import Sum
 import uuid
 
 from payments.models import (
@@ -323,6 +324,63 @@ def wallet_update(request):
 
 
 
+# @api_view(['GET'])
+# def get_user_wallet_balance(request):
+#     user_id = request.query_params.get('user_id')
+    
+#     try:
+#         user = CustomUser.objects.get(id=user_id)
+#     except CustomUser.DoesNotExist:
+#         return Response(
+#             create_response(message="User not found", status=False),
+#             status=status.HTTP_404_NOT_FOUND
+#         )
+    
+#     try:
+#         wallet = WalletBalance.objects.get(user=user)
+#         last_success_txn = Transaction.objects.filter(
+#             user=user, status=Transaction.Status.SUCCESS
+#         ).order_by('-created_at').first()
+
+#         transaction_total = transaction_total = Transaction.objects.filter(
+#     user=user, 
+#     status=Transaction.Status.SUCCESS
+# ).aggregate(total=Sum('amount'))['total'] or 0
+
+        
+#         txn_data = {
+#             "txn_id": last_success_txn.txn_id,
+#             "amount": str(last_success_txn.amount),
+#             "status": last_success_txn.status,
+#             "created_at": last_success_txn.created_at.isoformat(),
+#             "total_transaction": transaction_total
+#         } if last_success_txn else None
+        
+#         return Response(
+#             create_response(
+#                 status=True,
+#                 message="Wallet balance retrieved successfully",
+#                 data={
+#                     "balance": str(wallet.balance),
+#                     "last_successful_transaction": txn_data
+#                 }
+#             ),
+#             status=status.HTTP_200_OK
+#         )
+    
+#     except WalletBalance.DoesNotExist:
+#         return Response(
+#             create_response(
+#                 status=False,
+#                 message="Wallet balance not found for user",
+#                 data=None
+#             ),
+#             status=status.HTTP_404_NOT_FOUND
+#         )
+
+
+from django.db.models import Sum, F, ExpressionWrapper, DecimalField
+
 @api_view(['GET'])
 def get_user_wallet_balance(request):
     user_id = request.query_params.get('user_id')
@@ -337,15 +395,42 @@ def get_user_wallet_balance(request):
     
     try:
         wallet = WalletBalance.objects.get(user=user)
+        
+        # Last successful transaction
         last_success_txn = Transaction.objects.filter(
             user=user, status=Transaction.Status.SUCCESS
         ).order_by('-created_at').first()
-        
+
+        transaction_total = Transaction.objects.filter(
+            user=user, 
+            status=Transaction.Status.SUCCESS
+        ).aggregate(total=Sum('amount'))['total'] or 0
+
+        # Total credited and debited from wallet history
+        total_credited = WalletHistory.objects.filter(
+            user=user, txn_type=WalletHistory.TransactionType.CREDIT
+        ).aggregate(total=Sum('amount'))['total'] or 0
+
+        total_debited = WalletHistory.objects.filter(
+            user=user, txn_type=WalletHistory.TransactionType.DEBIT
+        ).aggregate(total=Sum('amount'))['total'] or 0
+
+        # Total deductions: sum of (Transaction.amount - credited_amount) for all SUCCESS transactions
+        transactions = Transaction.objects.filter(
+            user=user, status=Transaction.Status.SUCCESS
+        )
+
+        total_deductions = 0
+        for txn in transactions:
+            deduction = txn.amount - txn.credited_amount
+            total_deductions += deduction
+
         txn_data = {
             "txn_id": last_success_txn.txn_id,
             "amount": str(last_success_txn.amount),
             "status": last_success_txn.status,
-            "created_at": last_success_txn.created_at.isoformat()
+            "created_at": last_success_txn.created_at.isoformat(),
+            "total_transaction": transaction_total
         } if last_success_txn else None
         
         return Response(
@@ -354,7 +439,10 @@ def get_user_wallet_balance(request):
                 message="Wallet balance retrieved successfully",
                 data={
                     "balance": str(wallet.balance),
-                    "last_successful_transaction": txn_data
+                    "last_successful_transaction": txn_data,
+                    "total_credited": str(total_credited),
+                    "total_debited": str(total_debited),
+                    "total_deductions": str(total_deductions)
                 }
             ),
             status=status.HTTP_200_OK
@@ -369,6 +457,7 @@ def get_user_wallet_balance(request):
             ),
             status=status.HTTP_404_NOT_FOUND
         )
+
 
 
 @api_view(['GET'])

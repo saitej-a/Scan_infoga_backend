@@ -222,7 +222,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
         return obj.last_name or ''
 
     def get_sessionData(self, obj):
-        oldest_session = UserSession.objects.filter(user=obj).order_by('created_at').first()
+        oldest_session = UserSession.objects.filter(user=obj).order_by('-created_at').first()
         if oldest_session:
             return UserSessionDataSerializer(oldest_session).data
         return None

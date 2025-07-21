@@ -1122,6 +1122,7 @@ def get_user_location_map(request):
             lat=lat,
             lng=lng
         )
+        print("API Response: ", api_response)
         return Response(
             create_response(
                 status=api_response['success'],

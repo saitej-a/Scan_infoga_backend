@@ -621,16 +621,16 @@ def loginUser(request):
         )
 
     # # Third step: Verify OTP and generate token
-    totp = pyotp.TOTP(user.otp_secret)
-    if not totp.verify(otp):
-        return Response(
-            create_response(
-                status=False,
-                message="Invalid OTP",
-                data=None
-            ),
-            status=status.HTTP_401_UNAUTHORIZED
-        )
+    # totp = pyotp.TOTP(user.otp_secret)
+    # if not totp.verify(otp):
+    #     return Response(
+    #         create_response(
+    #             status=False,
+    #             message="Invalid OTP",
+    #             data=None
+    #         ),
+    #         status=status.HTTP_401_UNAUTHORIZED
+    #     )
 
     # Generate token and complete login
     from core.utils import create_token

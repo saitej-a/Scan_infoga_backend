@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Transaction, WalletBalance
+from custom_auth.models import CustomUser
 
 # class TransactionSerializer(serializers.ModelSerializer):
 #     class Meta:
@@ -11,6 +12,8 @@ from .models import Transaction, WalletBalance
 class TransactionSerializer(serializers.ModelSerializer):
     payment_group = serializers.SerializerMethodField()
     bank_reference = serializers.SerializerMethodField()
+    user_first_name = serializers.SerializerMethodField()
+    user_last_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Transaction
@@ -22,7 +25,9 @@ class TransactionSerializer(serializers.ModelSerializer):
             'comment',
             'payment_group',
             'bank_reference',
-            'credited_amount'
+            'credited_amount',
+            'user_first_name',
+            'user_last_name',
         ]
 
     def get_payment_group(self, obj):
@@ -35,6 +40,18 @@ class TransactionSerializer(serializers.ModelSerializer):
         try:
             return obj.cf_response.get('payment', {}).get('bank_reference', None)
         except Exception:
+            return None
+
+    def get_user_first_name(self, obj):
+        try:
+            return obj.user.first_name
+        except CustomUser.DoesNotExist:
+            return None
+
+    def get_user_last_name(self, obj):
+        try:
+            return obj.user.last_name
+        except CustomUser.DoesNotExist:
             return None
 
 

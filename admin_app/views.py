@@ -31,7 +31,7 @@ from user_activities.models import UserActivity
 
 from user_activities.serializers import UserActivitySerializer
 
-from payments.serializers import WalletHistorySerializer
+from payments.serializers import WalletHistorySerializer, TransactionSerializer
 
 from core.utils import create_response, paginate_queryset
 
@@ -586,3 +586,109 @@ def user_note(request):
             ),
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
         )
+
+
+@api_view(['GET'])
+# @permission_classes([IsAuthenticated])  # Uncomment if you want auth
+def get_pending_txns(request):
+    try:
+        count = int(request.query_params.get('count', 20))
+        page = int(request.query_params.get('page', 1))
+    except ValueError:
+        return Response(
+            create_response(
+                status=False,
+                message="Invalid 'count' or 'page' parameter",
+                data=None
+            ),
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    queryset = Transaction.objects.filter(status='pending').order_by('-created_at')
+
+    # Assuming you have a utility like this:
+    paginated_data = paginate_queryset(request, queryset, TransactionSerializer)
+
+    return Response(
+        create_response(
+            status=True,
+            message="Pending transactions retrieved successfully",
+            data=paginated_data
+        ),
+        status=status.HTTP_200_OK
+    )
+
+
+@api_view(['GET'])
+# @permission_classes([IsAuthenticated])  # Uncomment if you want auth
+def get_completed_txns(request):
+    try:
+        count = int(request.query_params.get('count', 20))
+        page = int(request.query_params.get('page', 1))
+    except ValueError:
+        return Response(
+            create_response(
+                status=False,
+                message="Invalid 'count' or 'page' parameter",
+                data=None
+            ),
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    queryset = Transaction.objects.filter(status='success').order_by('-created_at')
+
+    paginated_data = paginate_queryset(request, queryset, TransactionSerializer)
+
+    return Response(
+        create_response(
+            status=True,
+            message="Successful transactions retrieved successfully",
+            data=paginated_data
+        ),
+        status=status.HTTP_200_OK
+    )
+
+
+@api_view(['GET'])
+# @permission_classes([IsAuthenticated])  # Uncomment if you want auth
+def get_failed_txns(request):
+    import time
+    from django.db import connection
+
+    try:
+        count = int(request.query_params.get('count', 20))
+        page = int(request.query_params.get('page', 1))
+    except ValueError:
+        return Response(
+            create_response(
+                status=False,
+                message="Invalid 'count' or 'page' parameter",
+                data=None
+            ),
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    start_total = time.time()
+
+    queryset = Transaction.objects.filter(status='failed').select_related('user').order_by('-created_at')
+
+    db_start = time.time()
+    paginated_data = paginate_queryset(request, queryset, TransactionSerializer)
+    db_end = time.time()
+
+    total_end = time.time()
+
+    print("========== TRACE ==========")
+    print(f"DB Query + Pagination Time: {db_end - db_start:.3f}s")
+    print(f"Total View Time:            {total_end - start_total:.3f}s")
+    print(f"DB Queries Run:             {len(connection.queries)}")
+    print("===========================")
+
+    return Response(
+        create_response(
+            status=True,
+            message="Failed transactions retrieved successfully",
+            data=paginated_data
+        ),
+        status=status.HTTP_200_OK
+    )

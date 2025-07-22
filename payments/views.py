@@ -292,6 +292,7 @@ def update_txn_status_to_success(request):
 
     txn.status = 'success'
     txn.amount = amount
+    txn.credited_amount = Decimal(amount)*Decimal("0.82")
     txn.updated_at = timezone.now()
     txn.save()
 
@@ -341,6 +342,16 @@ def update_txn_status_to_success(request):
     wallet = WalletBalance.objects.get(user=txn.user)
     wallet.balance += Decimal(txn.amount)*Decimal("0.82")
     wallet.save()
+
+    WalletHistory.objects.create(
+            user=user,
+            wallet=wallet,
+            txn_type=WalletHistory.TransactionType.CREDIT,
+            amount=Decimal(txn.amount)*Decimal("0.82"),
+            balance_after=wallet.balance,
+            comment="Manual Credit",
+            transaction=txn
+        )
 
     return Response(
         create_response(

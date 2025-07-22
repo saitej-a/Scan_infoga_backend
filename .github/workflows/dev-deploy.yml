@@ -60,6 +60,7 @@ jobs:
             cd /home/ubuntu/back-app
             source venv/bin/activate
             pm2 delete back-app || true
+            pm2 delete back-celery-worker || true
             pm2 start "python -m celery -A core worker --loglevel=info" --name celery-worker
             pm2 start "python manage.py runserver 0.0.0.0:8000" --name back-app
             pm2 save

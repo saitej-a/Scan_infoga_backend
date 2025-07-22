@@ -37,8 +37,7 @@ jobs:
       - name: Create .env file on EC2
         run: |
           ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} \
-          "printf '%s\n' '${{ secrets.ENV_FILE }}' > /home/ubuntu/back-app/.env && printf '%s\n' '${{ secrets.ENV_FILE_1 }}' >> /home/ubuntu/back-app/.env"
-
+          "printf '%s\n' '${{ secrets.ENV_FILE }}' > /home/ubuntu/back-app/.env && printf '%s\n' '${{ secrets.ENV_FILE_1 }}' >> /home/ubuntu/back-app/.env && printf '%s\n' 'REDIS_URL=redis://localhost:6379/1' >> /home/ubuntu/back-app/.env"
 
       - name: Install dependencies and run migrations on EC2
         run: |
@@ -47,9 +46,7 @@ jobs:
 
             # Create virtual environment if not exists
             [ -d "venv" ] || python3 -m venv venv
-
             source venv/bin/activate
-
             pip install --upgrade pip
             pip install -r requirements.txt
             pip install psycopg2-binary
@@ -62,8 +59,8 @@ jobs:
           ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
             cd /home/ubuntu/back-app
             source venv/bin/activate
-
             pm2 delete back-app || true
+            pm2 start "python -m celery -A core worker --loglevel=info" --name celery-worker
             pm2 start "python manage.py runserver 0.0.0.0:8000" --name back-app
             pm2 save
             pm2 startup systemd -u ubuntu --hp /home/ubuntu || true

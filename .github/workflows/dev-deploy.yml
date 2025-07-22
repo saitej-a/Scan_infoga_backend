@@ -37,7 +37,7 @@ jobs:
       - name: Create .env file on EC2
         run: |
           ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} \
-          "printf '%s\n' '${{ secrets.ENV_FILE }}' > /home/ubuntu/back-app/.env && printf '%s\n' '${{ secrets.ENV_FILE_1 }}' >> /home/ubuntu/back-app/.env && printf '%s\n' 'REDIS_URL=redis://localhost:6379/1' >> /home/ubuntu/back-app/.env"
+          "printf '%s\n' '${{ secrets.ENV_FILE }}' > /home/ubuntu/back-app/.env && printf '%s\n' '${{ secrets.ENV_FILE_1 }}' >> /home/ubuntu/back-app/.env"
 
       - name: Install dependencies and run migrations on EC2
         run: |

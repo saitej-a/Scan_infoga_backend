@@ -202,7 +202,7 @@ DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL")
 # Celery settings
 CELERY_BROKER_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")  # Redis URL (for EC2 Redis)
 # CELERY_BROKER_URL = "redis://localhost:6379/0"  # Redis URL (for EC2 Redis)
-# print("REDIS URL", os.environ.get("REDIS_URL"))
+print("REDIS URL", os.environ.get("REDIS_URL"))
 # Or for ElastiCache Redis (use the endpoint from ElastiCache)
 # CELERY_BROKER_URL = 'redis://<elasticache-redis-endpoint>:6379/0'
 

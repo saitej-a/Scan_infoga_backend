@@ -121,33 +121,6 @@ def get_user_info(request):
         status=status.HTTP_200_OK
     )
 
-
-# @api_view(['GET'])
-# # @permission_classes([IsAuthenticated])
-# def get_login_history(request):
-#     user_id = request.query_params.get('user_id')
-#     if not user_id:
-#         return Response(
-#             create_response(message="user_id is required", status=False),
-#             status=status.HTTP_400_BAD_REQUEST
-#         )
-
-#     try:
-#         user = CustomUser.objects.get(id=user_id)
-#     except CustomUser.DoesNotExist:
-#         return Response(
-#             create_response(message="User not found", status=False),
-#             status=status.HTTP_404_NOT_FOUND
-#         )
-
-#     sessions = UserSession.objects.filter(user=user).order_by('created_at')
-#     serializer = UserSessionDataSerializer(sessions, many=True)
-
-#     return Response(
-#         create_response(data=serializer.data, message="Login history retrieved", status=True),
-#         status=status.HTTP_200_OK
-#     )
-
 @api_view(['GET'])
 # @permission_classes([IsAuthenticated])
 def get_login_history(request):
@@ -178,34 +151,6 @@ def get_login_history(request):
         ),
         status=status.HTTP_200_OK
     )
-
-
-
-# @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
-# def get_bookmarks_by_user(request):
-#     user_id = request.query_params.get('user_id')
-#     if not user_id:
-#         return Response(
-#             create_response(message="user_id is required", status=False),
-#             status=status.HTTP_400_BAD_REQUEST
-#         )
-
-#     try:
-#         user = CustomUser.objects.get(id=user_id)
-#     except CustomUser.DoesNotExist:
-#         return Response(
-#             create_response(message="User not found", status=False),
-#             status=status.HTTP_404_NOT_FOUND
-#         )
-
-#     bookmarks = Bookmark.objects.filter(user=user).order_by('-created_at')
-#     serializer = BookmarkSerializer(bookmarks, many=True)
-
-#     return Response(
-#         create_response(data=serializer.data, message="Bookmarks retrieved", status=True),
-#         status=status.HTTP_200_OK
-#     )
 
 @api_view(['GET'])
 # @permission_classes([IsAuthenticated])
@@ -406,10 +351,10 @@ def get_user_wallet_balance(request):
             status=Transaction.Status.SUCCESS
         ).aggregate(total=Sum('amount'))['total'] or 0
 
-        # Total credited and debited from wallet history
-        total_credited = WalletHistory.objects.filter(
-            user=user, txn_type=WalletHistory.TransactionType.CREDIT
-        ).aggregate(total=Sum('amount'))['total'] or 0
+        credited_in_wallet = Transaction.objects.filter(
+            user=user, 
+            status=Transaction.Status.SUCCESS
+        ).aggregate(total=Sum('credited_amount'))['total'] or 0
 
         total_debited = WalletHistory.objects.filter(
             user=user, txn_type=WalletHistory.TransactionType.DEBIT
@@ -430,7 +375,8 @@ def get_user_wallet_balance(request):
             "amount": str(last_success_txn.amount),
             "status": last_success_txn.status,
             "created_at": last_success_txn.created_at.isoformat(),
-            "total_transaction": transaction_total
+            "total_transaction": transaction_total,
+            "credited_in_wallet": credited_in_wallet
         } if last_success_txn else None
         
         return Response(
@@ -440,7 +386,8 @@ def get_user_wallet_balance(request):
                 data={
                     "balance": str(wallet.balance),
                     "last_successful_transaction": txn_data,
-                    "total_credited": str(total_credited),
+                    "credited_in_wallet": str(credited_in_wallet),
+                    "total_transaction": str(transaction_total),
                     "total_debited": str(total_debited),
                     "total_deductions": str(total_deductions)
                 }

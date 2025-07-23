@@ -120,13 +120,17 @@ def aadharVerify(aadhar_number):
         response = requests.request("POST", aadharVerifyUrl, headers=aadhaarVerifyheaders, data=aadharVerifyPayload)
         if response.status_code == 200:
             result = response.json()
+            print("Aadhar verification result:", result)
             if result.get("status") == "Success":
                 return {
                     "status": True,
                     "data": result
                 }
             else:
-                raise Exception(f"Aadhar verification failed: {result.get('message', 'Unknown error')}")
+                message = result.get("errorDetails", {}).get("messageEnglish", "Unknown error")
+                print("MEssage:", message)
+                raise Exception(f"{message}")
+
         else:
             raise Exception(f"Aadhar verification API error. Status code: {response.status_code}")
     except Exception as e:

@@ -62,8 +62,10 @@ def handleAadhaarVerify(request):
     if realtimeData:
         try:
             result = aadharVerify(aadhaarNo)
+            print("here", result)
             if not result["status"]:
-                return Response(create_response(False, "Error While Verfiying External API", None), status=status.HTTP_404_NOT_FOUND)
+                print("here it si ",result)
+                return Response(create_response(False, "Aadhar verification failed", result.get("error")),status=status.HTTP_400_BAD_REQUEST)
             existing = AadharVerifyReport.objects.filter(aadhaarNo=aadhaarNo).first()
 
             # compare the last entry with the new result

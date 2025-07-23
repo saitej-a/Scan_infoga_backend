@@ -37,6 +37,7 @@ def aadharVerify(aadhar_number):
         }
 
         response = requests.request("POST", getCaptchaUrl, headers=headers, data=payload)
+        print("Response from getCaptchaUrl:", response.text)
         if response.status_code != 200:
             raise Exception(f"Aadhar Captcha Error. Status code: {response.status_code}")
         result = response.json()
@@ -66,6 +67,7 @@ def aadharVerify(aadhar_number):
         
         
         createTaskResponse = requests.request("POST", createTaskUrl, headers=createHeaders, data=createTaskPayload)
+        print("Response from createTaskUrl:", createTaskResponse.text)
         if createTaskResponse.status_code != 200:
             raise Exception(f"Error creating captcha task. Status code: {createTaskResponse.status_code}")
         task_result = createTaskResponse.json()
@@ -91,7 +93,7 @@ def aadharVerify(aadhar_number):
                     break
             attempt += 1
             time.sleep(1.0)
-        
+        print("Captcha code:", captcha_code)
         aadharVerifyUrl = os.getenv("AADHAR_VERIFY_API_URL")
         aadharVerifyPayload = json.dumps({
             "uid": aadhar_number,
@@ -118,6 +120,7 @@ def aadharVerify(aadhar_number):
             'x-request-id': '6b62ce2d-ea38-4c3e-a13f-4ce1694fb84b'
         }
         response = requests.request("POST", aadharVerifyUrl, headers=aadhaarVerifyheaders, data=aadharVerifyPayload)
+        print("Response from aadharVerifyUrl:", response.text)
         if response.status_code == 200:
             result = response.json()
             print("Aadhar verification result:", result)

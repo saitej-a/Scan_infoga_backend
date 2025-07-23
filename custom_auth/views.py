@@ -33,6 +33,8 @@ from core.tasks import send_welcome_email, send_otp_email
 import random
 import string
 from django.core.cache import cache
+from datetime import datetime, timedelta
+
 
 from .utils import fetch_map, fetch_location_map
 from payments.utils import create_wallet
@@ -620,17 +622,17 @@ def loginUser(request):
             status=status.HTTP_200_OK
         )
 
-    # # Third step: Verify OTP and generate token
-    # totp = pyotp.TOTP(user.otp_secret)
-    # if not totp.verify(otp):
-    #     return Response(
-    #         create_response(
-    #             status=False,
-    #             message="Invalid OTP",
-    #             data=None
-    #         ),
-    #         status=status.HTTP_401_UNAUTHORIZED
-    #     )
+    # Third step: Verify OTP and generate token
+    totp = pyotp.TOTP(user.otp_secret)
+    if not totp.verify(otp):
+        return Response(
+            create_response(
+                status=False,
+                message="Invalid OTP",
+                data=None
+            ),
+            status=status.HTTP_401_UNAUTHORIZED
+        )
 
     # Generate token and complete login
     from core.utils import create_token
@@ -1376,11 +1378,22 @@ def get_all_users(request):
             users = users.filter(**{field: val})
 
     # 📆 Date filters
-    for field in ['date_joined', 'last_login']:
+    # for field in ['date_joined', 'last_login', 'created_at']:
+    #     if val := request.GET.get(f'{field}__gte'):
+    #         users = users.filter(**{f'{field}__gte': val})
+    #     if val := request.GET.get(f'{field}__lte'):
+    #         users = users.filter(**{f'{field}__lte': val})
+    for field in ['date_joined', 'last_login', 'created_at']:
         if val := request.GET.get(f'{field}__gte'):
             users = users.filter(**{f'{field}__gte': val})
         if val := request.GET.get(f'{field}__lte'):
-            users = users.filter(**{f'{field}__lte': val})
+            try:
+                # Parse the date and extend to end of day
+                date_val = datetime.strptime(val, '%Y-%m-%d') + timedelta(days=1)
+                users = users.filter(**{f'{field}__lt': date_val})
+            except ValueError:
+                # If full datetime is passed, use it as is
+                users = users.filter(**{f'{field}__lte': val})
 
     # 💸 Annotations
     spent_subquery = Transaction.objects.filter(

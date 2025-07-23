@@ -1,0 +1,68 @@
+name: Deploy to AWS EC2
+
+on:
+  push:
+    branches:
+      - development
+
+jobs:
+  deploy:
+    name: Deploy on EC2
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" | tr -d '\r' > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Create app directory on EC2
+        run: |
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "mkdir -p /home/ubuntu/back-app"
+
+      - name: Copy source code to EC2
+        run: |
+          rsync -avz --delete -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
+            --exclude='.git' \
+            --exclude='.env.example' \
+            --exclude='venv' \
+            ./ \
+            ubuntu@${{ secrets.EC2_HOST }}:/home/ubuntu/back-app/
+
+      - name: Create .env file on EC2
+        run: |
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} \
+          "printf '%s\n' '${{ secrets.ENV_FILE }}' > /home/ubuntu/back-app/.env && printf '%s\n' '${{ secrets.ENV_FILE_1 }}' >> /home/ubuntu/back-app/.env"
+
+      - name: Install dependencies and run migrations on EC2
+        run: |
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} << EOF
+            cd /home/ubuntu/back-app
+
+            # Create virtual environment if not exists
+            [ -d "venv" ] || python3 -m venv venv
+            source venv/bin/activate
+            pip install --upgrade pip
+            pip install -r requirements.txt
+            pip install psycopg2-binary
+            python manage.py makemigrations
+            python manage.py migrate
+          EOF
+
+      - name: Start Django backend with PM2 on EC2
+        run: |
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
+            cd /home/ubuntu/back-app
+            source venv/bin/activate
+            pm2 delete back-app || true
+            pm2 delete celery-worker || true
+            pm2 start "python -m celery -A core worker --loglevel=info" --name celery-worker
+            pm2 start "python manage.py runserver 0.0.0.0:8000" --name back-app
+            pm2 save
+            pm2 startup systemd -u ubuntu --hp /home/ubuntu || true
+          EOF

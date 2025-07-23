@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from decimal import Decimal
 
 class DynamoDBItemSerializer(serializers.Serializer):
     class Meta:
@@ -23,3 +24,21 @@ class DynamoDBItemSerializer(serializers.Serializer):
             else:
                 data[key] = str(value)
         return data
+
+class DynamoDBItemSerializer2:
+    """Simple serializer without DRF serializers"""
+    @staticmethod
+    def serialize(items):
+        result = []
+        for item in items:
+            clean_item = {}
+            for key, value in item.items():
+                if isinstance(value, Decimal):
+                    if value % 1 == 0:
+                        clean_item[key] = int(value)
+                    else:
+                        clean_item[key] = float(value)
+                else:
+                    clean_item[key] = value
+            result.append(clean_item)
+        return result

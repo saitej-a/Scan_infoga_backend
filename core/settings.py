@@ -63,6 +63,8 @@ EXTERNAL_APPS = [
     'digital_intelligence',
     'holehe_util',
     'sherlock_util',
+    'admin_app',
+    'verify',
 ]
 
 INSTALLED_APPS += EXTERNAL_APPS
@@ -134,6 +136,9 @@ DYNAMODB_LEAKED_TABLE_NAME = os.environ.get('AWS_DYNAMODB_LEAKED_TABLE_NAME')
 DYNAMODB_JOBSEEKER_TABLE_NAME = os.environ.get('AWS_DYNAMODB_JOBSEEKER_TABLE_NAME')
 DYNAMODB_CORPORATE_TABLE_NAME = os.environ.get('AWS_DYNAMODB_CORPORATE_TABLE_NAME')
 DYNAMODB_ZOMATO_TABLE_NAME=os.environ.get('AWS_DYNAMODB_ZOMATO_TABLE_NAME')
+DYNAMODB_CBSE_TABLE_NAME=os.environ.get('AWS_DYNAMODB_CBSE_TABLE_NAME')
+DYNAMODB_OLX_TABLE_NAME=os.environ.get('AWS_DYNAMODB_OLX_TABLE_NAME')
+DYNAMODB_INDIA_MART_TABLE_NAME=os.environ.get('AWS_DYNAMODB_INDIA_MART_TABLE_NAME')
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = True  # Set to True only in development
@@ -141,7 +146,7 @@ ALLOWED_HOSTS = ['172.31.27.231', '*', 'localhost']
 
 
 CORS_ALLOW_HEADERS = list(default_headers) + [
-    'clientinfo',  # ❗ add your custom header name here, lowercase
+    'clientinfo',  
 ]
 
 # JWT settings

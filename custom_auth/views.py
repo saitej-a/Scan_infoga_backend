@@ -33,6 +33,8 @@ from core.tasks import send_welcome_email, send_otp_email
 import random
 import string
 from django.core.cache import cache
+from datetime import datetime, timedelta
+
 
 from .utils import fetch_map, fetch_location_map
 from payments.utils import create_wallet
@@ -146,6 +148,7 @@ def registerUser(request):
         # Generate secret and OTP
         secret_key = pyotp.random_base32()
         otp = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+        print("THIS IS OTP", otp)
         otp_hash = hashlib.sha256(otp.encode()).hexdigest()
 
         # Save user data and otp in Redis
@@ -512,14 +515,15 @@ def resendOTP(request):
     timestamp = timezone.datetime.fromisoformat(cached['timestamp'])
     elapsed = (timezone.now() - timestamp).total_seconds()
 
-    if elapsed < 300:  # Allow resend only if more than 5 minutes passed
-        return Response(
-            create_response(False, "OTP is still valid. Please wait before requesting a new OTP.", None),
-            status=status.HTTP_400_BAD_REQUEST
-        )
+    # if elapsed < 300:  # Allow resend only if more than 5 minutes passed
+    #     return Response(
+    #         create_response(False, "OTP is still valid. Please wait before requesting a new OTP.", None),
+    #         status=status.HTTP_400_BAD_REQUEST
+    #     )
 
     # Generate new OTP
     otp = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+    print("THIS IS NEW OTP", otp)
     otp_hash = hashlib.sha256(otp.encode()).hexdigest()
 
     cached['otp_hash'] = otp_hash
@@ -1122,6 +1126,7 @@ def get_user_location_map(request):
             lat=lat,
             lng=lng
         )
+        print("API Response: ", api_response)
         return Response(
             create_response(
                 status=api_response['success'],
@@ -1176,21 +1181,155 @@ def get_user_session(request):
         status=status.HTTP_200_OK
     )
 
+# @api_view(['GET'])
+# def get_all_users(request):
+#     try:
+#         count = int(request.query_params.get('count', 25))
+#         page = int(request.query_params.get('page', 1))
+#         if page < 1 or count < 1:
+#             raise ValueError
+#     except ValueError:
+#         return Response(
+#             create_response(False, "Invalid count or page number", None),
+#             status=status.HTTP_400_BAD_REQUEST
+#         )
 
+#     users = CustomUser.objects.select_related('corporate_profile', 'developer_profile', 'wallet')
+
+#     # 🔍 Global Search
+#     search = request.GET.get('search')
+#     if search:
+#         users = users.filter(
+#             Q(email__icontains=search) |
+#             Q(corporate_profile__first_name__icontains=search) |
+#             Q(corporate_profile__last_name__icontains=search) |
+#             Q(corporate_profile__company__icontains=search) |
+#             Q(corporate_profile__domain__icontains=search) |
+#             Q(developer_profile__first_name__icontains=search) |
+#             Q(developer_profile__last_name__icontains=search)
+#         )
+
+#     # ✅ Dynamic filters: exact, startswith, endswith, icontains
+#     dynamic_filters = {
+#         'email': ['email'],
+#         'first_name': ['first_name', 'corporate_profile__first_name', 'developer_profile__first_name'],
+#         'last_name': ['last_name', 'corporate_profile__last_name', 'developer_profile__last_name'],
+#         'company': ['corporate_profile__company'],
+#         'domain': ['corporate_profile__domain'],
+#         'approval_status': ['corporate_profile__approval_status', 'developer_profile__approval_status'],
+#     }
+
+#     for param, paths in dynamic_filters.items():
+#         for suffix in ['', '__exact', '__startswith', '__endswith', '__icontains']:
+#             key = f"{param}{suffix}"
+#             if val := request.GET.get(key):
+#                 q = Q()
+#                 for path in paths:
+#                     try:
+#                         q |= Q(**{f"{path}{suffix}": val})
+#                     except Exception:
+#                         pass  # Avoid OneToOneRel join errors
+#                 users = users.filter(q)
+
+#     # 🔁 Simple filters
+#     simple_filters = {
+#         'id': 'id',
+#         'user_type': 'user_type',
+#         'is_active': 'is_active',
+#         'is_staff': 'is_staff',
+#     }
+#     for param, field in simple_filters.items():
+#         if val := request.GET.get(param):
+#             users = users.filter(**{field: val})
+
+#     # 📆 Date filters
+#     for field in ['date_joined', 'last_login']:
+#         if val := request.GET.get(f'{field}__gte'):
+#             users = users.filter(**{f'{field}__gte': val})
+#         if val := request.GET.get(f'{field}__lte'):
+#             users = users.filter(**{f'{field}__lte': val})
+
+#     # 💸 Annotations
+#     spent_subquery = Transaction.objects.filter(
+#         user=OuterRef('pk'),
+#         status='success'
+#     ).values('user').annotate(total=Sum('amount')).values('total')
+
+#     users = users.annotate(
+#         wallet_balance=Coalesce(
+#             F('wallet__balance'),
+#             Value(0),
+#             output_field=DecimalField(max_digits=10, decimal_places=2)
+#         ),
+#         total_spent=Coalesce(
+#             Subquery(spent_subquery, output_field=DecimalField(max_digits=10, decimal_places=2)),
+#             Value(0),
+#             output_field=DecimalField(max_digits=10, decimal_places=2)
+#         ),
+#         profile_first_name=Case(
+#             When(user_type='CORPORATE', then=F('corporate_profile__first_name')),
+#             When(user_type='DEVELOPER', then=F('developer_profile__first_name')),
+#             When(user_type='USER', then=F('first_name')),
+#             default=Value(''),
+#             output_field=CharField()
+#         ),
+#         profile_last_name=Case(
+#             When(user_type='CORPORATE', then=F('corporate_profile__last_name')),
+#             When(user_type='DEVELOPER', then=F('developer_profile__last_name')),
+#             When(user_type='USER', then=F('last_name')),
+#             default=Value(''),
+#             output_field=CharField()
+#         ),
+#         session_last_login=Max('usersession__created_at')
+#     )
+
+#     # 🔢 Range filters
+#     for field in ['wallet_balance', 'total_spent', 'session_last_login']:
+#         if val := request.GET.get(f'{field}__gte'):
+#             users = users.filter(**{f'{field}__gte': val})
+#         if val := request.GET.get(f'{field}__lte'):
+#             users = users.filter(**{f'{field}__lte': val})
+
+#     # 📊 Ordering
+#     ordering = request.GET.get('ordering', 'email')
+#     valid_ordering_fields = [
+#         'email', 'date_joined', 'session_last_login',
+#         'wallet_balance', 'total_spent',
+#         'profile_first_name', 'profile_last_name', 'id'
+#     ]
+#     if ordering.lstrip('-') in valid_ordering_fields:
+#         users = users.order_by(ordering)
+
+#     # 📄 Pagination
+#     total_count = users.count()
+#     paginated_users = users[(page - 1) * count: page * count]
+
+#     serializer = UserListSerializer(paginated_users, many=True)
+#     return Response(
+#         create_response(
+#             True,
+#             "Users retrieved successfully",
+#             data={
+#                 'users': serializer.data,
+#                 'total_count': total_count,
+#                 'page': page,
+#                 'count': count
+#             }
+#         ),
+#         status=status.HTTP_200_OK
+#     )
+
+from decimal import Decimal
+from django.db.models import (
+    Q, F, Value, Case, When, Max, OuterRef, Subquery, Sum, DecimalField, CharField
+)
+from django.db.models.functions import Coalesce
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
 
 @api_view(['GET'])
 def get_all_users(request):
-    try:
-        count = int(request.query_params.get('count', 25))
-        page = int(request.query_params.get('page', 1))
-        if page < 1 or count < 1:
-            raise ValueError
-    except ValueError:
-        return Response(
-            create_response(False, "Invalid count or page number", None),
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
     users = CustomUser.objects.select_related('corporate_profile', 'developer_profile', 'wallet')
 
     # 🔍 Global Search
@@ -1206,7 +1345,7 @@ def get_all_users(request):
             Q(developer_profile__last_name__icontains=search)
         )
 
-    # ✅ Dynamic filters: exact, startswith, endswith, icontains
+    # ✅ Dynamic filters
     dynamic_filters = {
         'email': ['email'],
         'first_name': ['first_name', 'corporate_profile__first_name', 'developer_profile__first_name'],
@@ -1215,7 +1354,6 @@ def get_all_users(request):
         'domain': ['corporate_profile__domain'],
         'approval_status': ['corporate_profile__approval_status', 'developer_profile__approval_status'],
     }
-
     for param, paths in dynamic_filters.items():
         for suffix in ['', '__exact', '__startswith', '__endswith', '__icontains']:
             key = f"{param}{suffix}"
@@ -1225,7 +1363,7 @@ def get_all_users(request):
                     try:
                         q |= Q(**{f"{path}{suffix}": val})
                     except Exception:
-                        pass  # Avoid OneToOneRel join errors
+                        pass
                 users = users.filter(q)
 
     # 🔁 Simple filters
@@ -1240,11 +1378,22 @@ def get_all_users(request):
             users = users.filter(**{field: val})
 
     # 📆 Date filters
-    for field in ['date_joined', 'last_login']:
+    # for field in ['date_joined', 'last_login', 'created_at']:
+    #     if val := request.GET.get(f'{field}__gte'):
+    #         users = users.filter(**{f'{field}__gte': val})
+    #     if val := request.GET.get(f'{field}__lte'):
+    #         users = users.filter(**{f'{field}__lte': val})
+    for field in ['date_joined', 'last_login', 'created_at']:
         if val := request.GET.get(f'{field}__gte'):
             users = users.filter(**{f'{field}__gte': val})
         if val := request.GET.get(f'{field}__lte'):
-            users = users.filter(**{f'{field}__lte': val})
+            try:
+                # Parse the date and extend to end of day
+                date_val = datetime.strptime(val, '%Y-%m-%d') + timedelta(days=1)
+                users = users.filter(**{f'{field}__lt': date_val})
+            except ValueError:
+                # If full datetime is passed, use it as is
+                users = users.filter(**{f'{field}__lte': val})
 
     # 💸 Annotations
     spent_subquery = Transaction.objects.filter(
@@ -1255,12 +1404,15 @@ def get_all_users(request):
     users = users.annotate(
         wallet_balance=Coalesce(
             F('wallet__balance'),
-            Value(0),
+            Value(Decimal('0.00')),
             output_field=DecimalField(max_digits=10, decimal_places=2)
         ),
         total_spent=Coalesce(
-            Subquery(spent_subquery, output_field=DecimalField(max_digits=10, decimal_places=2)),
-            Value(0),
+            Subquery(
+                spent_subquery,
+                output_field=DecimalField(max_digits=10, decimal_places=2)
+            ),
+            Value(Decimal('0.00')),
             output_field=DecimalField(max_digits=10, decimal_places=2)
         ),
         profile_first_name=Case(
@@ -1280,7 +1432,7 @@ def get_all_users(request):
         session_last_login=Max('usersession__created_at')
     )
 
-    # 🔢 Range filters
+    # 🔢 Range filters for annotated fields
     for field in ['wallet_balance', 'total_spent', 'session_last_login']:
         if val := request.GET.get(f'{field}__gte'):
             users = users.filter(**{f'{field}__gte': val})
@@ -1297,24 +1449,19 @@ def get_all_users(request):
     if ordering.lstrip('-') in valid_ordering_fields:
         users = users.order_by(ordering)
 
-    # 📄 Pagination
-    total_count = users.count()
-    paginated_users = users[(page - 1) * count: page * count]
+    # 📄 Pagination using shared paginate_queryset helper
+    paginated_data = paginate_queryset(request, users, UserListSerializer)
 
-    serializer = UserListSerializer(paginated_users, many=True)
     return Response(
         create_response(
-            True,
-            "Users retrieved successfully",
-            data={
-                'users': serializer.data,
-                'total_count': total_count,
-                'page': page,
-                'count': count
-            }
+            status=True,
+            message="Users retrieved successfully",
+            data=paginated_data
         ),
         status=status.HTTP_200_OK
     )
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_bookmark(request):

@@ -3,6 +3,7 @@ from django import template
 from core.services.email_service import EmailService
 from secondary.models import PayworldData2, RazorpayIFSCData, PaynearbyData, RazorpayIFSCData2
 from mobile.models import UPIToAccount, UPIToAccount2
+from verify.models import AadharVerifyReport
 
 @shared_task
 def send_welcome_email(user_email, name):
@@ -99,6 +100,8 @@ def fetch_and_store_razorpay_data(ifsc_code, api_response):
     except Exception as e:
         import traceback
         return {"status": False, "message": str(e), "traceback": traceback.format_exc()}
+    
+
 
 
 @shared_task
@@ -143,6 +146,38 @@ def fetch_and_store_paynearby_data(mobile_number, api_response):
         obj, _ = PaynearbyData.objects.get_or_create(Mobile_number=mobile_number)
         existing = obj.result or {}
 
+        def last_cleaned():
+            if not existing:
+                return None, None
+            last_entry = existing[-1]
+            last_timestamp = list(last_entry.keys())[0]
+            return last_timestamp, last_entry[last_timestamp]
+
+        last_ts, last_data = last_cleaned()
+
+        if last_data != new_data:
+            existing.append(new_data_dict)
+            obj.result = existing
+            obj.save()
+            return {"status": True, "message": "New data appended"}
+        else:
+            return {"status": True, "message": "No change in data"}
+
+    except Exception as e:
+        import traceback
+        return {"status": False, "message": str(e), "traceback": traceback.format_exc()}
+    
+
+@shared_task
+def fetch_and_store_aadhar_verify_data(aadhaarNo, api_response):
+    try:
+        new_data = api_response["data"]
+        timestamp = new_data.pop("datetime")
+        new_data_dict = {timestamp: new_data}
+        
+        obj, _ = AadharVerifyReport.objects.get_or_create(aadhaarNo=aadhaarNo)
+        existing = obj.result or {}
+        print("Existing: ",existing)
         def last_cleaned():
             if not existing:
                 return None, None

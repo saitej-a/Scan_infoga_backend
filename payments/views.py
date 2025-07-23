@@ -4,14 +4,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from core.utils import (
-        create_response, 
-        get_token_from_header, 
+        create_response,
+        get_token_from_header,
         get_user_from_token,
         paginate_queryset,
     )
-from .models import Transaction, WalletBalance
+from .models import Transaction, WalletBalance, WalletHistory
 from core.permissions import IsAdminUserType
-from .serializers import TransactionSerializer
+from .serializers import TransactionSerializer, WalletHistorySerializer
 from rest_framework import status
 from decimal import Decimal
 
@@ -88,7 +88,8 @@ def post_txn(request):
     Transaction.objects.create(
         user=user,
         txn_id=txn_id,
-        amount=amount
+        amount=amount,
+        comment="Bank Transfer"
     )
 
     return Response(
@@ -291,6 +292,7 @@ def update_txn_status_to_success(request):
 
     txn.status = 'success'
     txn.amount = amount
+    txn.credited_amount = Decimal(amount)*Decimal("0.82")
     txn.updated_at = timezone.now()
     txn.save()
 
@@ -338,8 +340,18 @@ def update_txn_status_to_success(request):
 
     # update the wallet balance for the user
     wallet = WalletBalance.objects.get(user=txn.user)
-    wallet.balance += Decimal(txn.amount)
+    wallet.balance += Decimal(txn.amount)*Decimal("0.82")
     wallet.save()
+
+    WalletHistory.objects.create(
+            user=user,
+            wallet=wallet,
+            txn_type=WalletHistory.TransactionType.CREDIT,
+            amount=Decimal(txn.amount)*Decimal("0.82"),
+            balance_after=wallet.balance,
+            comment="Manual Credit",
+            transaction=txn
+        )
 
     return Response(
         create_response(
@@ -593,7 +605,15 @@ def cashfree_webhook(request):
 
         # Clean up the cache
         cache.delete(cache_key)
-
+        WalletHistory.objects.create(
+            user=user,
+            wallet=wallet,
+            txn_type=WalletHistory.TransactionType.CREDIT,
+            amount=credited_amount,
+            balance_after=wallet.balance,
+            comment="Wallet Top-Up",
+            transaction=transaction
+        )
         return JsonResponse({'status': 'success'})
 
     except CustomUser.DoesNotExist:

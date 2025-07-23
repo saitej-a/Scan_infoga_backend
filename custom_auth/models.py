@@ -97,17 +97,17 @@ class UserSession(models.Model):
 
     # Existing Fields
     ipAddress = models.GenericIPAddressField(null=True, blank=True)
-    device = models.CharField(max_length=200, default='Unknown')
-    browser = models.CharField(max_length=200, default='Unknown')
-    latitude = models.CharField(max_length=200, default='0')
-    longitude = models.CharField(max_length=200, default='0')
+    device = models.CharField(max_length=200, default='Unknown', null=True, blank=True)
+    browser = models.CharField(max_length=200, default='Unknown', null=True, blank=True)
+    latitude = models.CharField(max_length=200, default='0', null=True, blank=True)
+    longitude = models.CharField(max_length=200, default='0', null=True, blank=True)
 
     # New Fields
     userAgent = models.TextField(blank=True, null=True)
     platform = models.CharField(max_length=100, blank=True, null=True)
     language = models.CharField(max_length=50, blank=True, null=True)
-    cookiesEnabled = models.BooleanField(default=True)
-    javascriptEnabled = models.BooleanField(default=True)
+    cookiesEnabled = models.BooleanField(default=True, null=True)
+    javascriptEnabled = models.BooleanField(default=True, null=True)
     touchSupport = models.BooleanField(default=False, blank=True, null=True)
     deviceType = models.CharField(max_length=50, blank=True, null=True)
     cpuCores = models.IntegerField(blank=True, null=True)
@@ -118,7 +118,7 @@ class UserSession(models.Model):
     gpuRenderer = models.TextField(blank=True, null=True)
     cameras = models.CharField(max_length=10, blank=True, null=True)
     microphones = models.CharField(max_length=10, blank=True, null=True)
-    publicIp = models.GenericIPAddressField(null=True, blank=True)
+    publicIp = models.CharField(null=True, blank=True)
     isp = models.CharField(max_length=200, blank=True, null=True)
     asn = models.CharField(max_length=50, blank=True, null=True)
     city = models.CharField(max_length=100, blank=True, null=True)
@@ -127,8 +127,6 @@ class UserSession(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.created_at}"
-
-
 
 class OTP(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)

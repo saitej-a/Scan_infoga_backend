@@ -3,8 +3,11 @@ from . import views
 
 urlpatterns = [
     # path('get-password', views.get_passwords, name='get-passwords'),
-    path('get-password', views.GetPassword.as_view(), name='get-passwords'),
-    path('get-jobseeker', views.GetJobSeekerData.as_view(), name='get-jobseeker-data'),
-    path('get-corporate', views.GetCorporateData.as_view(), name='get-corporate-data'),
-    path('get-zomato', views.GetZomatoData.as_view(), name='get-zomato-data'),
+    path('get-password', views.get_password, name='get-password'),
+    path('get-jobseeker', views.get_job_seeker_data, name='get-jobseeker-data'),
+    path('get-corporate', views.get_corporate_data, name='get-corporate-data'),
+    path('get-zomato', views.get_zomato_data, name='get-zomato-data'),
+    path('get-cbse', views.get_cbse_data, name='get-cbse-data'),
+    path('get-olx', views.get_olx_data, name='get-olx-data'),
+    path('get-india-mart', views.get_india_mart_data, name='get-india-mart-data'),
 ]

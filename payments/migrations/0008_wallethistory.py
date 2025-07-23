@@ -1,0 +1,29 @@
+from django.conf import settings
+from django.db import migrations, models
+import django.db.models.deletion
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+        ('payments', '0007_transaction_credited_amount'),
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name='WalletHistory',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('txn_type', models.CharField(choices=[('credit', 'Credit'), ('debit', 'Debit')], db_index=True, max_length=10)),
+                ('amount', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('balance_after', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('comment', models.CharField(blank=True, max_length=255, null=True)),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('api_pricing', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='wallet_history', to='payments.apipricing')),
+                ('transaction', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='wallet_history', to='payments.transaction')),
+                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='wallet_history', to=settings.AUTH_USER_MODEL)),
+                ('wallet', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='history', to='payments.walletbalance')),
+            ],
+        ),
+    ]

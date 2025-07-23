@@ -214,6 +214,8 @@ def fetch_location_map(lat, lng):
     
     response = requests.get(api_url, params=params, headers=headers)
 
+    print("Util response: ", response)
+
     if response.status_code == 200:
         # Convert image bytes to base64 string
         image_base64 = base64.b64encode(response.content).decode('utf-8')

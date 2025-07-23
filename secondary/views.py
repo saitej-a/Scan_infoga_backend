@@ -144,7 +144,7 @@ def payworld_data(request):
                         log_user_activity(request=request, status=UserActivity.Status.FAILED)
                         return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                     print("UPDATING")
-                    update_user_balance(user=user, amount=balance_after_deduction)
+                    update_user_balance(user=user, amount=balance_after_deduction,api_name='secondary_payworld_data')
 
                 latest_timestamp = list(latest_entry.keys())[0]
                 log_user_activity(request, UserActivity.Status.SUCCESS)
@@ -178,7 +178,8 @@ def payworld_data(request):
                     )
                     
                     if realtime_data or not is_called:
-                        update_user_balance(user=user, amount=balance_after_deduction)
+                        update_user_balance(user=user, amount=balance_after_deduction,api_name='secondary_payworld_data')
+
                 
                 log_user_activity(request, UserActivity.Status.SUCCESS)
                 return Response(
@@ -202,7 +203,8 @@ def payworld_data(request):
 
         with transaction.atomic():
             if realtime_data or not is_called:
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction,api_name='secondary_payworld_data')
+
         
         log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(
@@ -253,7 +255,8 @@ def get_full_payworld_data(request):
                 log_user_activity(request=request, status=UserActivity.Status.FAILED)
                 return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
             print("UPDATING")
-            update_user_balance(user=user, amount=balance_after_deduction)
+            update_user_balance(user=user, amount=balance_after_deduction,api_name='secondary_payworld_all_data')
+
 
         log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(
@@ -279,7 +282,8 @@ def get_full_payworld_data(request):
                     sender_mobile_number=sender_mobile,
                     defaults={"result": [data_dict]}
                 )
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction,api_name='secondary_payworld_all_data')
+
             
             log_user_activity(request, UserActivity.Status.SUCCESS)
             return Response(
@@ -542,7 +546,8 @@ def razorpay_ifsc_data(request):
                         log_user_activity(request=request, status=UserActivity.Status.FAILED)
                         return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                     print("UPDATING")
-                    update_user_balance(user=user, amount=balance_after_deduction)
+                    update_user_balance(user=user, amount=balance_after_deduction,api_name='secondary_ifsc_data')
+
 
                 latest_timestamp = list(latest_entry.keys())[0]
                 log_user_activity(request, UserActivity.Status.SUCCESS)
@@ -576,7 +581,8 @@ def razorpay_ifsc_data(request):
                     )
                     
                     if realtime_data or not is_called:
-                        update_user_balance(user=user, amount=balance_after_deduction)
+                        update_user_balance(user=user, amount=balance_after_deduction,api_name='secondary_ifsc_data')
+
                 
                 log_user_activity(request, UserActivity.Status.SUCCESS)
                 return Response(
@@ -600,7 +606,8 @@ def razorpay_ifsc_data(request):
         
         with transaction.atomic():
             if realtime_data or not is_called:
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction,api_name='secondary_ifsc_data')
+
         
         log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(
@@ -651,7 +658,7 @@ def get_full_razorpay_ifsc_data(request):
                 log_user_activity(request=request, status=UserActivity.Status.FAILED)
                 return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
             print("UPDATING")
-            update_user_balance(user=user, amount=balance_after_deduction)
+            update_user_balance(user=user, amount=balance_after_deduction,api_name='secondary_ifsc_all_data')
 
         log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(
@@ -677,7 +684,8 @@ def get_full_razorpay_ifsc_data(request):
                     ifsc_code=ifsc_code,
                     defaults={"result": [data_dict]}
                 )
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction,api_name='secondary_ifsc_all_data')
+
             
             log_user_activity(request, UserActivity.Status.SUCCESS)
             return Response(
@@ -866,7 +874,8 @@ def paynearby_data(request):
                         log_user_activity(request=request, status=UserActivity.Status.FAILED)
                         return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                     print("UPDATING")
-                    update_user_balance(user=user, amount=balance_after_deduction)
+                    update_user_balance(user=user, amount=balance_after_deduction, api_name='secondary_paynear_by_data')
+
                 
                 latest_timestamp = list(latest_entry.keys())[0]
                 log_user_activity(request, UserActivity.Status.SUCCESS)
@@ -899,7 +908,8 @@ def paynearby_data(request):
                     )
                     
                     if realtime_data or not is_called:
-                        update_user_balance(user=user, amount=balance_after_deduction)
+                        update_user_balance(user=user, amount=balance_after_deduction, api_name='secondary_paynear_by_data')
+
                 
                 log_user_activity(request, UserActivity.Status.SUCCESS)
                 return Response(
@@ -923,7 +933,8 @@ def paynearby_data(request):
         
         with transaction.atomic():
             if realtime_data or not is_called:
-                update_user_balance(user=user, amount=balance_after_deduction)
+                update_user_balance(user=user, amount=balance_after_deduction, api_name='secondary_paynear_by_data')
+
         
         log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(
@@ -970,7 +981,8 @@ def get_full_paynearby_data(request):
                 log_user_activity(request=request, status=UserActivity.Status.FAILED)
                 return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
             print("UPDATING")
-            update_user_balance(user=user, amount=balance_after_deduction)
+            update_user_balance(user=user, amount=balance_after_deduction, api_name='secondary_paynear_by_all_data')
+
 
         log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(
@@ -996,7 +1008,8 @@ def get_full_paynearby_data(request):
                     mobile_number=mobile_number,
                     defaults={"result": [data_dict]}
                 )
-                update_user_balance(user=user,amount=balance_after_deduction)
+                update_user_balance(user=user,amount=balance_after_deduction, api_name='secondary_paynear_by_all_data')
+
             
             log_user_activity(request, UserActivity.Status.SUCCESS)
             return Response(

@@ -622,17 +622,17 @@ def loginUser(request):
             status=status.HTTP_200_OK
         )
 
-    # # Third step: Verify OTP and generate token
-    # totp = pyotp.TOTP(user.otp_secret)
-    # if not totp.verify(otp):
-    #     return Response(
-    #         create_response(
-    #             status=False,
-    #             message="Invalid OTP",
-    #             data=None
-    #         ),
-    #         status=status.HTTP_401_UNAUTHORIZED
-    #     )
+    # Third step: Verify OTP and generate token
+    totp = pyotp.TOTP(user.otp_secret)
+    if not totp.verify(otp):
+        return Response(
+            create_response(
+                status=False,
+                message="Invalid OTP",
+                data=None
+            ),
+            status=status.HTTP_401_UNAUTHORIZED
+        )
 
     # Generate token and complete login
     from core.utils import create_token

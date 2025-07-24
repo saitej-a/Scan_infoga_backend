@@ -1116,5 +1116,68 @@ def fetch_upi_to_account(upi_id):
         }
     raise Exception(response.json()['message'] or 'Unexpected Error')
 
+def fetch_rc_data(vehicle_number):
+    api_url = os.getenv('VEHICLE_VERIFICATION_API_URL')
+    api_key = os.getenv('VEHICLE_VERIFICATION_API_AUTH_KEY')
+    
+    headers = {
+        'authkey': api_key,
+        'Content-Type': 'application/json'
+    }
 
+    payload = {
+        'vehicle_no': vehicle_number,
+        'consent': 'Y',
+        'consent_text': "We confirm that we have obtained the consent of the respective customer to fetch their details by using their RC Number and the customer is aware of the purpose for which their data is sought for being processed and have given their consent for the same and such consent is currently valid and not withdrawn."
+    }
+
+    response = requests.post(api_url, headers=headers, json=payload)
+    response.raise_for_status()
+    
+    data = response.json()
+    
+    if 'txn_id' in data.keys():
+        data.pop('txn_id') # remove txn_id becuse its unique and will cause issue in comparison
+    
+    data["datetime"] = datetime.now().isoformat() + "Z"
+
+    if data.get('status') == 1:
+        return {
+            'success': True,
+            'data': data
+        }
+    raise Exception(data.get('message') or 'Unexpected Error')
+
+def fetch_challan_data(vehicle_no):
+    api_url = os.getenv('CHALLAN_DETAILS_API_URL')
+    api_key = os.getenv('CHALLAN_DETAILS_API_AUTH_KEY')
+
+    headers = {
+        'authkey': api_key,
+        'Content-Type': 'application/json'
+    }
+
+    payload = {
+        "vehicle_no": vehicle_no,
+        "consent": "Y",
+        "consent_text": "I give my consent to challan-details api to check my challan details"
+    }
+
+    response = requests.post(api_url, headers=headers, json=payload)
+    response.raise_for_status()
+
+    data = response.json()
+
+    if 'txn_id' in data.keys():
+        data.pop('txn_id')  # optional, if it exists and causes mismatch
+
+    data["datetime"] = datetime.now().isoformat() + "Z"
+
+    if data.get('status') == 1:
+        return {
+            'success': True,
+            'data': data
+        }
+
+    raise Exception(data.get('message') or 'Unexpected Error')
 

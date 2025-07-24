@@ -12,10 +12,14 @@ from django.db import transaction
 from user_activities.utils import log_user_activity
 from user_activities.models import UserActivity
 
+import datetime
+
 from decimal import Decimal
 
 from .models import (
+    ChallanReport,
     Mobile360Report,
+    RCVerifyReport2,
     UANHistoryReport, 
     UANEmploymentReport,
     ESICReport,
@@ -33,7 +37,8 @@ from .models import (
     HunterFind,
     HunterVerify,
     UPIToAccount,
-    UPIToAccount2
+    UPIToAccount2,
+    RCVerifyReport,
 )
 
 
@@ -55,10 +60,12 @@ from .serializers import (
     LeakOSINTSerializer,
     HunterVerifySerializer,
     HunterFindSerializer,
-    UPIToAccountSerializer
+    UPIToAccountSerializer,
+    RCVerifyReportSerializer2,
 )
 
 from .utils import (
+    fetch_challan_data,
     fetch_mobile360_data, 
     fetch_uan_employment_data, 
     fetch_uan_history_data, 
@@ -76,10 +83,13 @@ from .utils import (
     fetch_leak_osint_data,
     fetch_hunter_find_data,
     fetch_hunter_verify_data,
-    fetch_upi_to_account
+    fetch_upi_to_account,
+    fetch_rc_data,
 )
 
 from core.tasks import (
+    fetch_and_store_challan,
+    fetch_and_store_rcverify,
     fetch_and_store_upi_to_account,
 )
 
@@ -2449,5 +2459,371 @@ def upi_to_account_full_data(request):
 #         create_response(True, f'Successfully deleted {count} record(s) for upi_id: {upi_id}', None),
 #         status=status.HTTP_200_OK
 #     )
-    
-        
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def rcverify_data(request):
+    token = get_token_from_header(request=request)
+    user = get_user_from_token(token)
+    vehicle_no = request.data.get('vehicle_no')
+    realtime_data = request.data.get('realtimeData', False)
+
+    if not vehicle_no:
+        return Response(create_response(False, 'vehicle_no is required', None), status=status.HTTP_400_BAD_REQUEST)
+
+    payload = request.data
+    is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
+
+    try:
+        obj = RCVerifyReport2.objects.get(vehicle_no=vehicle_no)
+        full_data = obj.result
+        latest_entry = obj.result[-1] if obj.result else None
+    except RCVerifyReport2.DoesNotExist:
+        full_data = []
+        latest_entry = None
+        obj = None
+
+    try:
+        count = len(full_data)
+        datetime_list = [list(entry.keys())[0] for entry in full_data]
+
+        if not realtime_data:
+            if latest_entry:
+                if not is_called:
+                    balance_after_deduction = get_amount_after_api_call(api_name='rc_verify_data', user=user)
+                    if balance_after_deduction < 0.0:
+                        log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                        return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+
+                    update_user_balance(user=user, amount=balance_after_deduction, api_name="rc_verify_data")
+
+                latest_timestamp = list(latest_entry.keys())[0]
+                log_user_activity(request, UserActivity.Status.SUCCESS)
+                return Response(
+                    create_response(True, "Data fetched from database", {
+                        "count": count,
+                        "datetime_list": datetime_list,
+                        "datetime": latest_timestamp,
+                        "data": latest_entry[latest_timestamp]
+                    }),
+                    status=status.HTTP_200_OK
+                )
+
+        # For realtime or no cached data
+        if realtime_data or latest_entry is None:
+            balance_after_deduction = get_amount_after_api_call(api_name='rc_verify_data', user=user)
+            if balance_after_deduction < 0.0:
+                log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+
+        if latest_entry is None:
+            result = fetch_rc_data(vehicle_no)
+            if result.get('success'):
+                ts = result["data"].pop("datetime")
+                data_dict = {ts: result["data"]}
+
+                with transaction.atomic():
+                    RCVerifyReport2.objects.update_or_create(
+                        vehicle_no=vehicle_no,
+                        defaults={"result": [data_dict]}
+                    )
+
+                    if realtime_data or not is_called:
+                        update_user_balance(user=user, amount=balance_after_deduction, api_name="rc_verify_data")
+
+                log_user_activity(request, UserActivity.Status.SUCCESS)
+                return Response(
+                    create_response(True, "Real-time data fetched successfully", {
+                        "count": 1,
+                        "datetime_list": [ts],
+                        "datetime": ts,
+                        "data": data_dict[ts]
+                    }),
+                    status=status.HTTP_200_OK
+                )
+
+        api_response = fetch_rc_data(vehicle_no)
+        fetch_and_store_rcverify.delay(vehicle_no, api_response)
+
+        with transaction.atomic():
+            if realtime_data or not is_called:
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="rc_verify_data")
+
+        log_user_activity(request, UserActivity.Status.SUCCESS)
+        return Response(
+            create_response(True, "Data fetched from API, comparing in background.", {
+                "count": count,
+                "datetime_list": datetime_list,
+                "datetime": api_response['data']['datetime'],
+                "data": api_response["data"]
+            }),
+            status=status.HTTP_200_OK
+        )
+
+    except Exception as e:
+        log_user_activity(request, UserActivity.Status.FAILED)
+        return Response(
+            create_response(False, f"Unexpected Error: {str(e)}", None),
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def rcverify_full_data(request):
+    token = get_token_from_header(request=request)
+    user = get_user_from_token(token)
+    vehicle_no = request.data.get("vehicle_no")
+
+    if not vehicle_no:
+        return Response(
+            create_response(False, "Missing vehicle_no in query parameters", None),
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    payload = request.data
+    is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
+
+    try:
+        data_obj = RCVerifyReport2.objects.get(vehicle_no=vehicle_no)
+        full_data = [
+            {"datetime": list(entry.keys())[0], "data": list(entry.values())[0]}
+            for entry in data_obj.result
+        ]
+
+        if not is_called:
+            balance_after_deduction = get_amount_after_api_call(api_name='rc_verify_full_data', user=user)
+            if balance_after_deduction < 0.0:
+                log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+
+            update_user_balance(user=user, amount=balance_after_deduction, api_name="rc_verify_full_data")
+
+        log_user_activity(request, UserActivity.Status.SUCCESS)
+        return Response(
+            create_response(True, "Full data fetched successfully", full_data),
+            status=status.HTTP_200_OK
+        )
+
+    except RCVerifyReport2.DoesNotExist:
+        balance_after_deduction = get_amount_after_api_call(api_name='rc_verify_full_data', user=user)
+        if balance_after_deduction < 0.0:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+
+        api_response = fetch_rc_data(vehicle_no)
+        if api_response.get('success'):
+            ts = api_response["data"].pop("datetime")
+            data_dict = {ts: api_response["data"]}
+
+            with transaction.atomic():
+                RCVerifyReport2.objects.update_or_create(
+                    vehicle_no=vehicle_no,
+                    defaults={"result": [data_dict]}
+                )
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="rc_verify_full_data")
+
+            log_user_activity(request, UserActivity.Status.SUCCESS)
+            return Response(
+                create_response(True, "Real-time data fetched successfully", [{
+                    "datetime": ts,
+                    "data": data_dict[ts]
+                }]),
+                status=status.HTTP_200_OK
+            )
+        else:
+            log_user_activity(request, UserActivity.Status.FAILED)
+            return Response(
+                create_response(False, api_response.get("message", "Failed to fetch data"), None), 
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+    except Exception as e:
+        log_user_activity(request, UserActivity.Status.FAILED)
+        return Response(
+            create_response(False, str(e), None),
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def challan_data(request):
+    token = get_token_from_header(request=request)
+    user = get_user_from_token(token)
+    vehicle_no = request.data.get('vehicle_no')
+    realtime_data = request.data.get('realtimeData', False)
+
+    if not vehicle_no:
+        return Response(create_response(False, 'vehicle_no is required', None), status=status.HTTP_400_BAD_REQUEST)
+
+    payload = request.data
+    is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
+
+    try:
+        obj = ChallanReport.objects.get(vehicle_no=vehicle_no)
+        full_data = obj.result
+        latest_entry = obj.result[-1] if obj.result else None
+    except ChallanReport.DoesNotExist:
+        full_data = []
+        latest_entry = None
+        obj = None
+
+    try:
+        count = len(full_data)
+        datetime_list = [list(entry.keys())[0] for entry in full_data]
+
+        if not realtime_data:
+            if latest_entry:
+                if not is_called:
+                    balance_after_deduction = get_amount_after_api_call(api_name='challan_data', user=user)
+                    if balance_after_deduction < 0.0:
+                        log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                        return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+
+                    update_user_balance(user=user, amount=balance_after_deduction, api_name="challan_data")
+
+                latest_timestamp = list(latest_entry.keys())[0]
+                log_user_activity(request, UserActivity.Status.SUCCESS)
+                return Response(
+                    create_response(True, "Data fetched from database", {
+                        "count": count,
+                        "datetime_list": datetime_list,
+                        "datetime": latest_timestamp,
+                        "data": latest_entry[latest_timestamp]
+                    }),
+                    status=status.HTTP_200_OK
+                )
+
+        # realtime or no data
+        if realtime_data or latest_entry is None:
+            balance_after_deduction = get_amount_after_api_call(api_name='challan_data', user=user)
+            if balance_after_deduction < 0.0:
+                log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+
+        if latest_entry is None:
+            result = fetch_challan_data(vehicle_no)
+            if result.get('success'):
+                ts = result["data"].pop("datetime")
+                data_dict = {ts: result["data"]}
+
+                with transaction.atomic():
+                    ChallanReport.objects.update_or_create(
+                        vehicle_no=vehicle_no,
+                        defaults={"result": [data_dict]}
+                    )
+
+                    if realtime_data or not is_called:
+                        update_user_balance(user=user, amount=balance_after_deduction, api_name="challan_data")
+
+                log_user_activity(request, UserActivity.Status.SUCCESS)
+                return Response(
+                    create_response(True, "Real-time data fetched successfully", {
+                        "count": 1,
+                        "datetime_list": [ts],
+                        "datetime": ts,
+                        "data": data_dict[ts]
+                    }),
+                    status=status.HTTP_200_OK
+                )
+
+        api_response = fetch_challan_data(vehicle_no)
+        fetch_and_store_challan.delay(vehicle_no, api_response)
+
+        with transaction.atomic():
+            if realtime_data or not is_called:
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="challan_data")
+
+        log_user_activity(request, UserActivity.Status.SUCCESS)
+        return Response(
+            create_response(True, "Data fetched from API, comparing in background.", {
+                "count": count,
+                "datetime_list": datetime_list,
+                "datetime": api_response['data']['datetime'],
+                "data": api_response["data"]
+            }),
+            status=status.HTTP_200_OK
+        )
+
+    except Exception as e:
+        log_user_activity(request, UserActivity.Status.FAILED)
+        return Response(
+            create_response(False, f"Unexpected Error: {str(e)}", None),
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def challan_full_data(request):
+    token = get_token_from_header(request=request)
+    user = get_user_from_token(token)
+    vehicle_no = request.data.get("vehicle_no")
+
+    if not vehicle_no:
+        return Response(
+            create_response(False, "Missing vehicle_no in query parameters", None),
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    payload = request.data
+    is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
+
+    try:
+        data_obj = ChallanReport.objects.get(vehicle_no=vehicle_no)
+        full_data = [
+            {"datetime": list(entry.keys())[0], "data": list(entry.values())[0]}
+            for entry in data_obj.result
+        ]
+
+        if not is_called:
+            balance_after_deduction = get_amount_after_api_call(api_name='challan_full_data', user=user)
+            if balance_after_deduction < 0.0:
+                log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+
+            update_user_balance(user=user, amount=balance_after_deduction, api_name="challan_full_data")
+
+        log_user_activity(request, UserActivity.Status.SUCCESS)
+        return Response(
+            create_response(True, "Full data fetched successfully", full_data),
+            status=status.HTTP_200_OK
+        )
+
+    except ChallanReport.DoesNotExist:
+        balance_after_deduction = get_amount_after_api_call(api_name='challan_full_data', user=user)
+        if balance_after_deduction < 0.0:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+
+        api_response = fetch_challan_data(vehicle_no)
+        if api_response.get('success'):
+            ts = api_response["data"].pop("datetime")
+            data_dict = {ts: api_response["data"]}
+
+            with transaction.atomic():
+                ChallanReport.objects.update_or_create(
+                    vehicle_no=vehicle_no,
+                    defaults={"result": [data_dict]}
+                )
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="challan_full_data")
+
+            log_user_activity(request, UserActivity.Status.SUCCESS)
+            return Response(
+                create_response(True, "Real-time data fetched successfully", [{
+                    "datetime": ts,
+                    "data": data_dict[ts]
+                }]),
+                status=status.HTTP_200_OK
+            )
+        else:
+            log_user_activity(request, UserActivity.Status.FAILED)
+            return Response(
+                create_response(False, api_response.get("message", "Failed to fetch data"), None), 
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+    except Exception as e:
+        log_user_activity(request, UserActivity.Status.FAILED)
+        return Response(
+            create_response(False, str(e), None),
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

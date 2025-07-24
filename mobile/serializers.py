@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Mobile360Report, UANHistoryReport, UANEmploymentReport, ESICReport, GSTVerificationReport, UdyamReport, ProfileAdvanceReport, EquifaxV3Report, GSTTurnoverReport, MobileToAccountNumber, UanWithoutOtp, MobileToDLLookup, PanAllInOne, DigitalPaymentAnalyser, LeakOSINT, HunterFind, HunterVerify, UPIToAccount2, UPIToAccount
+from .models import ChallanReport, Mobile360Report, RCVerifyReport2, UANHistoryReport, UANEmploymentReport, ESICReport, GSTVerificationReport, UdyamReport, ProfileAdvanceReport, EquifaxV3Report, GSTTurnoverReport, MobileToAccountNumber, UanWithoutOtp, MobileToDLLookup, PanAllInOne, DigitalPaymentAnalyser, LeakOSINT, HunterFind, HunterVerify, UPIToAccount2, UPIToAccount, RCVerifyReport
 
 class Mobile360ReportSerializer(serializers.ModelSerializer):
     class Meta:
@@ -103,4 +103,18 @@ class UPIToAccount2Serializer(serializers.ModelSerializer):
     class Meta:
         model = UPIToAccount2
         fields = '__all__'
-        
+
+class RCVerifyReportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RCVerifyReport
+        fields = '__all__'
+
+class RCVerifyReportSerializer2(serializers.ModelSerializer):
+    class Meta:
+        model = RCVerifyReport2
+        fields = '__all__'
+
+class ChallanReportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ChallanReport
+        fields = '__all__'

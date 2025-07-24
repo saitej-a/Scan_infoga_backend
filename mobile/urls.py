@@ -24,5 +24,8 @@ urlpatterns = [
     path('upi-to-account', views.upi_to_account_data, name="upi-to-account"),
     path('upi-to-account-full-data', views.upi_to_account_full_data, name="upi-to-account-full-data"),
     path('mobile-count', views.mobile_360_call_count, name="mobile-count"),
-    # path('delete-upi-to-account', views.delete_upi_to_account_data, name="delete-upi-to-account"),
+    path('rc-verify', views.rcverify_data, name="rc-verify"),
+    path('rc-verify-full-data', views.rcverify_full_data, name="rc-verify-full-data"),
+    path('challan', views.challan_data, name="challan"),
+    path('challan-full-data', views.challan_full_data, name="challan-full-data"),
 ]

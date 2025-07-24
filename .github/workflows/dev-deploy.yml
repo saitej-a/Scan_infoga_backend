@@ -37,7 +37,7 @@ jobs:
       - name: Create .env file on EC2
         run: |
           ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} \
-          "printf '%s\n' '${{ secrets.ENV_FILE }}' > /home/ubuntu/back-app/.env && printf '%s\n' '${{ secrets.ENV_FILE_1 }}' >> /home/ubuntu/back-app/.env"
+          "printf '%s\n' '${{ secrets.ENV_FILE }}' > /home/ubuntu/back-app/.env && printf '%s\n' '${{ secrets.ENV_FILE_1 }}' >> /home/ubuntu/back-app/.env && printf '%s\n' '${{ secrets.ENV_FILE_2 }}' >> /home/ubuntu/back-app/.env"
 
       - name: Install dependencies and run migrations on EC2
         run: |
@@ -47,7 +47,6 @@ jobs:
             # Create virtual environment if not exists
             [ -d "venv" ] || python3 -m venv venv
             source venv/bin/activate
-            pip install --upgrade pip
             pip install -r requirements.txt
             pip install psycopg2-binary
             python manage.py makemigrations

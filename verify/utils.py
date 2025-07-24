@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 import json
 import time
 from datetime import datetime
+from rest_framework.decorators import api_view
+
 
 load_dotenv()
 
@@ -136,6 +138,41 @@ def aadharVerify(aadhar_number):
 
         else:
             raise Exception(f"Aadhar verification API error. Status code: {response.status_code}")
+    except Exception as e:
+        return {
+            "status": False,
+            "error": str(e)
+        }   
+
+
+
+
+def trucallerVerify(mobile_number):
+    try:
+        TRUCALLER_API_URL = os.getenv("TRUCALLER_API_URL")
+        API_KEY = os.getenv("TRUCALLER_API_KEY")
+        querystring = {"code": "91", "number": mobile_number}
+
+        headers = {
+            "x-rapidapi-key": API_KEY,
+            "x-rapidapi-host": "viewcaller.p.rapidapi.com"
+        }
+
+        response = requests.get(TRUCALLER_API_URL, headers=headers, params=querystring)
+        
+        if response.status_code == 200:
+            result = response.json()
+            if result.get("status"):
+                return {
+                    "status": True,
+                    "data": result
+                }
+            else:
+                raise Exception(f"Trucaller verification failed")
+
+        else:
+            print("Response from Trucaller API:", response.text)
+            raise Exception(f"Trucaller verification API error. Status code: {response.status_code}")
     except Exception as e:
         return {
             "status": False,

@@ -63,3 +63,5 @@ __pycache__/
 *.pyc
 # Virtualenv
 venv/
+__pycache__/
+*.pyc

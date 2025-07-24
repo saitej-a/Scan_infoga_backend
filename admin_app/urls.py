@@ -14,6 +14,6 @@ urlpatterns = [
     path('user-note', views.user_note, name='user-note'),
     path('pending-txns', views.get_pending_txns, name='pending-txns'),
     path('successful-txns', views.get_completed_txns, name='completed-txns'),
-    path('failed-txns', views.get_failed_txns, name='failed-txns')
-
+    path('failed-txns', views.get_failed_txns, name='failed-txns'),
+    path('admin-login', views.admin_login, name='admin-login'),
 ]

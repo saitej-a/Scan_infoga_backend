@@ -30,6 +30,11 @@ class CustomUser(AbstractUser):
         PLATINUM = 'PLATINUM', 'Platinum'
     username = None
     email = models.EmailField(_('email address'), unique=True)
+    class UserTypeOpt(models.TextChoices):
+        ADMIN= "ADMIN", "Admin"
+        DEVELOPER= "DEVELOPER", "Developer"
+        USER= "USER", "User"
+        CORPORATE= "CORPORATE", "Corporate"
     user_type = models.CharField(max_length=20, choices=[
         ('CORPORATE', 'Corporate'),
         ('DEVELOPER', 'Developer'),

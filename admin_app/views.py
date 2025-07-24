@@ -639,3 +639,141 @@ def get_failed_txns(request):
         ),
         status=status.HTTP_200_OK
     )
+
+
+@api_view(['POST'])
+def admin_login(request):
+    all_headers = dict(request.headers)
+    email = request.data.get('email')
+    password = request.data.get('password')
+    otp = request.data.get('otp')
+    
+    # First step: Email and password authentication
+    if not all([email, password]):
+        return Response(
+            create_response(
+                status=False,
+                message="Please provide email, password",
+                data=None
+            ),
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    hashedPassword = hashlib.sha256(password.encode()).hexdigest()
+    user = authenticate(email=email, password=hashedPassword)
+
+    if not user:
+        return Response(
+            create_response(
+                status=False,
+                message="Invalid credentials",
+                data=None
+            ),
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+    
+    if user.user_type != CustomUser.UserTypeOpt.ADMIN:
+        return Response(
+            create_response(
+                status=False,
+                message=f"Invalid Login",
+                data=None
+            ),
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+
+    # Second step: Request OTP
+    if not otp:
+        return Response(
+            create_response(
+                status=True,
+                message="Please provide OTP",
+                data={'require_otp': True}
+            ),
+            status=status.HTTP_200_OK
+        )
+
+    # Third step: Verify OTP and generate token
+    totp = pyotp.TOTP(user.otp_secret)
+    if not totp.verify(otp):
+        return Response(
+            create_response(
+                status=False,
+                message="Invalid OTP",
+                data=None
+            ),
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+
+    # Generate token and complete login
+    from core.utils import create_token
+    # token = create_token(user)
+    refresh = RefreshToken.for_user(user)
+    token = str(refresh.access_token)
+
+    raw = request.headers.get('Clientinfo')
+    clientinfo = {}
+    if raw:
+        try:
+            clientinfo = json.loads(raw)
+        except json.JSONDecodeError:
+            return Response(
+                create_response(False, "Malformed Clientinfo header", None),
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    user_data = {
+        'email': user.email,
+        'firstName': user.first_name,
+        'lastName': user.last_name,
+        'userType': user.user_type,
+        'dateJoined': user.date_joined,
+        "ipAddress": clientinfo.get('ip') or request.META.get('REMOTE_ADDR'),
+        "device": clientinfo.get('device', 'Unknown'),
+        "browser": clientinfo.get('browser', 'Unknown'),
+        "latitude": clientinfo.get('latitude', '0'),
+        "longitude": clientinfo.get('longitude', '0'),
+        "subscriptionPlan": user.subscription_plan,
+        "subscriptionDate": user.subscription_date,
+        "phone": user.phone,
+    }
+
+    UserSession.objects.create(
+        user=user,
+        ipAddress=clientinfo.get('ip') or request.META.get('REMOTE_ADDR'),
+        device=clientinfo.get('device', 'Unknown'),
+        browser=clientinfo.get('browser', 'Unknown'),
+        latitude=clientinfo.get('latitude', '0'),
+        longitude=clientinfo.get('longitude', '0'),
+
+        userAgent=clientinfo.get('userAgent', ''),
+        platform=clientinfo.get('platform', ''),
+        language=clientinfo.get('language', ''),
+        cookiesEnabled=clientinfo.get('cookiesEnabled', True),
+        javascriptEnabled=clientinfo.get('javascriptEnabled', True),
+        touchSupport=clientinfo.get('touchSupport', False),
+        deviceType=clientinfo.get('deviceType', ''),
+        cpuCores=clientinfo.get('cpuCores'),
+        memory=clientinfo.get('memory', ''),
+        screenSize=clientinfo.get('screenSize', ''),
+        batteryLevel=clientinfo.get('batteryLevel', ''),
+        isCharging=clientinfo.get('isCharging', False),
+        gpuRenderer=clientinfo.get('gpuRenderer', ''),
+        cameras=clientinfo.get('cameras', ''),
+        microphones=clientinfo.get('microphones', ''),
+        publicIp=clientinfo.get('publicIp', ''),
+        isp=clientinfo.get('isp', ''),
+        asn=clientinfo.get('asn', ''),
+        city=clientinfo.get('city', ''),
+        country=clientinfo.get('country', ''),
+        possibleIoT=clientinfo.get('possibleIoT', False)
+    )
+
+    return Response(
+        create_response(
+            status=True,
+            message="Login successful",
+            data={'user': user_data, 'accessToken': token}
+        ),
+        status=status.HTTP_200_OK
+    )

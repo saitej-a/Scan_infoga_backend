@@ -1181,3 +1181,35 @@ def fetch_challan_data(vehicle_no):
 
     raise Exception(data.get('message') or 'Unexpected Error')
 
+
+def fetch_address_tracing_data(mobile_number):
+    api_url = os.getenv('ADDRESS_TRACING_API_URL')
+    api_key = os.getenv('ADDRESS_TRACING_API_AUTH_KEY')
+    
+    headers = {
+        'authkey': api_key,
+        'Content-Type': 'application/json'
+    }
+    
+    payload = {
+        "mobile": mobile_number,
+        "consent": "Y",
+        "consent_text": "We confirm obtaining valid customer consent to access/process their Mobile Number. Consent remains valid, informed, and unwithdrawn."
+    }
+    
+    response = requests.post(api_url, headers=headers, json=payload)
+    response.raise_for_status()
+    
+    data = response.json()
+    
+    if 'txn_id' in data.keys():
+        data.pop('txn_id')  # optional, if it exists and causes mismatch
+    
+    data["datetime"] = datetime.now().isoformat() + "Z"
+    
+    if data.get('status') == 1:
+        return {
+            'success': True,
+            'data': data
+        }
+    raise Exception(data.get('message') or 'Unexpected Error')

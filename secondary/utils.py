@@ -2,6 +2,7 @@ import datetime
 import os
 import requests
 from django.core.cache import cache
+import http.client
 
 # def fetch_payworld_data(sender_mobile):
 #     """
@@ -242,4 +243,18 @@ def fetch_paynearby_data(mobile_number):
             "message": f"Unexpected error: {str(e)}"
         }
 
-        
+
+def fetch_rapid_search_data(query):
+    rapid_api_key = os.getenv("RAPID_API_KEY")
+    rapid_api_host_url = os.getenv("RAPID_API_HOST_URL")
+    
+    headers = {
+        'x-rapidapi-key': rapid_api_key,
+        'x-rapidapi-host': rapid_api_host_url
+    }
+    
+    conn = http.client.HTTPSConnection(rapid_api_host_url)
+    conn.request("GET", f"/?query={query}&limit=10&related_keywords=true", headers=headers)
+    res = conn.getresponse()
+    data = res.read()
+    return data.decode("utf-8")

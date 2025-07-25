@@ -28,4 +28,6 @@ urlpatterns = [
     path('rc-verify-full-data', views.rcverify_full_data, name="rc-verify-full-data"),
     path('challan', views.challan_data, name="challan"),
     path('challan-full-data', views.challan_full_data, name="challan-full-data"),
+    path('address-trace', views.address_trace_data, name='address_trace_data'),
+    path('address-trace-full-data', views.address_trace_full_data, name='address_trace_full_data'),
 ]

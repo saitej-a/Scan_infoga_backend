@@ -1213,3 +1213,7 @@ def fetch_address_tracing_data(mobile_number):
             'data': data
         }
     raise Exception(data.get('message') or 'Unexpected Error')
+
+
+def fetch_mobile_to_dl_advance(mobile):
+    pass

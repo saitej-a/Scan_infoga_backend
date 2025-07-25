@@ -2974,36 +2974,43 @@ def address_trace_full_data(request):
         )
 
     except AddressTraceReport.DoesNotExist:
-        balance_after_deduction = get_amount_after_api_call(api_name='address_trace_full_data', user=user)
-        if balance_after_deduction < 0.0:
-            log_user_activity(request=request, status=UserActivity.Status.FAILED)
-            return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+        try:
+            balance_after_deduction = get_amount_after_api_call(api_name='address_trace_full_data', user=user)
+            if balance_after_deduction < 0.0:
+                log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
-        api_response = fetch_address_tracing_data(mobile)
-        if api_response.get('success'):
-            ts = api_response["data"].pop("datetime")
-            data_dict = {ts: api_response["data"]}
+            api_response = fetch_address_tracing_data(mobile)
+            if api_response.get('success'):
+                ts = api_response["data"].pop("datetime")
+                data_dict = {ts: api_response["data"]}
 
-            with transaction.atomic():
-                AddressTraceReport.objects.update_or_create(
-                    mobile=mobile,
-                    defaults={"result": [data_dict]}
+                with transaction.atomic():
+                    AddressTraceReport.objects.update_or_create(
+                        mobile=mobile,
+                        defaults={"result": [data_dict]}
+                    )
+                    update_user_balance(user=user, amount=balance_after_deduction, api_name="address_trace_full_data")
+
+                log_user_activity(request, UserActivity.Status.SUCCESS)
+                return Response(
+                    create_response(True, "Real-time data fetched successfully", [{
+                        "datetime": ts,
+                        "data": data_dict[ts]
+                    }]),
+                    status=status.HTTP_200_OK
                 )
-                update_user_balance(user=user, amount=balance_after_deduction, api_name="address_trace_full_data")
-
-            log_user_activity(request, UserActivity.Status.SUCCESS)
-            return Response(
-                create_response(True, "Real-time data fetched successfully", [{
-                    "datetime": ts,
-                    "data": data_dict[ts]
-                }]),
-                status=status.HTTP_200_OK
-            )
-        else:
+            else:
+                log_user_activity(request, UserActivity.Status.FAILED)
+                return Response(
+                    create_response(False, api_response.get("message", "Failed to fetch data"), None), 
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        except Exception as e:
             log_user_activity(request, UserActivity.Status.FAILED)
             return Response(
-                create_response(False, api_response.get("message", "Failed to fetch data"), None), 
-                status=status.HTTP_404_NOT_FOUND
+                create_response(False, str(e), None),
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
     except Exception as e:

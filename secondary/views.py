@@ -1,5 +1,6 @@
 import datetime
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import api_view
@@ -7,10 +8,11 @@ from django.utils import timezone
 from rest_framework.views import APIView
 from core.utils import create_response
 from django.core.cache import cache
+import urllib.parse
 
 from .models import PayworldData2, RazorpayIFSCData, PaynearbyData, RazorpayIFSCData2
 from core.tasks import fetch_and_store_payworld_data, fetch_and_store_razorpay_data, fetch_and_store_paynearby_data
-from .utils import fetch_payworld_data, fetch_razorpay_ifsc_data, fetch_paynearby_data
+from .utils import fetch_payworld_data, fetch_rapid_search_data, fetch_razorpay_ifsc_data, fetch_paynearby_data
 from core.utils import create_response
 
 from user_activities.utils import is_called_by_user_previously, log_user_activity
@@ -1034,6 +1036,43 @@ def get_full_paynearby_data(request):
         )
 
         
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def get_rapid_search_data(request):
+    token=get_token_from_header(request=request)
+    user=get_user_from_token(token)
+    query = request.data.get('query')
+    query = urllib.parse.quote(query)
+    
+    if not query:
+        return Response(create_response(False, 'query is required', None), status=status.HTTP_400_BAD_REQUEST)
+
+    # payload = request.data
+    # is_called = is_called_by_user_previously(user=user,api_name=request.path,payload=payload)
+
+    try:
+        api_response = fetch_rapid_search_data(query)
+        response_data=api_response['data']
         
+        if response_data:
+            balance_after_deduction = get_amount_after_api_call(api_name='rapid_search', user=user)
+            if balance_after_deduction<0.0:
+                log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+            
+            update_user_balance(user=user, amount=balance_after_deduction, api_name='rapid_search')
+            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+            return Response(create_response(True, "Data fetched from api.", response_data), status=status.HTTP_200_OK)
+        else:
+            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            return Response(create_response(False, "No data found.", None), status=status.HTTP_404_NOT_FOUND)
+    
+    except Exception as e:
+        log_user_activity(request, UserActivity.Status.FAILED)
+        return Response(
+            create_response(False, str(e), None),
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+    
     
     

@@ -17,4 +17,5 @@ urlpatterns = [
     path('failed-txns', views.get_failed_txns, name='failed-txns'),
     path('admin-login', views.admin_login, name='admin-login'),
     path('get-all-user-activities', views.get_user_activities, name='admin-login'),
+    path('get-all-apis', views.list_all_routes, name='api-list'),
 ]

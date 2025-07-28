@@ -11,6 +11,7 @@ import hashlib
 import uuid
 from django.contrib.auth import authenticate
 import pyotp
+from django.urls import get_resolver, URLPattern, URLResolver
 
 from payments.models import (
     WalletHistory,
@@ -869,11 +870,15 @@ def get_user_activities(request):
             Q(browser__icontains=search)
         )
 
-    # ✅ Filter by status
+    # filter by api_called
+    if val := request.GET.get('api_called__exact'):
+        activities = activities.filter(api_called=val)
+
+    # Filter by status
     if status_filter := request.GET.get('status'):
         activities = activities.filter(status=status_filter)
 
-    # 📆 Date filters
+    # Date filters
     if val := request.GET.get('activity_time__gte'):
         try:
             date = make_aware(datetime.strptime(val, '%Y-%m-%d'))
@@ -915,3 +920,26 @@ def get_user_activities(request):
         ),
         status=status.HTTP_200_OK
     )
+
+
+def list_urls(urlpatterns, prefix=''):
+    urls = []
+    for pattern in urlpatterns:
+        if isinstance(pattern, URLPattern):
+            full_path = prefix + str(pattern.pattern)
+            if full_path.startswith('api'): 
+                urls.append({
+                    'value': "/" +full_path,
+                    'label': "/" + full_path,
+                    # 'label': pattern.name,
+                })
+        elif isinstance(pattern, URLResolver):
+            nested_prefix = prefix + str(pattern.pattern)
+            urls.extend(list_urls(pattern.url_patterns, prefix=nested_prefix))
+    return urls
+@api_view(['GET'])
+def list_all_routes(request):
+    resolver = get_resolver()
+    urls = list_urls(resolver.url_patterns)
+    return Response(create_response(status= True, message= "APIs fetched successfully.", data=urls))
+    

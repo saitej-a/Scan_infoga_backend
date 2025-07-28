@@ -143,13 +143,13 @@ def payworld_data(request):
                 if not is_called:
                     balance_after_deduction = get_amount_after_api_call(api_name='secondary_payworld_data', user=user)
                     if balance_after_deduction < 0.0:
-                        log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                        # log_user_activity(request=request, status=UserActivity.Status.FAILED)
                         return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                     print("UPDATING")
                     update_user_balance(user=user, amount=balance_after_deduction,api_name='secondary_payworld_data')
 
                 latest_timestamp = list(latest_entry.keys())[0]
-                log_user_activity(request, UserActivity.Status.SUCCESS)
+                # log_user_activity(request, UserActivity.Status.SUCCESS)
                 return Response(
                     create_response(True, "Data fetched from database", {
                         "count": count,
@@ -164,7 +164,7 @@ def payworld_data(request):
         if realtime_data or latest_entry is None:
             balance_after_deduction = get_amount_after_api_call(api_name='secondary_payworld_data', user=user)
             if balance_after_deduction < 0.0:
-                log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                # log_user_activity(request=request, status=UserActivity.Status.FAILED)
                 return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
         if latest_entry is None:
@@ -183,7 +183,7 @@ def payworld_data(request):
                         update_user_balance(user=user, amount=balance_after_deduction,api_name='secondary_payworld_data')
 
                 
-                log_user_activity(request, UserActivity.Status.SUCCESS)
+                # log_user_activity(request, UserActivity.Status.SUCCESS)
                 return Response(
                     create_response(True, "Real-time data fetched successfully", {
                         "count": 1,
@@ -194,7 +194,7 @@ def payworld_data(request):
                     status=status.HTTP_200_OK
                 )
             else:
-                log_user_activity(request, UserActivity.Status.FAILED)
+                # log_user_activity(request, UserActivity.Status.FAILED)
                 return Response(
                     create_response(False, result.get("message", "Failed to fetch data"), None),
                     status=status.HTTP_404_NOT_FOUND
@@ -208,7 +208,7 @@ def payworld_data(request):
                 update_user_balance(user=user, amount=balance_after_deduction,api_name='secondary_payworld_data')
 
         
-        log_user_activity(request, UserActivity.Status.SUCCESS)
+        # log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(
             create_response(True, "Data fetched from API, comparing in background.", {
                 "count": count,
@@ -220,7 +220,7 @@ def payworld_data(request):
         )
     
     except Exception as e:
-        log_user_activity(request, UserActivity.Status.FAILED)
+        # log_user_activity(request, UserActivity.Status.FAILED)
         return Response(
             create_response(False, str(e), None),
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -254,13 +254,13 @@ def get_full_payworld_data(request):
         if not is_called:
             balance_after_deduction = get_amount_after_api_call(api_name='secondary_payworld_all_data', user=user)
             if balance_after_deduction < 0.0:
-                log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                # log_user_activity(request=request, status=UserActivity.Status.FAILED)
                 return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
             print("UPDATING")
             update_user_balance(user=user, amount=balance_after_deduction,api_name='secondary_payworld_all_data')
 
 
-        log_user_activity(request, UserActivity.Status.SUCCESS)
+        # log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(
             create_response(True, "Full data fetched successfully", full_data),
             status=status.HTTP_200_OK
@@ -271,7 +271,7 @@ def get_full_payworld_data(request):
         
         balance_after_deduction = get_amount_after_api_call(api_name='secondary_payworld_all_data', user=user)
         if balance_after_deduction < 0.0:
-            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            # log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
         
         result = fetch_payworld_data(sender_mobile)
@@ -287,7 +287,7 @@ def get_full_payworld_data(request):
                 update_user_balance(user=user, amount=balance_after_deduction,api_name='secondary_payworld_all_data')
 
             
-            log_user_activity(request, UserActivity.Status.SUCCESS)
+            # log_user_activity(request, UserActivity.Status.SUCCESS)
             return Response(
                 create_response(True, "Real-time data fetched successfully", [{
                     "datetime": ts,
@@ -296,14 +296,14 @@ def get_full_payworld_data(request):
                 status=status.HTTP_200_OK
             )
         else:
-            log_user_activity(request, UserActivity.Status.FAILED)
+            # log_user_activity(request, UserActivity.Status.FAILED)
             return Response(
                 create_response(False, result.get("message", "Failed to fetch data"), None),
                 status=status.HTTP_404_NOT_FOUND
             )
             
     except Exception as e:
-        log_user_activity(request, UserActivity.Status.FAILED)
+        # log_user_activity(request, UserActivity.Status.FAILED)
         return Response(
             create_response(False, str(e), None),
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -545,14 +545,14 @@ def razorpay_ifsc_data(request):
                 if not is_called:
                     balance_after_deduction = get_amount_after_api_call(api_name='secondary_ifsc_data', user=user)
                     if balance_after_deduction < 0.0:
-                        log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                        # log_user_activity(request=request, status=UserActivity.Status.FAILED)
                         return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                     print("UPDATING")
                     update_user_balance(user=user, amount=balance_after_deduction,api_name='secondary_ifsc_data')
 
 
                 latest_timestamp = list(latest_entry.keys())[0]
-                log_user_activity(request, UserActivity.Status.SUCCESS)
+                # log_user_activity(request, UserActivity.Status.SUCCESS)
                 return Response(
                     create_response(True, "Data fetched from database", {
                         "count": count,
@@ -567,7 +567,7 @@ def razorpay_ifsc_data(request):
         if realtime_data or latest_entry is None:
             balance_after_deduction = get_amount_after_api_call(api_name='secondary_ifsc_data', user=user)
             if balance_after_deduction < 0.0:
-                log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                # log_user_activity(request=request, status=UserActivity.Status.FAILED)
                 return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
         if latest_entry is None:
@@ -586,7 +586,7 @@ def razorpay_ifsc_data(request):
                         update_user_balance(user=user, amount=balance_after_deduction,api_name='secondary_ifsc_data')
 
                 
-                log_user_activity(request, UserActivity.Status.SUCCESS)
+                # log_user_activity(request, UserActivity.Status.SUCCESS)
                 return Response(
                     create_response(True, "Real-time data fetched successfully", {
                         "count": 1,
@@ -597,7 +597,7 @@ def razorpay_ifsc_data(request):
                     status=status.HTTP_200_OK
                 )
             else:
-                log_user_activity(request, UserActivity.Status.FAILED)
+                # log_user_activity(request, UserActivity.Status.FAILED)
                 return Response(
                     create_response(False, result.get("message", "Failed to fetch data"), None), 
                     status=status.HTTP_404_NOT_FOUND
@@ -611,7 +611,7 @@ def razorpay_ifsc_data(request):
                 update_user_balance(user=user, amount=balance_after_deduction,api_name='secondary_ifsc_data')
 
         
-        log_user_activity(request, UserActivity.Status.SUCCESS)
+        # log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(
             create_response(True, "Data fetched from API, comparing in background.", {
                 "count": count,
@@ -623,7 +623,7 @@ def razorpay_ifsc_data(request):
         )
     
     except Exception as e:
-        log_user_activity(request, UserActivity.Status.FAILED)
+        # log_user_activity(request, UserActivity.Status.FAILED)
         return Response(
             create_response(False, str(e), None),
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -657,12 +657,12 @@ def get_full_razorpay_ifsc_data(request):
         if not is_called:
             balance_after_deduction = get_amount_after_api_call(api_name='secondary_ifsc_all_data', user=user)
             if balance_after_deduction < 0.0:
-                log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                # log_user_activity(request=request, status=UserActivity.Status.FAILED)
                 return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
             print("UPDATING")
             update_user_balance(user=user, amount=balance_after_deduction,api_name='secondary_ifsc_all_data')
 
-        log_user_activity(request, UserActivity.Status.SUCCESS)
+        # log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(
             create_response(True, "Full data fetched successfully", full_data),
             status=status.HTTP_200_OK
@@ -673,7 +673,7 @@ def get_full_razorpay_ifsc_data(request):
         
         balance_after_deduction = get_amount_after_api_call(api_name='secondary_ifsc_all_data', user=user)
         if balance_after_deduction < 0.0:
-            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            # log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
         
         result = fetch_razorpay_ifsc_data(ifsc_code)
@@ -689,7 +689,7 @@ def get_full_razorpay_ifsc_data(request):
                 update_user_balance(user=user, amount=balance_after_deduction,api_name='secondary_ifsc_all_data')
 
             
-            log_user_activity(request, UserActivity.Status.SUCCESS)
+            # log_user_activity(request, UserActivity.Status.SUCCESS)
             return Response(
                 create_response(True, "Real-time data fetched successfully", [{
                     "datetime": ts,
@@ -698,14 +698,14 @@ def get_full_razorpay_ifsc_data(request):
                 status=status.HTTP_200_OK
             )
         else:
-            log_user_activity(request, UserActivity.Status.FAILED)
+            # log_user_activity(request, UserActivity.Status.FAILED)
             return Response(
                 create_response(False, result.get("message", "Failed to fetch data"), None), 
                 status=status.HTTP_404_NOT_FOUND
             )
             
     except Exception as e:
-        log_user_activity(request, UserActivity.Status.FAILED)
+        # log_user_activity(request, UserActivity.Status.FAILED)
         return Response(
             create_response(False, str(e), None),
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -873,14 +873,14 @@ def paynearby_data(request):
                 if not is_called:
                     balance_after_deduction = get_amount_after_api_call(api_name='secondary_paynear_by_data', user=user)
                     if balance_after_deduction<0.0:
-                        log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                        # log_user_activity(request=request, status=UserActivity.Status.FAILED)
                         return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                     print("UPDATING")
                     update_user_balance(user=user, amount=balance_after_deduction, api_name='secondary_paynear_by_data')
 
                 
                 latest_timestamp = list(latest_entry.keys())[0]
-                log_user_activity(request, UserActivity.Status.SUCCESS)
+                # log_user_activity(request, UserActivity.Status.SUCCESS)
                 return Response(
                     create_response(True, "Data fetched from database", {
                         "count": count,
@@ -894,7 +894,7 @@ def paynearby_data(request):
         if realtime_data or latest_entry is None:
             balance_after_deduction = get_amount_after_api_call(api_name='secondary_paynear_by_data', user=user)
             if balance_after_deduction < 0.0:
-                log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                # log_user_activity(request=request, status=UserActivity.Status.FAILED)
                 return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
         
         if latest_entry is None:
@@ -913,7 +913,7 @@ def paynearby_data(request):
                         update_user_balance(user=user, amount=balance_after_deduction, api_name='secondary_paynear_by_data')
 
                 
-                log_user_activity(request, UserActivity.Status.SUCCESS)
+                # log_user_activity(request, UserActivity.Status.SUCCESS)
                 return Response(
                     create_response(True, "Real-time data fetched successfully", {
                         "count": 1,
@@ -924,7 +924,7 @@ def paynearby_data(request):
                     status=status.HTTP_200_OK
                 )
             else:
-                log_user_activity(request, UserActivity.Status.FAILED)
+                # log_user_activity(request, UserActivity.Status.FAILED)
                 return Response(
                     create_response(False, result.get("message", "Failed to fetch data"), None), 
                     status=status.HTTP_404_NOT_FOUND
@@ -938,7 +938,7 @@ def paynearby_data(request):
                 update_user_balance(user=user, amount=balance_after_deduction, api_name='secondary_paynear_by_data')
 
         
-        log_user_activity(request, UserActivity.Status.SUCCESS)
+        # log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(
             create_response(True, "Data fetched from API, comparing in background.", {
                 "count": count,
@@ -950,7 +950,7 @@ def paynearby_data(request):
         )
     
     except Exception as e:
-        log_user_activity(request, UserActivity.Status.FAILED)
+        # log_user_activity(request, UserActivity.Status.FAILED)
         return Response(
             create_response(False, str(e), None),
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -980,13 +980,13 @@ def get_full_paynearby_data(request):
         if not is_called:
             balance_after_deduction = get_amount_after_api_call(api_name='secondary_paynear_by_all_data', user=user)
             if balance_after_deduction < 0.0:
-                log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                # log_user_activity(request=request, status=UserActivity.Status.FAILED)
                 return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
             print("UPDATING")
             update_user_balance(user=user, amount=balance_after_deduction, api_name='secondary_paynear_by_all_data')
 
 
-        log_user_activity(request, UserActivity.Status.SUCCESS)
+        # log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(
             create_response(True, "Full data fetched successfully", full_data),
             status=status.HTTP_200_OK
@@ -997,7 +997,7 @@ def get_full_paynearby_data(request):
         
         balance_after_deduction = get_amount_after_api_call(api_name='secondary_paynear_by_all_data', user=user)
         if balance_after_deduction<0.0:
-            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            # log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
         
         result = fetch_paynearby_data(mobile_number=mobile_number)
@@ -1013,7 +1013,7 @@ def get_full_paynearby_data(request):
                 update_user_balance(user=user,amount=balance_after_deduction, api_name='secondary_paynear_by_all_data')
 
             
-            log_user_activity(request, UserActivity.Status.SUCCESS)
+            # log_user_activity(request, UserActivity.Status.SUCCESS)
             return Response(
                 create_response(True, "Real-time data fetched successfully", [{
                     "datetime": ts,
@@ -1022,14 +1022,14 @@ def get_full_paynearby_data(request):
                 status=status.HTTP_200_OK
             )
         else:
-            log_user_activity(request, UserActivity.Status.FAILED)
+            # log_user_activity(request, UserActivity.Status.FAILED)
             return Response(
                 create_response(False, result.get("message", "Failed to fetch data"), None), 
                 status=status.HTTP_404_NOT_FOUND
             )
             
     except Exception as e:
-        log_user_activity(request, UserActivity.Status.FAILED)
+        # log_user_activity(request, UserActivity.Status.FAILED)
         return Response(
             create_response(False, str(e), None),
             status=status.HTTP_500_INTERNAL_SERVER_ERROR

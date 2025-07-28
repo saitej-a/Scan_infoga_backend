@@ -157,7 +157,7 @@ def is_called_by_user_previously(user, api_name, payload, full_payload=True):
         return False
 
 
-def log_user_activity(request, status):
+def log_user_activity(request, status, error_message = None):
     try:
         # 1. Decode JWT Token
         auth_header = request.headers.get("Authorization", "")
@@ -168,15 +168,6 @@ def log_user_activity(request, status):
         token = get_token_from_header(request)
         user = get_user_from_token(token)
 
-
-        # email = user.email
-        # if token:
-        #     payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-        #     email = payload.get("email")  # Adjust key if needed (e.g., 'email')
-        #     if email:
-        #         user = User.objects.filter(email=email).first()
-
-        # 2. Parse clientInfo
         client_info_raw = request.headers.get("clientInfo", "{}")
 
         try:
@@ -184,14 +175,8 @@ def log_user_activity(request, status):
         except json.JSONDecodeError as e:
             client_info = {}
 
-        # 3. Parse payload
-        # try:
-        #     # payload_data = json.loads(request.body.decode('utf-8')) if request.body else {}
-        #     pay
-        # except Exception:
-        #     payload_data = {}
-
-        payload_data = request.data if request.data else {}
+        # payload_data = request.data if request.data else {}
+        payload_data = json.loads(request.body.decode("utf-8")) if request.body else {}
 
         # 4. Save to DB
         if user:
@@ -205,7 +190,8 @@ def log_user_activity(request, status):
                 browser=client_info.get("browser", ""),
                 latitude=client_info.get("latitude", ""),
                 longitude=client_info.get("longitude", ""),
-                status = status
+                status = status,
+                error_message = error_message
             )
 
             print("Created user activity")

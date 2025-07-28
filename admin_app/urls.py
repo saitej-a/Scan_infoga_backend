@@ -1,6 +1,5 @@
 from django.urls import path
 
-from payments.views import get_completed_txns, get_failed_txns
 from . import views
 
 urlpatterns = [
@@ -16,4 +15,5 @@ urlpatterns = [
     path('successful-txns', views.get_completed_txns, name='completed-txns'),
     path('failed-txns', views.get_failed_txns, name='failed-txns'),
     path('admin-login', views.admin_login, name='admin-login'),
+    path('get-all-user-activities', views.get_user_activities, name='admin-login'),
 ]

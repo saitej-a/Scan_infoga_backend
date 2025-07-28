@@ -41,7 +41,7 @@ def handleAadhaarVerify(request):
 
     balance_after_deduction = get_amount_after_api_call(api_name="aadhar_verify", user=user)
     if balance_after_deduction < 0.0:
-        log_user_activity(request=request, status=UserActivity.Status.FAILED)
+        # log_user_activity(request=request, status=UserActivity.Status.FAILED)
         return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
     
     time = datetime.datetime.now().isoformat() + 'Z'
@@ -85,7 +85,7 @@ def handleAadhaarVerify(request):
                 obj.result = existing_result
                 obj.save()  
 
-            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+            # log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             update_user_balance(user=user, amount=balance_after_deduction, api_name="aadhar_verify")
             return Response(create_response(True, "Data fetched successfully from external api.", obj.result), status=status.HTTP_200_OK)
             
@@ -111,7 +111,7 @@ def handleAadhaarVerify(request):
                 return Response(create_response(True, "Data fetched successfully from external api.", data_to_store), status=status.HTTP_200_OK)
             else:
                 existing_result = existing.result or {}
-                log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+                # log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
                 if not is_called:
                     update_user_balance(user=user, amount=balance_after_deduction, api_name="aadhar_verify")
                     return Response(create_response(True, "Data fetched from Database.", existing_result), status=status.HTTP_200_OK)
@@ -143,7 +143,7 @@ def handleTrucallerVerify(request):
 
     balance_after_deduction = get_amount_after_api_call(api_name="trucaller_verify", user=user)
     if balance_after_deduction < 0.0:
-        log_user_activity(request=request, status=UserActivity.Status.FAILED)
+        # log_user_activity(request=request, status=UserActivity.Status.FAILED)
         return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
     
     time = datetime.datetime.now().isoformat() + 'Z'
@@ -188,7 +188,7 @@ def handleTrucallerVerify(request):
                 obj.result = existing_result
                 obj.save()
 
-            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+            # log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             update_user_balance(user=user, amount=balance_after_deduction, api_name="trucaller_verify")
             return Response(create_response(True, "Data fetched successfully from external api.", obj.result), status=status.HTTP_200_OK)
 

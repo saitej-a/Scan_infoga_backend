@@ -77,3 +77,7 @@ def paginate_queryset(request, queryset, serializer_class):
         "result": serialized_data,
         "paginationDetails": pagination_details
     }
+
+emd = {
+    "INSUFFICIENT_BALANCE": "Insufficient balance"
+}

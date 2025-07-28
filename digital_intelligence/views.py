@@ -45,7 +45,7 @@ def get_alternate_mobile_numbers(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name=api_name, user=user)
                 if balance_after_deduction<0.0:
-                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                    # log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 update_user_balance(user=user, amount=balance_after_deduction, api_name=api_name)
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
@@ -62,7 +62,7 @@ def get_alternate_mobile_numbers(request):
     try:
         balance_after_deduction = get_amount_after_api_call(api_name=api_name, user=user)
         if balance_after_deduction<0.0:
-            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            # log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
         
         api_response = fetch_profile_advance_data(mobile_number)
@@ -79,7 +79,7 @@ def get_alternate_mobile_numbers(request):
                 update_user_balance(user=user,amount=balance_after_deduction, api_name=api_name)
 
             
-            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+            # log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             try:
                 alt_numbers =result_data['result']['alternate_phone']
                 cleaned_alt_numbers = [entry['values'] for entry in alt_numbers]
@@ -89,11 +89,11 @@ def get_alternate_mobile_numbers(request):
                 return Response(create_response(True,'Data Fetched from external API', {'data':{'alternate_numbers':[]}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
 
         else:
-            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            # log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
 
     except Exception as e:
-        log_user_activity(request=request, status=UserActivity.Status.FAILED)
+        # log_user_activity(request=request, status=UserActivity.Status.FAILED)
         return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 
        
@@ -126,7 +126,7 @@ def get_email(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name=api_name, user=user)
                 if balance_after_deduction<0.0:
-                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                    # log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 update_user_balance(user=user, amount=balance_after_deduction, api_name=api_name)
 
@@ -143,7 +143,7 @@ def get_email(request):
     try:
         balance_after_deduction = get_amount_after_api_call(api_name=api_name, user=user)
         if balance_after_deduction<0.0:
-            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            # log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
         
         api_response = fetch_profile_advance_data(mobile_number)
@@ -159,7 +159,7 @@ def get_email(request):
                     )
                 update_user_balance(user=user,amount=balance_after_deduction, api_name=api_name)
             
-            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+            # log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             try:
                 alt_emails=result_data['result']['email']
                 clean_email=[email['value'] for email in alt_emails]
@@ -170,11 +170,11 @@ def get_email(request):
 
 
         else:
-            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            # log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
 
     except Exception as e:
-        log_user_activity(request=request, status=UserActivity.Status.FAILED)
+        # log_user_activity(request=request, status=UserActivity.Status.FAILED)
         return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -206,7 +206,7 @@ def get_lpg_info(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name=api_name, user=user)
                 if balance_after_deduction<0.0:
-                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                    # log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 update_user_balance(user=user, amount=balance_after_deduction, api_name=api_name)
 
@@ -222,7 +222,7 @@ def get_lpg_info(request):
     try:
         balance_after_deduction = get_amount_after_api_call(api_name=api_name, user=user)
         if balance_after_deduction<0.0:
-            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            # log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
         
         api_response = fetch_mobile360_data(mobile_number)
@@ -237,7 +237,7 @@ def get_lpg_info(request):
                 )
                 update_user_balance(user=user,amount=balance_after_deduction, api_name=api_name)
             
-            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+            # log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             try:
                 lpg_info=result_data['result']['lpg_info']['data']
                 return Response(create_response(True,'Data Fetched from external API',{'data':{'lpg_info':lpg_info}, 'datetime':datetime.datetime.now().isoformat() + "Z"}),status=status.HTTP_200_OK)
@@ -247,11 +247,11 @@ def get_lpg_info(request):
 
 
         else:
-            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            # log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
 
     except Exception as e:
-        log_user_activity(request=request, status=UserActivity.Status.FAILED)
+        # log_user_activity(request=request, status=UserActivity.Status.FAILED)
         return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 
                 
@@ -285,7 +285,7 @@ def get_address_profile_advance(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name=api_name, user=user)
                 if balance_after_deduction<0.0:
-                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                    # log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 update_user_balance(user=user, amount=balance_after_deduction, api_name=api_name)
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
@@ -300,7 +300,7 @@ def get_address_profile_advance(request):
     try:
         balance_after_deduction = get_amount_after_api_call(api_name=api_name, user=user)
         if balance_after_deduction<0.0:
-            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            # log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
         
         api_response = fetch_profile_advance_data(mobile_number)
@@ -317,7 +317,7 @@ def get_address_profile_advance(request):
                 update_user_balance(user=user,amount=balance_after_deduction, api_name=api_name)
 
             
-            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+            # log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             try:
                 address =result_data['result']['address']
                 return Response(create_response(True,'Data Fetched from external API',{'data':{'address':address}, 'datetime':datetime.datetime.now().isoformat() + "Z"}),status=status.HTTP_200_OK)
@@ -325,11 +325,11 @@ def get_address_profile_advance(request):
                 return Response(create_response(True,'Data Fetched from external API', {'data':{'address':[]}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
 
         else:
-            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            # log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
 
     except Exception as e:
-        log_user_activity(request=request, status=UserActivity.Status.FAILED)
+        # log_user_activity(request=request, status=UserActivity.Status.FAILED)
         return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 
        
@@ -362,7 +362,7 @@ def get_document_data_profile_advance(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name=api_name, user=user)
                 if balance_after_deduction<0.0:
-                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                    # log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 update_user_balance(user=user, amount=balance_after_deduction, api_name=api_name)
 
@@ -382,7 +382,7 @@ def get_document_data_profile_advance(request):
     try:
         balance_after_deduction = get_amount_after_api_call(api_name=api_name, user=user)
         if balance_after_deduction<0.0:
-            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            # log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
         
         api_response = fetch_profile_advance_data(mobile_number)
@@ -398,7 +398,7 @@ def get_document_data_profile_advance(request):
                     )
                 update_user_balance(user=user,amount=balance_after_deduction, api_name=api_name)
             
-            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+            # log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             try:
                 doc_data=result_data['result']['document_data']
                 clean_doc_data = {
@@ -412,11 +412,11 @@ def get_document_data_profile_advance(request):
 
 
         else:
-            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            # log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
 
     except Exception as e:
-        log_user_activity(request=request, status=UserActivity.Status.FAILED)
+        # log_user_activity(request=request, status=UserActivity.Status.FAILED)
         return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -451,7 +451,7 @@ def get_personal_information_profile_advance(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name=api_name, user=user)
                 if balance_after_deduction<0.0:
-                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                    # log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 update_user_balance(user=user, amount=balance_after_deduction, api_name=api_name)
 
@@ -468,7 +468,7 @@ def get_personal_information_profile_advance(request):
     try:
         balance_after_deduction = get_amount_after_api_call(api_name=api_name, user=user)
         if balance_after_deduction<0.0:
-            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            # log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
         
         api_response = fetch_profile_advance_data(mobile_number)
@@ -484,7 +484,7 @@ def get_personal_information_profile_advance(request):
                     )
                 update_user_balance(user=user,amount=balance_after_deduction, api_name=api_name)
             
-            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+            # log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             try:
                 personal_info=result_data['result']['personal_information']
                 return Response(create_response(True,'Data Fetched from external API',{'data':{'personal_information':personal_info}, 'datetime':datetime.datetime.now().isoformat() + "Z"}),status=status.HTTP_200_OK)
@@ -494,11 +494,11 @@ def get_personal_information_profile_advance(request):
 
 
         else:
-            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            # log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
 
     except Exception as e:
-        log_user_activity(request=request, status=UserActivity.Status.FAILED)
+        # log_user_activity(request=request, status=UserActivity.Status.FAILED)
         return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -531,7 +531,7 @@ def mobile_to_gst_udyam_iec(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name='digital_intelligence_gst_udyam_iec', user=user)
                 if balance_after_deduction<0.0:
-                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                    # log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 update_user_balance(user=user, amount=balance_after_deduction, api_name='digital_intelligence_gst_udyam_iec')
 
@@ -549,7 +549,7 @@ def mobile_to_gst_udyam_iec(request):
     try:
         balance_after_deduction = get_amount_after_api_call(api_name='digital_intelligence_gst_udyam_iec', user=user)
         if balance_after_deduction<0.0:
-            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            # log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
         
         api_response = fetch_mobile360_data(mobile_number)
@@ -565,7 +565,7 @@ def mobile_to_gst_udyam_iec(request):
                 update_user_balance(user=user,amount=balance_after_deduction, api_name='digital_intelligence_gst_udyam_iec')
 
             
-            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+            # log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             try:
                 gst_list=result_data['result']['key_highlights']['gst_numbers']
                 udyam_number=result_data['result']['key_highlights']['udyam_numbers']
@@ -576,11 +576,11 @@ def mobile_to_gst_udyam_iec(request):
                 return Response(create_response(True,'Data Fetched from external API', {'data':{'gst_list':[], 'udyam_number':[], 'iec_number':[]}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
 
         else:
-            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            # log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
 
     except Exception as e:
-        log_user_activity(request=request, status=UserActivity.Status.FAILED)
+        # log_user_activity(request=request, status=UserActivity.Status.FAILED)
         return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -613,7 +613,7 @@ def mobile_to_uan_esic(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name='digital_intelligence_esic_uan', user=user)
                 if balance_after_deduction<0.0:
-                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                    # log_user_activity(request=request, status=UserActivity.Status.FAILED)
                     return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 update_user_balance(user=user, amount=balance_after_deduction,api_name='digital_intelligence_esic_uan')
 
@@ -631,7 +631,7 @@ def mobile_to_uan_esic(request):
     try:
         balance_after_deduction = get_amount_after_api_call(api_name='digital_intelligence_esic_uan', user=user)
         if balance_after_deduction<0.0:
-            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            # log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
         
         api_response = fetch_mobile360_data(mobile_number)
@@ -647,7 +647,7 @@ def mobile_to_uan_esic(request):
                 update_user_balance(user=user,amount=balance_after_deduction, api_name='digital_intelligence_esic_uan')
 
             
-            log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+            # log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             try:
                 esic_list=result_data['result']['key_highlights']['esic_number']
                 uan_list=result_data['result']['key_highlights']['uan_numbers']
@@ -657,10 +657,10 @@ def mobile_to_uan_esic(request):
                 return Response(create_response(True,'Data Fetched from external API', {'data':{'esic_list':[], 'uan_list':[]}, 'datetime':datetime.datetime.now().isoformat() + "Z"}), status=status.HTTP_200_OK)
 
         else:
-            log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            # log_user_activity(request=request, status=UserActivity.Status.FAILED)
             return Response(create_response(False, "External API did not respond or returned an error.", None), status=status.HTTP_404_NOT_FOUND)
 
     except Exception as e:
-        log_user_activity(request=request, status=UserActivity.Status.FAILED)
+        # log_user_activity(request=request, status=UserActivity.Status.FAILED)
         return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

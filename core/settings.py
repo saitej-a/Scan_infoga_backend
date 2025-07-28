@@ -34,7 +34,7 @@ GHUNT_CREDS_PATH = os.path.join(BASE_DIR, 'secrets', 'creds.m')
 SECRET_KEY = 'django-insecure-yyr!ycnt3t8(cgrz3vydwxv%^e9=p-nd8d1oypmk75q2^whoty'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 # ALLOWED_HOSTS = ['16.171.113.56', 'localhost', '127.0.0.1']
 
 
@@ -70,6 +70,7 @@ EXTERNAL_APPS = [
 INSTALLED_APPS += EXTERNAL_APPS
 
 MIDDLEWARE = [
+    'core.middleware.GlobalLoggingMiddleware',  # Add this line
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
@@ -78,7 +79,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'core.middleware.GlobalLoggingMiddleware',  # Add this line
 ]
 
 EXTERNAL_MIDDLEWARE = [
@@ -163,6 +163,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    # 'EXCEPTION_HANDLER': 'core.middleware.raise_uncaught_exceptions',
 }
 
 AUTH_USER_MODEL = 'custom_auth.CustomUser'

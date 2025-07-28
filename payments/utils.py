@@ -1,3 +1,5 @@
+
+from core.exception_handlers import InsufficientBalanceError
 from .models import WalletBalance, ApiPricing, WalletHistory
 from decimal import Decimal
 from django.db import transaction
@@ -20,7 +22,7 @@ def get_amount_after_api_call(user, api_name):
     price = api_pricing.price
 
     if balance < price:
-        raise ValidationError("Insufficient balance.")
+        raise InsufficientBalanceError()
 
     return balance - price  # returns Decimal
 

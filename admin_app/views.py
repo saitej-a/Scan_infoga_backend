@@ -10,6 +10,7 @@ import json
 import hashlib
 import uuid
 from django.contrib.auth import authenticate
+import pyotp
 
 from payments.models import (
     WalletHistory,

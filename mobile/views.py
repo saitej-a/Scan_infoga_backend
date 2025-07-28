@@ -3195,13 +3195,13 @@ def dl_advance_full_data(request):
                 log_user_activity(request=request, status=UserActivity.Status.FAILED)
                 return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
-            api_response = fetch_address_tracing_data(mobile)
+            api_response = fetch_mobile_to_dl_advance(mobile)
             if api_response.get('success'):
                 ts = api_response["data"].pop("datetime")
                 data_dict = {ts: api_response["data"]}
 
                 with transaction.atomic():
-                    AddressTraceReport.objects.update_or_create(
+                    MobileToDLAdvance.objects.update_or_create(
                         mobile=mobile,
                         defaults={"result": [data_dict]}
                     )

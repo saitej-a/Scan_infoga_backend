@@ -18,8 +18,10 @@ import datetime
 from decimal import Decimal
 
 from .models import (
+    AddressTraceReport,
     ChallanReport,
     Mobile360Report,
+    MobileToDLAdvance,
     RCVerifyReport2,
     UANHistoryReport, 
     UANEmploymentReport,
@@ -66,8 +68,10 @@ from .serializers import (
 )
 
 from .utils import (
+    fetch_address_tracing_data,
     fetch_challan_data,
-    fetch_mobile360_data, 
+    fetch_mobile360_data,
+    fetch_mobile_to_dl_advance, 
     fetch_uan_employment_data, 
     fetch_uan_history_data, 
     fetch_esic_data, 
@@ -89,7 +93,9 @@ from .utils import (
 )
 
 from core.tasks import (
+    fetch_and_store_address_trace,
     fetch_and_store_challan,
+    fetch_and_store_mobile_to_dl_advance,
     fetch_and_store_rcverify,
     fetch_and_store_upi_to_account,
 )

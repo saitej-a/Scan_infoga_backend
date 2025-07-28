@@ -12,6 +12,7 @@ import uuid
 from django.contrib.auth import authenticate
 import pyotp
 from django.urls import get_resolver, URLPattern, URLResolver
+from core.permissions import IsAdminUserType
 
 from payments.models import (
     WalletHistory,
@@ -67,7 +68,7 @@ from core.utils import create_response, paginate_queryset
 
 
 @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsAdminUserType])
 def wallet_history_list(request):
     user_id = request.query_params.get('user_id')
     if not user_id:
@@ -102,7 +103,7 @@ def wallet_history_list(request):
 
 
 @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsAdminUserType])
 def get_user_info(request):
     user_id = request.query_params.get('user_id')
     if not user_id:
@@ -128,7 +129,7 @@ def get_user_info(request):
     )
 
 @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsAdminUserType])
 def get_login_history(request):
     user_id = request.query_params.get('user_id')
     if not user_id:
@@ -159,7 +160,7 @@ def get_login_history(request):
     )
 
 @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsAdminUserType])
 def get_bookmarks_by_user(request):
     user_id = request.query_params.get('user_id')
     if not user_id:
@@ -192,7 +193,7 @@ def get_bookmarks_by_user(request):
 
 
 @api_view(['POST'])
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsAdminUserType])
 def wallet_update(request):
     user_id = request.data.get('user_id')
     amount = request.data.get('amount')
@@ -333,6 +334,7 @@ def wallet_update(request):
 from django.db.models import Sum, F, ExpressionWrapper, DecimalField
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminUserType])
 def get_user_wallet_balance(request):
     user_id = request.query_params.get('user_id')
     
@@ -414,7 +416,7 @@ def get_user_wallet_balance(request):
 
 
 @api_view(['GET'])
-# @permission_classes([IsAuthenticated])  # Uncomment if you want auth
+@permission_classes([IsAuthenticated, IsAdminUserType])
 def get_user_activity(request):
     user_id = request.query_params.get('user_id')
     if not user_id:
@@ -456,7 +458,7 @@ from custom_auth.models import CustomUser
 from core.utils import create_response  # Assuming this is where your helper is defined
 
 @api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsAdminUserType])
 def user_note(request):
     if request.method == 'GET':
         user_id = request.query_params.get('user_id')
@@ -542,7 +544,7 @@ def user_note(request):
 
 
 @api_view(['GET'])
-# @permission_classes([IsAuthenticated])  # Uncomment if you want auth
+@permission_classes([IsAuthenticated, IsAdminUserType])
 def get_pending_txns(request):
     try:
         count = int(request.query_params.get('count', 20))
@@ -573,7 +575,7 @@ def get_pending_txns(request):
 
 
 @api_view(['GET'])
-# @permission_classes([IsAuthenticated])  # Uncomment if you want auth
+@permission_classes([IsAuthenticated, IsAdminUserType]) 
 def get_completed_txns(request):
     try:
         count = int(request.query_params.get('count', 20))
@@ -603,7 +605,7 @@ def get_completed_txns(request):
 
 
 @api_view(['GET'])
-# @permission_classes([IsAuthenticated])  # Uncomment if you want auth
+@permission_classes([IsAuthenticated, IsAdminUserType])
 def get_failed_txns(request):
     import time
     from django.db import connection
@@ -855,6 +857,7 @@ from user_activities.serializers import UserActivitySerializer1  # you’ll need
 from django.db.models import Count, Q
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminUserType])
 def get_user_activities(request):
     activities = UserActivity.objects.select_related('user')
 
@@ -938,6 +941,7 @@ def list_urls(urlpatterns, prefix=''):
             urls.extend(list_urls(pattern.url_patterns, prefix=nested_prefix))
     return urls
 @api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminUserType])
 def list_all_routes(request):
     resolver = get_resolver()
     urls = list_urls(resolver.url_patterns)

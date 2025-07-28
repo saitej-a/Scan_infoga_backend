@@ -9,6 +9,13 @@ from custom_auth.models import CustomUser
 #         fields = ['txn_id', 'amount', 'status', 'created_at', 'comment', 'created_at']
         
 
+# class TransactionSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = Transaction
+#         # fields = '__all__'
+#         fields = ['txn_id', 'amount', 'status', 'created_at', 'comment', 'created_at']
+        
+
 class TransactionSerializer(serializers.ModelSerializer):
     payment_group = serializers.SerializerMethodField()
     bank_reference = serializers.SerializerMethodField()

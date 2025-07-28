@@ -465,9 +465,18 @@ class GlobalLoggingMiddleware:
             self.log_response(request, response)
         return response
 
-    def log_request(self, request: HttpRequest):
-        query_params = dict(request.GET)
-        payload = None
+    def process_exception(self, request, exception):
+        print("Exception from middleware: ", request.path, str(exception))
+        return JsonResponse(
+            create_response(
+                status=False,
+                message=str(exception),
+                data=None
+            ),
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+    def log_user_activity(self, request):
         try:
             if request.method in ['POST', 'PUT', 'PATCH']:
                 payload = json.loads(request.body.decode("utf-8")) if request.body else {}

@@ -472,8 +472,6 @@ from cashfree_pg.models.customer_details import CustomerDetails
 from cashfree_pg.models.order_meta import OrderMeta
 from cashfree_pg.api_client import Cashfree
 
-from .models import Transaction, WalletBalance
-
 # Setup SDK
 Cashfree.XClientId = settings.CASHFREE_CLIENT_ID
 Cashfree.XClientSecret = settings.CASHFREE_CLIENT_SECRET

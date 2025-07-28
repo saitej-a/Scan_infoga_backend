@@ -1216,4 +1216,33 @@ def fetch_address_tracing_data(mobile_number):
 
 
 def fetch_mobile_to_dl_advance(mobile):
-    pass
+    api_url = os.getenv('MOBILE_TO_DL_ADV_API_URL')
+    api_key = os.getenv('MOBILE_TO_DL_ADV_AUTH_KEY')
+    
+    headers = {
+        'authkey': api_key,
+        'Content-Type': 'application/json'
+    }
+    
+    payload = {
+        "mobile":mobile,
+        "consent": "Y",
+        "consent_text": "We confirm obtaining valid customer consent to access/process their mobile data. Consent remains valid, informed, and unwithdrawn."
+    }
+    
+    response = requests.post(api_url, headers=headers, json=payload)
+    response.raise_for_status()
+    
+    data = response.json()
+    
+    if 'txn_id' in data.keys():
+        data.pop('txn_id')  # optional, if it exists and causes mismatch
+    
+    data["datetime"] = datetime.now().isoformat() + "Z"
+    
+    if data.get('status') == 1:
+        return {
+            'success': True,
+            'data': data
+        }
+    raise Exception(data.get('message') or 'Unexpected Error')

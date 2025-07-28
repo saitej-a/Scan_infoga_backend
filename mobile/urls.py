@@ -30,4 +30,6 @@ urlpatterns = [
     path('challan-full-data', views.challan_full_data, name="challan-full-data"),
     path('address-trace', views.address_trace_data, name='address_trace_data'),
     path('address-trace-full-data', views.address_trace_full_data, name='address_trace_full_data'),
+    path('mobile-to-dl-advance', views.dl_advance_data, name='mobile_to_dl_advance_data'),
+    path('mobile-to-dl-advance-full-data', views.dl_advance_full_data, name='dl_advance_full_data'),
 ]

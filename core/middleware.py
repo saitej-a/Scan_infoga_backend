@@ -179,7 +179,6 @@ class GlobalLoggingMiddleware:
             log_user_activity(request, UserActivity.Status.SUCCESS)
 
     def process_exception(self, request, exception):
-        print("Process exception called")
         log_user_activity(request, UserActivity.Status.FAILED, str(exception))
         return JsonResponse(create_response(status= False, message= str(exception) if os.getenv("ENVIRONMENT") == "DEVELOPMENT" else "Error occured processing your request"), status=status.HTTP_400_BAD_REQUEST)
 

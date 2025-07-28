@@ -227,7 +227,6 @@ def verifyOTP(request):
         )
 
 
-
 @api_view(['POST'])
 def forget_password(request):
     email = request.data.get("email")
@@ -237,7 +236,7 @@ def forget_password(request):
             create_response(False, "Email is required", None),
             status=status.HTTP_400_BAD_REQUEST
         )
-
+# rjf
     try:
         user = CustomUser.objects.get(email=email)
     except CustomUser.DoesNotExist:

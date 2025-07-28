@@ -1330,8 +1330,6 @@ def digital_payment_analyser(request):
                 balance_after_deduction = user_balance - Decimal(serialized['billable_count']) * price_per_api
 
                 if balance_after_deduction < 0.0:
-                    # log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                    # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                     raise InsufficientBalanceError()
 
                 update_user_balance(user=user, amount=balance_after_deduction, api_name='digital_payment_id_analyzer')
@@ -1347,7 +1345,6 @@ def digital_payment_analyser(request):
             raise InsufficientBalanceError()
 
         api_response, billable_count, failed_handles = fetch_digital_payment_analyser_data(mobile_number=mobile_number)
-        print("API RESPONSE: ", api_response, failed_handles[0])
 
         price_per_api = Decimal('6.0')
         billable_amount = Decimal(billable_count) * price_per_api
@@ -1363,7 +1360,6 @@ def digital_payment_analyser(request):
                 )
                 update_user_balance(user=user, amount=wallet_obj.balance - billable_amount, api_name='digital_payment_id_analyzer')
 
-                # update_user_balance(user=user, amount=balance_after_deduction)
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS, error_message=failed_handles)
             return Response(create_response(True, "Data fetched from external API", api_response), status=status.HTTP_200_OK)
         else:
@@ -1371,7 +1367,6 @@ def digital_payment_analyser(request):
             raise Exception("Error fetching UPI handles")
 
     except Exception as e:
-        # log_user_activity(request=request, status=UserActivity.Status.FAILED)
         return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # @api_view(["POST"])

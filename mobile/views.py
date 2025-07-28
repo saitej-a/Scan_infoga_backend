@@ -3234,4 +3234,3 @@ def dl_advance_full_data(request):
             create_response(False, str(e), None),
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
-

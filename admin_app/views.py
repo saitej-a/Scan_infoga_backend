@@ -5,7 +5,11 @@ from rest_framework.response import Response
 from decimal import Decimal
 from django.db import transaction
 from django.db.models import Sum
+from rest_framework_simplejwt.tokens import RefreshToken
+import json
+import hashlib
 import uuid
+from django.contrib.auth import authenticate
 
 from payments.models import (
     WalletHistory,
@@ -676,7 +680,7 @@ def admin_login(request):
         return Response(
             create_response(
                 status=False,
-                message=f"Invalid Login",
+                message=f"Invalid Login. Not an admin.",
                 data=None
             ),
             status=status.HTTP_401_UNAUTHORIZED
@@ -774,6 +778,139 @@ def admin_login(request):
             status=True,
             message="Login successful",
             data={'user': user_data, 'accessToken': token}
+        ),
+        status=status.HTTP_200_OK
+    )
+
+
+
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+from django.db.models import Q
+from django.utils.timezone import make_aware
+from datetime import datetime, timedelta
+from user_activities.models import UserActivity
+from user_activities.serializers import UserActivitySerializer1  # you’ll need to create this
+
+
+# @api_view(['GET'])
+# def get_user_activities(request):
+#     activities = UserActivity.objects.select_related('user')
+
+#     # 🔍 Global search
+#     search = request.GET.get('search')
+#     if search:
+#         activities = activities.filter(
+#             Q(email__icontains=search) |
+#             Q(api_called__icontains=search) |
+#             Q(error_message__icontains=search) |
+#             Q(ip_address__icontains=search) |
+#             Q(device__icontains=search) |
+#             Q(browser__icontains=search)
+#         )
+
+#     # ✅ Filter by status
+#     if status_filter := request.GET.get('status'):
+#         activities = activities.filter(status=status_filter)
+
+#     # 📆 Date filters
+#     if val := request.GET.get('activity_time__gte'):
+#         try:
+#             date = make_aware(datetime.strptime(val, '%Y-%m-%d'))
+#             activities = activities.filter(activity_time__gte=date)
+#         except ValueError:
+#             pass
+
+#     if val := request.GET.get('activity_time__lte'):
+#         try:
+#             date = make_aware(datetime.strptime(val, '%Y-%m-%d') + timedelta(days=1))
+#             activities = activities.filter(activity_time__lt=date)
+#         except ValueError:
+#             pass
+
+#     # 📊 Ordering
+#     ordering = request.GET.get('ordering', '-activity_time')
+#     valid_ordering_fields = [
+#         'activity_time', 'email', 'api_called', 'status', 'ip_address', 'device', 'browser'
+#     ]
+#     if ordering.lstrip('-') in valid_ordering_fields:
+#         activities = activities.order_by(ordering)
+
+#     # 📄 Pagination
+#     paginated_data = paginate_queryset(request, activities, UserActivitySerializer1)
+
+#     return Response(
+#         create_response(
+#             status=True,
+#             message="User activities retrieved successfully",
+#             data=paginated_data
+#         ),
+#         status=status.HTTP_200_OK
+#     )
+
+
+from django.db.models import Count, Q
+
+@api_view(['GET'])
+def get_user_activities(request):
+    activities = UserActivity.objects.select_related('user')
+
+    # 🔍 Global search
+    search = request.GET.get('search')
+    if search:
+        activities = activities.filter(
+            Q(email__icontains=search) |
+            Q(api_called__icontains=search) |
+            Q(error_message__icontains=search) |
+            Q(ip_address__icontains=search) |
+            Q(device__icontains=search) |
+            Q(browser__icontains=search)
+        )
+
+    # ✅ Filter by status
+    if status_filter := request.GET.get('status'):
+        activities = activities.filter(status=status_filter)
+
+    # 📆 Date filters
+    if val := request.GET.get('activity_time__gte'):
+        try:
+            date = make_aware(datetime.strptime(val, '%Y-%m-%d'))
+            activities = activities.filter(activity_time__gte=date)
+        except ValueError:
+            pass
+
+    if val := request.GET.get('activity_time__lte'):
+        try:
+            date = make_aware(datetime.strptime(val, '%Y-%m-%d') + timedelta(days=1))
+            activities = activities.filter(activity_time__lt=date)
+        except ValueError:
+            pass
+
+    # 📊 Ordering
+    ordering = request.GET.get('ordering', '-activity_time')
+    valid_ordering_fields = [
+        'activity_time', 'email', 'api_called', 'status', 'ip_address', 'device', 'browser'
+    ]
+    if ordering.lstrip('-') in valid_ordering_fields:
+        activities = activities.order_by(ordering)
+
+    # ✅ Get counts BEFORE pagination
+    success_count = activities.filter(status='success').count()
+    failed_count = activities.filter(status='failed').count()
+
+    # 📄 Pagination
+    paginated_data = paginate_queryset(request, activities, UserActivitySerializer1)
+
+    return Response(
+        create_response(
+            status=True,
+            message="User activities retrieved successfully",
+            data={
+                "success_count": success_count,
+                "failed_count": failed_count,
+                **paginated_data
+            }
         ),
         status=status.HTTP_200_OK
     )

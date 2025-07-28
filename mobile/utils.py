@@ -933,6 +933,7 @@ async def fetch_all_digital_payment_data_async(mobile_number, api_url, api_key):
 
     combined_results = {}
     billable_count = 0
+    failed_handles = []
 
     async with aiohttp.ClientSession() as session:
         for batch_number, batch in enumerate(chunked_iterable(upi_handle_pairs, 30), start=1):
@@ -959,10 +960,15 @@ async def fetch_all_digital_payment_data_async(mobile_number, api_url, api_key):
                     if isinstance(result, dict):
                         key = result['key']
                         value = result['data']
+                        print("Resulttt: ", result)
+                        print("Valueee ", value)
                         combined_results[key] = value
                         # Count billable responses (both success and failure)
                         if value.get("billable") is True:
                             billable_count += 1
+                        if not value.get("success"):
+                            failed_handles.append({"upi_handle": value.get("upi_handle"), "platform": value.get("platform"), "error": value.get("error")})
+
                     elif isinstance(result, Exception):
                         print(f"⚠️ Task failed: {result}")
 
@@ -982,7 +988,7 @@ async def fetch_all_digital_payment_data_async(mobile_number, api_url, api_key):
     }
     
     print(f"🔍 Filtered Results (success only): {len(filtered_results)} out of {len(combined_results)} total")
-    return filtered_results, billable_count
+    return filtered_results, billable_count, failed_handles
 
 def fetch_digital_payment_analyser_data(mobile_number):
     """Fetch digital payment details for the mobile number"""
@@ -993,18 +999,18 @@ def fetch_digital_payment_analyser_data(mobile_number):
     asyncio.set_event_loop(loop)
 
     try:
-        result, billable_count = loop.run_until_complete(
+        result, billable_count, failed_handles = loop.run_until_complete(
             fetch_all_digital_payment_data_async(mobile_number, api_url, api_key)
         )
     except Exception as e:
         print(f"Global failure occurred: {str(e)}")
-        result, billable_count = {}, 0
+        result, billable_count, failed_handles = {}, 0, []
     finally:
         loop.close()
 
     print("📦 Final Result (success only):", result)
     print(f"📊 Final Billable Count: {billable_count}")
-    return result, billable_count
+    return result, billable_count, failed_handles
 
 
 

@@ -6,3 +6,8 @@ class UserActivitySerializer(serializers.ModelSerializer):
         model = UserActivity
         fields = ['id', 'email', 'api_called', 'activity_time', 'request_payload', 'browser', 'ip_address', 'latitude', 'longitude']
         read_only_fields = ['id', 'activity_time']
+
+class UserActivitySerializer1(serializers.ModelSerializer):
+    class Meta:
+        model = UserActivity
+        fields = '__all__'

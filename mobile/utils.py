@@ -933,6 +933,7 @@ async def fetch_all_digital_payment_data_async(mobile_number, api_url, api_key):
 
     combined_results = {}
     billable_count = 0
+    failed_handles = []
 
     async with aiohttp.ClientSession() as session:
         for batch_number, batch in enumerate(chunked_iterable(upi_handle_pairs, 30), start=1):
@@ -959,10 +960,15 @@ async def fetch_all_digital_payment_data_async(mobile_number, api_url, api_key):
                     if isinstance(result, dict):
                         key = result['key']
                         value = result['data']
+                        print("Resulttt: ", result)
+                        print("Valueee ", value)
                         combined_results[key] = value
                         # Count billable responses (both success and failure)
                         if value.get("billable") is True:
                             billable_count += 1
+                        if not value.get("success"):
+                            failed_handles.append({"upi_handle": value.get("upi_handle"), "platform": value.get("platform"), "error": value.get("error")})
+
                     elif isinstance(result, Exception):
                         print(f"⚠️ Task failed: {result}")
 
@@ -982,7 +988,7 @@ async def fetch_all_digital_payment_data_async(mobile_number, api_url, api_key):
     }
     
     print(f"🔍 Filtered Results (success only): {len(filtered_results)} out of {len(combined_results)} total")
-    return filtered_results, billable_count
+    return filtered_results, billable_count, failed_handles
 
 def fetch_digital_payment_analyser_data(mobile_number):
     """Fetch digital payment details for the mobile number"""
@@ -993,18 +999,18 @@ def fetch_digital_payment_analyser_data(mobile_number):
     asyncio.set_event_loop(loop)
 
     try:
-        result, billable_count = loop.run_until_complete(
+        result, billable_count, failed_handles = loop.run_until_complete(
             fetch_all_digital_payment_data_async(mobile_number, api_url, api_key)
         )
     except Exception as e:
         print(f"Global failure occurred: {str(e)}")
-        result, billable_count = {}, 0
+        result, billable_count, failed_handles = {}, 0, []
     finally:
         loop.close()
 
     print("📦 Final Result (success only):", result)
     print(f"📊 Final Billable Count: {billable_count}")
-    return result, billable_count
+    return result, billable_count, failed_handles
 
 
 
@@ -1181,3 +1187,68 @@ def fetch_challan_data(vehicle_no):
 
     raise Exception(data.get('message') or 'Unexpected Error')
 
+
+def fetch_address_tracing_data(mobile_number):
+    api_url = os.getenv('ADDRESS_TRACING_API_URL')
+    api_key = os.getenv('ADDRESS_TRACING_API_AUTH_KEY')
+    
+    headers = {
+        'authkey': api_key,
+        'Content-Type': 'application/json'
+    }
+    
+    payload = {
+        "mobile": mobile_number,
+        "consent": "Y",
+        "consent_text": "We confirm obtaining valid customer consent to access/process their Mobile Number. Consent remains valid, informed, and unwithdrawn."
+    }
+    
+    response = requests.post(api_url, headers=headers, json=payload)
+    response.raise_for_status()
+    
+    data = response.json()
+    
+    if 'txn_id' in data.keys():
+        data.pop('txn_id')  # optional, if it exists and causes mismatch
+    
+    data["datetime"] = datetime.now().isoformat() + "Z"
+    
+    if data.get('status') == 1:
+        return {
+            'success': True,
+            'data': data
+        }
+    raise Exception(data.get('message') or 'Unexpected Error')
+
+
+def fetch_mobile_to_dl_advance(mobile):
+    api_url = os.getenv('MOBILE_TO_DL_ADV_API_URL')
+    api_key = os.getenv('MOBILE_TO_DL_ADV_AUTH_KEY')
+    
+    headers = {
+        'authkey': api_key,
+        'Content-Type': 'application/json'
+    }
+    
+    payload = {
+        "mobile":mobile,
+        "consent": "Y",
+        "consent_text": "We confirm obtaining valid customer consent to access/process their mobile data. Consent remains valid, informed, and unwithdrawn."
+    }
+    
+    response = requests.post(api_url, headers=headers, json=payload)
+    response.raise_for_status()
+    
+    data = response.json()
+    
+    if 'txn_id' in data.keys():
+        data.pop('txn_id')  # optional, if it exists and causes mismatch
+    
+    data["datetime"] = datetime.now().isoformat() + "Z"
+    
+    if data.get('status') == 1:
+        return {
+            'success': True,
+            'data': data
+        }
+    raise Exception(data.get('message') or 'Unexpected Error')

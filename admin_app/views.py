@@ -5,7 +5,14 @@ from rest_framework.response import Response
 from decimal import Decimal
 from django.db import transaction
 from django.db.models import Sum
+from rest_framework_simplejwt.tokens import RefreshToken
+import json
+import hashlib
 import uuid
+from django.contrib.auth import authenticate
+import pyotp
+from django.urls import get_resolver, URLPattern, URLResolver
+from core.permissions import IsAdminUserType
 
 from payments.models import (
     WalletHistory,
@@ -61,7 +68,7 @@ from core.utils import create_response, paginate_queryset
 
 
 @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsAdminUserType])
 def wallet_history_list(request):
     user_id = request.query_params.get('user_id')
     if not user_id:
@@ -96,7 +103,7 @@ def wallet_history_list(request):
 
 
 @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsAdminUserType])
 def get_user_info(request):
     user_id = request.query_params.get('user_id')
     if not user_id:
@@ -122,7 +129,7 @@ def get_user_info(request):
     )
 
 @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsAdminUserType])
 def get_login_history(request):
     user_id = request.query_params.get('user_id')
     if not user_id:
@@ -153,7 +160,7 @@ def get_login_history(request):
     )
 
 @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsAdminUserType])
 def get_bookmarks_by_user(request):
     user_id = request.query_params.get('user_id')
     if not user_id:
@@ -186,7 +193,7 @@ def get_bookmarks_by_user(request):
 
 
 @api_view(['POST'])
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsAdminUserType])
 def wallet_update(request):
     user_id = request.data.get('user_id')
     amount = request.data.get('amount')
@@ -327,6 +334,7 @@ def wallet_update(request):
 from django.db.models import Sum, F, ExpressionWrapper, DecimalField
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminUserType])
 def get_user_wallet_balance(request):
     user_id = request.query_params.get('user_id')
     
@@ -408,7 +416,7 @@ def get_user_wallet_balance(request):
 
 
 @api_view(['GET'])
-# @permission_classes([IsAuthenticated])  # Uncomment if you want auth
+@permission_classes([IsAuthenticated, IsAdminUserType])
 def get_user_activity(request):
     user_id = request.query_params.get('user_id')
     if not user_id:
@@ -450,7 +458,7 @@ from custom_auth.models import CustomUser
 from core.utils import create_response  # Assuming this is where your helper is defined
 
 @api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsAdminUserType])
 def user_note(request):
     if request.method == 'GET':
         user_id = request.query_params.get('user_id')
@@ -536,7 +544,7 @@ def user_note(request):
 
 
 @api_view(['GET'])
-# @permission_classes([IsAuthenticated])  # Uncomment if you want auth
+@permission_classes([IsAuthenticated, IsAdminUserType])
 def get_pending_txns(request):
     try:
         count = int(request.query_params.get('count', 20))
@@ -567,7 +575,7 @@ def get_pending_txns(request):
 
 
 @api_view(['GET'])
-# @permission_classes([IsAuthenticated])  # Uncomment if you want auth
+@permission_classes([IsAuthenticated, IsAdminUserType]) 
 def get_completed_txns(request):
     try:
         count = int(request.query_params.get('count', 20))
@@ -597,7 +605,7 @@ def get_completed_txns(request):
 
 
 @api_view(['GET'])
-# @permission_classes([IsAuthenticated])  # Uncomment if you want auth
+@permission_classes([IsAuthenticated, IsAdminUserType])
 def get_failed_txns(request):
     import time
     from django.db import connection
@@ -676,7 +684,7 @@ def admin_login(request):
         return Response(
             create_response(
                 status=False,
-                message=f"Invalid Login",
+                message=f"Invalid Login. Not an admin.",
                 data=None
             ),
             status=status.HTTP_401_UNAUTHORIZED
@@ -777,3 +785,165 @@ def admin_login(request):
         ),
         status=status.HTTP_200_OK
     )
+
+
+
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+from django.db.models import Q
+from django.utils.timezone import make_aware
+from datetime import datetime, timedelta
+from user_activities.models import UserActivity
+from user_activities.serializers import UserActivitySerializer1  # you’ll need to create this
+
+
+# @api_view(['GET'])
+# def get_user_activities(request):
+#     activities = UserActivity.objects.select_related('user')
+
+#     # 🔍 Global search
+#     search = request.GET.get('search')
+#     if search:
+#         activities = activities.filter(
+#             Q(email__icontains=search) |
+#             Q(api_called__icontains=search) |
+#             Q(error_message__icontains=search) |
+#             Q(ip_address__icontains=search) |
+#             Q(device__icontains=search) |
+#             Q(browser__icontains=search)
+#         )
+
+#     # ✅ Filter by status
+#     if status_filter := request.GET.get('status'):
+#         activities = activities.filter(status=status_filter)
+
+#     # 📆 Date filters
+#     if val := request.GET.get('activity_time__gte'):
+#         try:
+#             date = make_aware(datetime.strptime(val, '%Y-%m-%d'))
+#             activities = activities.filter(activity_time__gte=date)
+#         except ValueError:
+#             pass
+
+#     if val := request.GET.get('activity_time__lte'):
+#         try:
+#             date = make_aware(datetime.strptime(val, '%Y-%m-%d') + timedelta(days=1))
+#             activities = activities.filter(activity_time__lt=date)
+#         except ValueError:
+#             pass
+
+#     # 📊 Ordering
+#     ordering = request.GET.get('ordering', '-activity_time')
+#     valid_ordering_fields = [
+#         'activity_time', 'email', 'api_called', 'status', 'ip_address', 'device', 'browser'
+#     ]
+#     if ordering.lstrip('-') in valid_ordering_fields:
+#         activities = activities.order_by(ordering)
+
+#     # 📄 Pagination
+#     paginated_data = paginate_queryset(request, activities, UserActivitySerializer1)
+
+#     return Response(
+#         create_response(
+#             status=True,
+#             message="User activities retrieved successfully",
+#             data=paginated_data
+#         ),
+#         status=status.HTTP_200_OK
+#     )
+
+
+from django.db.models import Count, Q
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminUserType])
+def get_user_activities(request):
+    activities = UserActivity.objects.select_related('user')
+
+    # 🔍 Global search
+    search = request.GET.get('search')
+    if search:
+        activities = activities.filter(
+            Q(email__icontains=search) |
+            Q(api_called__icontains=search) |
+            Q(error_message__icontains=search) |
+            Q(ip_address__icontains=search) |
+            Q(device__icontains=search) |
+            Q(browser__icontains=search)
+        )
+
+    # filter by api_called
+    if val := request.GET.get('api_called__exact'):
+        activities = activities.filter(api_called=val)
+
+    # Filter by status
+    if status_filter := request.GET.get('status'):
+        activities = activities.filter(status=status_filter)
+
+    # Date filters
+    if val := request.GET.get('activity_time__gte'):
+        try:
+            date = make_aware(datetime.strptime(val, '%Y-%m-%d'))
+            activities = activities.filter(activity_time__gte=date)
+        except ValueError:
+            pass
+
+    if val := request.GET.get('activity_time__lte'):
+        try:
+            date = make_aware(datetime.strptime(val, '%Y-%m-%d') + timedelta(days=1))
+            activities = activities.filter(activity_time__lt=date)
+        except ValueError:
+            pass
+
+    # 📊 Ordering
+    ordering = request.GET.get('ordering', '-activity_time')
+    valid_ordering_fields = [
+        'activity_time', 'email', 'api_called', 'status', 'ip_address', 'device', 'browser'
+    ]
+    if ordering.lstrip('-') in valid_ordering_fields:
+        activities = activities.order_by(ordering)
+
+    # ✅ Get counts BEFORE pagination
+    success_count = activities.filter(status='success').count()
+    failed_count = activities.filter(status='failed').count()
+
+    # 📄 Pagination
+    paginated_data = paginate_queryset(request, activities, UserActivitySerializer1)
+
+    return Response(
+        create_response(
+            status=True,
+            message="User activities retrieved successfully",
+            data={
+                "success_count": success_count,
+                "failed_count": failed_count,
+                **paginated_data
+            }
+        ),
+        status=status.HTTP_200_OK
+    )
+
+
+def list_urls(urlpatterns, prefix=''):
+    urls = []
+    for pattern in urlpatterns:
+        if isinstance(pattern, URLPattern):
+            full_path = prefix + str(pattern.pattern)
+            if full_path.startswith('api'): 
+                urls.append({
+                    'value': "/" +full_path,
+                    'label': "/" + full_path,
+                    # 'label': pattern.name,
+                })
+        elif isinstance(pattern, URLResolver):
+            nested_prefix = prefix + str(pattern.pattern)
+            urls.extend(list_urls(pattern.url_patterns, prefix=nested_prefix))
+    return urls
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminUserType])
+def list_all_routes(request):
+    resolver = get_resolver()
+    urls = list_urls(resolver.url_patterns)
+    return Response(create_response(status= True, message= "APIs fetched successfully.", data=urls))
+    

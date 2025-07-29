@@ -19,6 +19,8 @@ class UserActivity(models.Model):
     latitude = models.CharField(max_length=50, null=True, blank=True)
     longitude = models.CharField(max_length=50, null=True, blank=True)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.FAILED, db_index=True)
+    # error_message = models.TextField(null=True, blank=True)
+    error_message = models.JSONField(null=True, blank=True)
 
     class Meta:
         ordering = ['-activity_time']

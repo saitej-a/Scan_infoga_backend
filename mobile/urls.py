@@ -20,7 +20,6 @@ urlpatterns = [
     path("breachinfo", views.leak_osint, name="leakosint"),
     path("hunterfind", views.hunter_find, name="hunterfind"),
     path("hunterverify", views.hunter_verify, name="hunterverify"),
-    path('sendMail', views.send_welcome_email, name="welcome-mail"),
     path('upi-to-account', views.upi_to_account_data, name="upi-to-account"),
     path('upi-to-account-full-data', views.upi_to_account_full_data, name="upi-to-account-full-data"),
     path('mobile-count', views.mobile_360_call_count, name="mobile-count"),
@@ -28,4 +27,8 @@ urlpatterns = [
     path('rc-verify-full-data', views.rcverify_full_data, name="rc-verify-full-data"),
     path('challan', views.challan_data, name="challan"),
     path('challan-full-data', views.challan_full_data, name="challan-full-data"),
+    path('address-trace', views.address_trace_data, name='address_trace_data'),
+    path('address-trace-full-data', views.address_trace_full_data, name='address_trace_full_data'),
+    path('mobile-to-dl-advance', views.dl_advance_data, name='mobile_to_dl_advance_data'),
+    path('mobile-to-dl-advance-full-data', views.dl_advance_full_data, name='dl_advance_full_data'),
 ]

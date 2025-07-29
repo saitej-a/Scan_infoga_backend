@@ -784,8 +784,9 @@ def equifax_v3_search(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name="equifax_v3", user=user)
                 if balance_after_deduction < 0.0:
+                    raise InsufficientBalanceError()
                     # log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                    return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                    # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 update_user_balance(user=user, amount=balance_after_deduction, api_name="equifax_v3")
 
             # log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
@@ -795,8 +796,9 @@ def equifax_v3_search(request):
     try:
         balance_after_deduction = get_amount_after_api_call(api_name="equifax_v3", user=user)
         if balance_after_deduction < 0.0:
+            raise InsufficientBalanceError()
             # log_user_activity(request=request, status=UserActivity.Status.FAILED)
-            return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+            # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
         api_response = fetch_equifax_data(id_number, id_type, mobile, name)
 
@@ -897,7 +899,8 @@ def get_acc_dtls_from_mobile(request):
                 balance_after_deduction = get_amount_after_api_call(api_name="mobile_to_account", user=user)
                 if balance_after_deduction < 0.0:
                     # log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                    return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                    raise InsufficientBalanceError()
+                    # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 update_user_balance(user=user, amount=balance_after_deduction, api_name="mobile_to_account")
 
             # log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
@@ -907,8 +910,9 @@ def get_acc_dtls_from_mobile(request):
     try:
         balance_after_deduction = get_amount_after_api_call(api_name="mobile_to_account", user=user)
         if balance_after_deduction < 0.0:
+            raise InsufficientBalanceError()
             # log_user_activity(request=request, status=UserActivity.Status.FAILED)
-            return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+            # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
         api_response = fetch_mobile_to_account_data(mobile_number)
 
@@ -1017,8 +1021,9 @@ def uan_passbook_without_otp(request):
                 if not is_called:
                     balance_after_deduction = get_amount_after_api_call(api_name="uan_passbook_without_otp", user=user)
                     if balance_after_deduction < 0.0:
+                        raise InsufficientBalanceError()
                         # log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                        return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                        # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                     update_user_balance(user=user, amount=balance_after_deduction, api_name="uan_passbook_without_otp")
 
 
@@ -1028,8 +1033,9 @@ def uan_passbook_without_otp(request):
         try:
             balance_after_deduction = get_amount_after_api_call(api_name="uan_passbook_without_otp", user=user)
             if balance_after_deduction < 0.0:
+                raise InsufficientBalanceError()
                 # log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
             api_response = get_uan_dtls_without_otp(uan)
 
@@ -1147,8 +1153,9 @@ def mobile_to_dl_lookup(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name="mobile_to_dl", user=user)
                 if balance_after_deduction < 0.0:
+                    raise InsufficientBalanceError()
                     # log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                    return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                    # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 update_user_balance(user=user, amount=balance_after_deduction, api_name="mobile_to_dl")
 
 
@@ -1159,8 +1166,9 @@ def mobile_to_dl_lookup(request):
     try:
         balance_after_deduction = get_amount_after_api_call(api_name="mobile_to_dl", user=user)
         if balance_after_deduction < 0.0:
+            raise InsufficientBalanceError()
             # log_user_activity(request=request, status=UserActivity.Status.FAILED)
-            return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+            # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
         api_response = fetch_mobile_to_dl_data(mobile_number, name, dob)
 
@@ -1264,8 +1272,9 @@ def pan_all_in_one(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name="pan_all_in_one", user=user)
                 if balance_after_deduction < 0.0:
+                    raise InsufficientBalanceError()
                     # log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                    return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                    # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 update_user_balance(user=user, amount=balance_after_deduction, api_name="pan_all_in_one")
 
             # log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
@@ -1275,8 +1284,9 @@ def pan_all_in_one(request):
     try:
         balance_after_deduction = get_amount_after_api_call(api_name="pan_all_in_one", user=user)
         if balance_after_deduction < 0.0:
+            raise InsufficientBalanceError()
             # log_user_activity(request=request, status=UserActivity.Status.FAILED)
-            return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+            # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
         api_response = fetch_pan_all_in_one_data(pan_number)
 
@@ -1431,8 +1441,9 @@ def leak_osint(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name="breach_info", user=user)
                 if balance_after_deduction < 0.0:
-                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                    return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                    raise InsufficientBalanceError()
+                    # log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                    # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 update_user_balance(user=user, amount=balance_after_deduction, api_name="breach_info")
 
 
@@ -1440,28 +1451,29 @@ def leak_osint(request):
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
 
     # Step 2: Fallback to external API
-    try:
-        balance_after_deduction = get_amount_after_api_call(api_name="breach_info", user=user)
-        if balance_after_deduction < 0.0:
-            log_user_activity(request=request, status=UserActivity.Status.FAILED)
-            return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+    # try:
+    balance_after_deduction = get_amount_after_api_call(api_name="breach_info", user=user)
+    if balance_after_deduction < 0.0:
+        raise InsufficientBalanceError()
+        # log_user_activity(request=request, status=UserActivity.Status.FAILED)
+        # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
-        api_response = fetch_leak_osint_data(request_body=request_body)
+    api_response = fetch_leak_osint_data(request_body=request_body)
 
-        with transaction.atomic():
-            LeakOSINT.objects.update_or_create(
-                request_body=request_body,
-                defaults={"result": api_response}
-            )
-            update_user_balance(user=user, amount=balance_after_deduction, api_name="breach_info")
+    with transaction.atomic():
+        LeakOSINT.objects.update_or_create(
+            request_body=request_body,
+            defaults={"result": api_response}
+        )
+        update_user_balance(user=user, amount=balance_after_deduction, api_name="breach_info")
 
 
-        log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
-        return Response(create_response(True, "Data fetched from external API", api_response), status=status.HTTP_200_OK)
+    # log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+    return Response(create_response(True, "Data fetched from external API", api_response), status=status.HTTP_200_OK)
 
-    except Exception as e:
-        log_user_activity(request=request, status=UserActivity.Status.FAILED)
-        return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    # except Exception as e:
+    #     log_user_activity(request=request, status=UserActivity.Status.FAILED)
+    #     return Response(create_response(False, f"Unexpected error: {str(e)}", None), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # @api_view(["POST"])
@@ -1516,8 +1528,9 @@ def hunter_verify(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name='hunterverify', user=user)
                 if balance_after_deduction<0.0:
-                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                    return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                    raise InsufficientBalanceError()
+                    # log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                    # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 print("Updating Balance")
                 update_user_balance(user=user, amount=balance_after_deduction, api_name="hunterverify")
 
@@ -1525,29 +1538,30 @@ def hunter_verify(request):
             serialized = HunterVerifySerializer(report).data
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
 
-    try:
-        if realtime_data or not report:
-            balance_after_deduction = get_amount_after_api_call(api_name='hunterverify', user=user)
-            if(balance_after_deduction < 0.0):
-                log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+    # try:
+    if realtime_data or not report:
+        balance_after_deduction = get_amount_after_api_call(api_name='hunterverify', user=user)
+        if(balance_after_deduction < 0.0):
+            # log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+            raise InsufficientBalanceError()
 
-        api_response = fetch_hunter_verify_data(email=email)
-        with transaction.atomic():
-            HunterVerify.objects.update_or_create(
-                email=email,
-                defaults={"result": api_response}
-            )
-            if realtime_data or not is_called:
-                update_user_balance(user=user, amount=balance_after_deduction, api_name="hunterverify")
+    api_response = fetch_hunter_verify_data(email=email)
+    with transaction.atomic():
+        HunterVerify.objects.update_or_create(
+            email=email,
+            defaults={"result": api_response}
+        )
+        if realtime_data or not is_called:
+            update_user_balance(user=user, amount=balance_after_deduction, api_name="hunterverify")
 
 
-        log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
-        return Response(create_response(True, "Data fetched from external API", api_response), status=status.HTTP_200_OK)
+    # log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+    return Response(create_response(True, "Data fetched from external API", api_response), status=status.HTTP_200_OK)
 
-    except Exception as e:
-        log_user_activity(request=request, status=UserActivity.Status.FAILED)
-        return Response(create_response(False, f"Unxpected Error: {str(e)}", None), status=status.HTTP_404_NOT_FOUND)
+    # except Exception as e:
+    #     log_user_activity(request=request, status=UserActivity.Status.FAILED)
+    #     return Response(create_response(False, f"Unxpected Error: {str(e)}", None), status=status.HTTP_404_NOT_FOUND)
 
 # @api_view(["POST"])
 # @permission_classes([IsAuthenticated])
@@ -1600,8 +1614,9 @@ def hunter_find(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name='hunterfind',user=user)
                 if balance_after_deduction<0.0:
-                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                    return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                    raise InsufficientBalanceError()
+                    # log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                    # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 print("Updating Balance")
                 update_user_balance(user=user, amount=balance_after_deduction, api_name="hunterfind")
 
@@ -1610,44 +1625,30 @@ def hunter_find(request):
             log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
             return Response(create_response(True, "Data fetched from database", serialized['result']), status=status.HTTP_200_OK)
 
-    try:
+    # try:
+    if realtime_data or not is_called:
+        balance_after_deduction = get_amount_after_api_call(api_name='hunterfind', user=user)
+        if(balance_after_deduction < 0.0):
+            raise InsufficientBalanceError()
+            # log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+
+    api_response = fetch_hunter_find_data(email=email)
+    
+    with transaction.atomic():
+        HunterFind.objects.update_or_create(
+            email=email,
+            defaults={"result": api_response}
+        )
         if realtime_data or not is_called:
-            balance_after_deduction = get_amount_after_api_call(api_name='hunterfind', user=user)
-            if(balance_after_deduction < 0.0):
-                log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+            update_user_balance(user=user, amount=balance_after_deduction, api_name="hunterfind")
 
-        api_response = fetch_hunter_find_data(email=email)
-        
-        with transaction.atomic():
-            HunterFind.objects.update_or_create(
-                email=email,
-                defaults={"result": api_response}
-            )
-            if realtime_data or not is_called:
-                update_user_balance(user=user, amount=balance_after_deduction, api_name="hunterfind")
+    # log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
+    return Response(create_response(True, "Data fetched from external API", api_response), status=status.HTTP_200_OK)
 
-        log_user_activity(request=request, status=UserActivity.Status.SUCCESS)
-        return Response(create_response(True, "Data fetched from external API", api_response), status=status.HTTP_200_OK)
-
-    except Exception as e:
-        log_user_activity(request=request, status=UserActivity.Status.FAILED)
-        return Response(create_response(False, f"Unxpected Error: {str(e)}", None), status=status.HTTP_404_NOT_FOUND)
-
-from django.shortcuts import render
-from core.services.email_service import EmailService  # Import the email service
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def send_welcome_email(user):
-    # subject = 'Welcome to Our Mobile App!'
-    # message = f'Hello abhinav,\nWelcome to our mobile app. We are excited to have you!'
-    # success = EmailService.send_email(template_name="welcome_template", to_email="abhinav0427@gmail.com", context={"username": "Abhinav", "site_url": "https://scaninfoga.com"})
-    print("Send welcome mail called")
-    from core.tasks import send_welcome_email
-    send_welcome_email.delay(user_email="abhinav0427@gmail.com", name="Abhinav Srivastava")
-    return Response(create_response(True, "Email sent successfully", None))
-
+    # except Exception as e:
+    #     log_user_activity(request=request, status=UserActivity.Status.FAILED)
+    #     return Response(create_response(False, f"Unxpected Error: {str(e)}", None), status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -1662,8 +1663,6 @@ def upi_to_account_data(request):
 
     payload = request.data
     is_called = is_called_by_user_previously(user=user, api_name=request.path, payload=payload)
-    
-    print("Is Called: ", is_called)
 
     try:
         obj = UPIToAccount2.objects.get(upi_id=upi_id)
@@ -1674,7 +1673,7 @@ def upi_to_account_data(request):
         latest_entry = None
         obj = None
 
-    try:
+    # try:
         count = len(full_data)
         datetime_list = [list(entry.keys())[0] for entry in full_data]
         
@@ -1683,9 +1682,9 @@ def upi_to_account_data(request):
                 if not is_called:
                     balance_after_deduction = get_amount_after_api_call(api_name='upi_to_account_data', user=user)
                     if balance_after_deduction < 0.0:
-                        log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                        return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
-                    print("UPDATING")
+                        raise InsufficientBalanceError()
+                        # log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                        # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                     update_user_balance(user=user, amount=balance_after_deduction, api_name="upi_to_account_data")
 
 
@@ -1705,43 +1704,43 @@ def upi_to_account_data(request):
         if realtime_data or latest_entry is None:
             balance_after_deduction = get_amount_after_api_call(api_name='upi_to_account_data', user=user)
             if balance_after_deduction < 0.0:
-                log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                raise InsufficientBalanceError()
+                # log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
         if latest_entry is None:
             result = fetch_upi_to_account(upi_id)
-            print("Latest None then real time: ", result)
-            if result.get('success'):
-                ts = result["data"].pop("datetime")
-                print(result["data"])
-                data_dict = {ts: result["data"]}
+            # if result.get('success'):
+            ts = result["data"].pop("datetime")
+            print(result["data"])
+            data_dict = {ts: result["data"]}
+            
+            with transaction.atomic():
+                UPIToAccount2.objects.update_or_create(
+                    upi_id=upi_id,
+                    defaults={"result": [data_dict]}
+                )
                 
-                with transaction.atomic():
-                    UPIToAccount2.objects.update_or_create(
-                        upi_id=upi_id,
-                        defaults={"result": [data_dict]}
-                    )
-                    
-                    if realtime_data or not is_called:
-                        update_user_balance(user=user, amount=balance_after_deduction, api_name="upi_to_account_data")
+                if realtime_data or not is_called:
+                    update_user_balance(user=user, amount=balance_after_deduction, api_name="upi_to_account_data")
 
-                
-                log_user_activity(request, UserActivity.Status.SUCCESS)
-                return Response(
-                    create_response(True, "Real-time data fetched successfully", {
-                        "count": 1,
-                        "datetime_list": [ts],
-                        "datetime": ts,
-                        "data": data_dict[ts]
-                    }),
-                    status=status.HTTP_200_OK
-                )
-            else:
-                log_user_activity(request, UserActivity.Status.FAILED)
-                return Response(
-                    create_response(False, result.get("message", "Failed to fetch data"), None), 
-                    status=status.HTTP_404_NOT_FOUND
-                )
+            
+            # log_user_activity(request, UserActivity.Status.SUCCESS)
+            return Response(
+                create_response(True, "Real-time data fetched successfully", {
+                    "count": 1,
+                    "datetime_list": [ts],
+                    "datetime": ts,
+                    "data": data_dict[ts]
+                }),
+                status=status.HTTP_200_OK
+            )
+            # else:
+            #     log_user_activity(request, UserActivity.Status.FAILED, error_message="Failed to fetch data.")
+            #     return Response(
+            #         create_response(False, result.get("message", "Failed to fetch data"), None), 
+            #         status=status.HTTP_404_NOT_FOUND
+            #     )
 
         api_response = fetch_upi_to_account(upi_id)
         fetch_and_store_upi_to_account.delay(upi_id, api_response)
@@ -1751,7 +1750,7 @@ def upi_to_account_data(request):
                 update_user_balance(user=user, amount=balance_after_deduction, api_name="upi_to_account_data")
 
         
-        log_user_activity(request, UserActivity.Status.SUCCESS)
+        # log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(
             create_response(True, "Data fetched from API, comparing in background.", {
                 "count": count,
@@ -1762,12 +1761,12 @@ def upi_to_account_data(request):
             status=status.HTTP_200_OK
         )
     
-    except Exception as e:
-        log_user_activity(request, UserActivity.Status.FAILED)
-        return Response(
-            create_response(False, f"Unexpected Error: {str(e)}", None),
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+    # except Exception as e:
+    #     log_user_activity(request, UserActivity.Status.FAILED)
+    #     return Response(
+    #         create_response(False, f"Unexpected Error: {str(e)}", None),
+    #         status=status.HTTP_500_INTERNAL_SERVER_ERROR
+    #     )
 
 
 @api_view(['POST'])
@@ -1798,68 +1797,68 @@ def upi_to_account_full_data(request):
         if not is_called:
             balance_after_deduction = get_amount_after_api_call(api_name='upi_to_account_full_data', user=user)
             if balance_after_deduction < 0.0:
-                log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
-            print("UPDATING")
+                raise InsufficientBalanceError()
+                # log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
             update_user_balance(user=user, amount=balance_after_deduction, api_name="upi_to_account_full_data")
 
 
-        log_user_activity(request, UserActivity.Status.SUCCESS)
+        # log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(
             create_response(True, "Full data fetched successfully", full_data),
             status=status.HTTP_200_OK
         )
         
     except UPIToAccount2.DoesNotExist:
-        try:
-            print("No data in database, fetching from external api")
+        # try:
             
             balance_after_deduction = get_amount_after_api_call(api_name='upi_to_account_full_data', user=user)
             if balance_after_deduction < 0.0:
-                log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                raise InsufficientBalanceError()
+                # log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
             
             api_response = fetch_upi_to_account(upi_id)
-            if api_response.get('success'):
-                ts = api_response["data"].pop("datetime")
-                print(api_response["data"])
-                data_dict = {ts: api_response["data"]}
-                
-                with transaction.atomic():
-                    UPIToAccount2.objects.update_or_create(
-                        upi_id=upi_id,
-                        defaults={"result": [data_dict]}
-                    )
-                    update_user_balance(user=user, amount=balance_after_deduction, api_name="upi_to_account_full_data")
-
-                
-                log_user_activity(request, UserActivity.Status.SUCCESS)
-                return Response(
-                    create_response(True, "Real-time data fetched successfully", [{
-                        "datetime": ts,
-                        "data": data_dict[ts]
-                    }]),
-                    status=status.HTTP_200_OK
-                )
-            else:
-                log_user_activity(request, UserActivity.Status.FAILED)
-                return Response(
-                    create_response(False, api_response.get("message", "Failed to fetch data"), None), 
-                    status=status.HTTP_404_NOT_FOUND
-                )
-        except Exception as e:
-            log_user_activity(request, UserActivity.Status.FAILED)
-            return Response(
-                create_response(False, str(e), None),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            # if api_response.get('success'):
+            ts = api_response["data"].pop("datetime")
+            print(api_response["data"])
+            data_dict = {ts: api_response["data"]}
             
-    except Exception as e:
-        log_user_activity(request, UserActivity.Status.FAILED)
-        return Response(
-            create_response(False, str(e), None),
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+            with transaction.atomic():
+                UPIToAccount2.objects.update_or_create(
+                    upi_id=upi_id,
+                    defaults={"result": [data_dict]}
+                )
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="upi_to_account_full_data")
+
+            
+            # log_user_activity(request, UserActivity.Status.SUCCESS)
+            return Response(
+                create_response(True, "Real-time data fetched successfully", [{
+                    "datetime": ts,
+                    "data": data_dict[ts]
+                }]),
+                status=status.HTTP_200_OK
+            )
+            # else:
+            #     log_user_activity(request, UserActivity.Status.FAILED)
+            #     return Response(
+            #         create_response(False, api_response.get("message", "Failed to fetch data"), None), 
+            #         status=status.HTTP_404_NOT_FOUND
+            #     )
+        # except Exception as e:
+        #     log_user_activity(request, UserActivity.Status.FAILED)
+        #     return Response(
+        #         create_response(False, str(e), None),
+        #         status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        #     )
+            
+    # except Exception as e:
+    #     log_user_activity(request, UserActivity.Status.FAILED)
+    #     return Response(
+    #         create_response(False, str(e), None),
+    #         status=status.HTTP_500_INTERNAL_SERVER_ERROR
+    #     )
 
 
 
@@ -2045,89 +2044,91 @@ def rcverify_data(request):
         latest_entry = None
         obj = None
 
-    try:
-        count = len(full_data)
-        datetime_list = [list(entry.keys())[0] for entry in full_data]
+    # try:
+    count = len(full_data)
+    datetime_list = [list(entry.keys())[0] for entry in full_data]
 
-        if not realtime_data:
-            if latest_entry:
-                if not is_called:
-                    balance_after_deduction = get_amount_after_api_call(api_name='rc_verify_data', user=user)
-                    if balance_after_deduction < 0.0:
-                        log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                        return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+    if not realtime_data:
+        if latest_entry:
+            if not is_called:
+                balance_after_deduction = get_amount_after_api_call(api_name='rc_verify_data', user=user)
+                if balance_after_deduction < 0.0:
+                    raise InsufficientBalanceError()
+                    # log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                    # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
-                    update_user_balance(user=user, amount=balance_after_deduction, api_name="rc_verify_data")
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="rc_verify_data")
 
-                latest_timestamp = list(latest_entry.keys())[0]
-                log_user_activity(request, UserActivity.Status.SUCCESS)
-                return Response(
-                    create_response(True, "Data fetched from database", {
-                        "count": count,
-                        "datetime_list": datetime_list,
-                        "datetime": latest_timestamp,
-                        "data": latest_entry[latest_timestamp]
-                    }),
-                    status=status.HTTP_200_OK
-                )
+            latest_timestamp = list(latest_entry.keys())[0]
+            # log_user_activity(request, UserActivity.Status.SUCCESS)
+            return Response(
+                create_response(True, "Data fetched from database", {
+                    "count": count,
+                    "datetime_list": datetime_list,
+                    "datetime": latest_timestamp,
+                    "data": latest_entry[latest_timestamp]
+                }),
+                status=status.HTTP_200_OK
+            )
 
-        # For realtime or no cached data
-        if realtime_data or latest_entry is None:
-            balance_after_deduction = get_amount_after_api_call(api_name='rc_verify_data', user=user)
-            if balance_after_deduction < 0.0:
-                log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+    # For realtime or no cached data
+    if realtime_data or latest_entry is None:
+        balance_after_deduction = get_amount_after_api_call(api_name='rc_verify_data', user=user)
+        if balance_after_deduction < 0.0:
+            raise InsufficientBalanceError()
+            # log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
-        if latest_entry is None:
-            result = fetch_rc_data(vehicle_no)
-            if result.get('success'):
-                ts = result["data"].pop("datetime")
-                data_dict = {ts: result["data"]}
-
-                with transaction.atomic():
-                    RCVerifyReport2.objects.update_or_create(
-                        vehicle_no=vehicle_no,
-                        defaults={"result": [data_dict]}
-                    )
-
-                    if realtime_data or not is_called:
-                        update_user_balance(user=user, amount=balance_after_deduction, api_name="rc_verify_data")
-
-                log_user_activity(request, UserActivity.Status.SUCCESS)
-                return Response(
-                    create_response(True, "Real-time data fetched successfully", {
-                        "count": 1,
-                        "datetime_list": [ts],
-                        "datetime": ts,
-                        "data": data_dict[ts]
-                    }),
-                    status=status.HTTP_200_OK
-                )
-
-        api_response = fetch_rc_data(vehicle_no)
-        fetch_and_store_rcverify.delay(vehicle_no, api_response)
+    if latest_entry is None:
+        result = fetch_rc_data(vehicle_no)
+        # if result.get('success'):
+        ts = result["data"].pop("datetime")
+        data_dict = {ts: result["data"]}
 
         with transaction.atomic():
+            RCVerifyReport2.objects.update_or_create(
+                vehicle_no=vehicle_no,
+                defaults={"result": [data_dict]}
+            )
+
             if realtime_data or not is_called:
                 update_user_balance(user=user, amount=balance_after_deduction, api_name="rc_verify_data")
 
         log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(
-            create_response(True, "Data fetched from API, comparing in background.", {
-                "count": count,
-                "datetime_list": datetime_list,
-                "datetime": api_response['data']['datetime'],
-                "data": api_response["data"]
+            create_response(True, "Real-time data fetched successfully", {
+                "count": 1,
+                "datetime_list": [ts],
+                "datetime": ts,
+                "data": data_dict[ts]
             }),
             status=status.HTTP_200_OK
         )
 
-    except Exception as e:
-        log_user_activity(request, UserActivity.Status.FAILED)
-        return Response(
-            create_response(False, f"Unexpected Error: {str(e)}", None),
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+    api_response = fetch_rc_data(vehicle_no)
+    fetch_and_store_rcverify.delay(vehicle_no, api_response)
+
+    with transaction.atomic():
+        if realtime_data or not is_called:
+            update_user_balance(user=user, amount=balance_after_deduction, api_name="rc_verify_data")
+
+    # log_user_activity(request, UserActivity.Status.SUCCESS)
+    return Response(
+        create_response(True, "Data fetched from API, comparing in background.", {
+            "count": count,
+            "datetime_list": datetime_list,
+            "datetime": api_response['data']['datetime'],
+            "data": api_response["data"]
+        }),
+        status=status.HTTP_200_OK
+    )
+
+    # except Exception as e:
+    #     log_user_activity(request, UserActivity.Status.FAILED)
+    #     return Response(
+    #         create_response(False, f"Unexpected Error: {str(e)}", None),
+    #         status=status.HTTP_500_INTERNAL_SERVER_ERROR
+    #     )
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -2155,63 +2156,65 @@ def rcverify_full_data(request):
         if not is_called:
             balance_after_deduction = get_amount_after_api_call(api_name='rc_verify_full_data', user=user)
             if balance_after_deduction < 0.0:
-                log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                raise InsufficientBalanceError()
+                # log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
             update_user_balance(user=user, amount=balance_after_deduction, api_name="rc_verify_full_data")
 
-        log_user_activity(request, UserActivity.Status.SUCCESS)
+        # log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(
             create_response(True, "Full data fetched successfully", full_data),
             status=status.HTTP_200_OK
         )
 
     except RCVerifyReport2.DoesNotExist:
-        try:
-            balance_after_deduction = get_amount_after_api_call(api_name='rc_verify_full_data', user=user)
-            if balance_after_deduction < 0.0:
-                log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+        # try:
+        balance_after_deduction = get_amount_after_api_call(api_name='rc_verify_full_data', user=user)
+        if balance_after_deduction < 0.0:
+            raise InsufficientBalanceError()
+            # log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
-            api_response = fetch_rc_data(vehicle_no)
-            if api_response.get('success'):
-                ts = api_response["data"].pop("datetime")
-                data_dict = {ts: api_response["data"]}
+        api_response = fetch_rc_data(vehicle_no)
+        # if api_response.get('success'):
+        ts = api_response["data"].pop("datetime")
+        data_dict = {ts: api_response["data"]}
 
-                with transaction.atomic():
-                    RCVerifyReport2.objects.update_or_create(
-                        vehicle_no=vehicle_no,
-                        defaults={"result": [data_dict]}
-                    )
-                    update_user_balance(user=user, amount=balance_after_deduction, api_name="rc_verify_full_data")
-
-                log_user_activity(request, UserActivity.Status.SUCCESS)
-                return Response(
-                    create_response(True, "Real-time data fetched successfully", [{
-                        "datetime": ts,
-                        "data": data_dict[ts]
-                    }]),
-                    status=status.HTTP_200_OK
-                )
-            else:
-                log_user_activity(request, UserActivity.Status.FAILED)
-                return Response(
-                    create_response(False, api_response.get("message", "Failed to fetch data"), None), 
-                    status=status.HTTP_404_NOT_FOUND
-                )
-        except Exception as e:
-            log_user_activity(request, UserActivity.Status.FAILED)
-            return Response(
-                create_response(False, str(e), None),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        with transaction.atomic():
+            RCVerifyReport2.objects.update_or_create(
+                vehicle_no=vehicle_no,
+                defaults={"result": [data_dict]}
             )
+            update_user_balance(user=user, amount=balance_after_deduction, api_name="rc_verify_full_data")
 
-    except Exception as e:
-        log_user_activity(request, UserActivity.Status.FAILED)
+        # log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(
-            create_response(False, str(e), None),
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            create_response(True, "Real-time data fetched successfully", [{
+                "datetime": ts,
+                "data": data_dict[ts]
+            }]),
+            status=status.HTTP_200_OK
         )
+            # else:
+            #     log_user_activity(request, UserActivity.Status.FAILED)
+            #     return Response(
+            #         create_response(False, api_response.get("message", "Failed to fetch data"), None), 
+            #         status=status.HTTP_404_NOT_FOUND
+            #     )
+        # except Exception as e:
+            # log_user_activity(request, UserActivity.Status.FAILED)
+            # return Response(
+            #     create_response(False, str(e), None),
+            #     status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            # )
+
+    # except Exception as e:
+    #     log_user_activity(request, UserActivity.Status.FAILED)
+    #     return Response(
+    #         create_response(False, str(e), None),
+    #         status=status.HTTP_500_INTERNAL_SERVER_ERROR
+    #     )
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -2236,89 +2239,91 @@ def challan_data(request):
         latest_entry = None
         obj = None
 
-    try:
-        count = len(full_data)
-        datetime_list = [list(entry.keys())[0] for entry in full_data]
+    # try:
+    count = len(full_data)
+    datetime_list = [list(entry.keys())[0] for entry in full_data]
 
-        if not realtime_data:
-            if latest_entry:
-                if not is_called:
-                    balance_after_deduction = get_amount_after_api_call(api_name='challan_data', user=user)
-                    if balance_after_deduction < 0.0:
-                        log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                        return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+    if not realtime_data:
+        if latest_entry:
+            if not is_called:
+                balance_after_deduction = get_amount_after_api_call(api_name='challan_data', user=user)
+                if balance_after_deduction < 0.0:
+                    raise InsufficientBalanceError()
+                    # log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                    # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
-                    update_user_balance(user=user, amount=balance_after_deduction, api_name="challan_data")
+                update_user_balance(user=user, amount=balance_after_deduction, api_name="challan_data")
 
-                latest_timestamp = list(latest_entry.keys())[0]
-                log_user_activity(request, UserActivity.Status.SUCCESS)
-                return Response(
-                    create_response(True, "Data fetched from database", {
-                        "count": count,
-                        "datetime_list": datetime_list,
-                        "datetime": latest_timestamp,
-                        "data": latest_entry[latest_timestamp]
-                    }),
-                    status=status.HTTP_200_OK
-                )
+            latest_timestamp = list(latest_entry.keys())[0]
+            # log_user_activity(request, UserActivity.Status.SUCCESS)
+            return Response(
+                create_response(True, "Data fetched from database", {
+                    "count": count,
+                    "datetime_list": datetime_list,
+                    "datetime": latest_timestamp,
+                    "data": latest_entry[latest_timestamp]
+                }),
+                status=status.HTTP_200_OK
+            )
 
-        # realtime or no data
-        if realtime_data or latest_entry is None:
-            balance_after_deduction = get_amount_after_api_call(api_name='challan_data', user=user)
-            if balance_after_deduction < 0.0:
-                log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+    # realtime or no data
+    if realtime_data or latest_entry is None:
+        balance_after_deduction = get_amount_after_api_call(api_name='challan_data', user=user)
+        if balance_after_deduction < 0.0:
+            raise InsufficientBalanceError()
+            # log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
-        if latest_entry is None:
-            result = fetch_challan_data(vehicle_no)
-            if result.get('success'):
-                ts = result["data"].pop("datetime")
-                data_dict = {ts: result["data"]}
-
-                with transaction.atomic():
-                    ChallanReport.objects.update_or_create(
-                        vehicle_no=vehicle_no,
-                        defaults={"result": [data_dict]}
-                    )
-
-                    if realtime_data or not is_called:
-                        update_user_balance(user=user, amount=balance_after_deduction, api_name="challan_data")
-
-                log_user_activity(request, UserActivity.Status.SUCCESS)
-                return Response(
-                    create_response(True, "Real-time data fetched successfully", {
-                        "count": 1,
-                        "datetime_list": [ts],
-                        "datetime": ts,
-                        "data": data_dict[ts]
-                    }),
-                    status=status.HTTP_200_OK
-                )
-
-        api_response = fetch_challan_data(vehicle_no)
-        fetch_and_store_challan.delay(vehicle_no, api_response)
+    if latest_entry is None:
+        result = fetch_challan_data(vehicle_no)
+        # if result.get('success'):
+        ts = result["data"].pop("datetime")
+        data_dict = {ts: result["data"]}
 
         with transaction.atomic():
+            ChallanReport.objects.update_or_create(
+                vehicle_no=vehicle_no,
+                defaults={"result": [data_dict]}
+            )
+
             if realtime_data or not is_called:
                 update_user_balance(user=user, amount=balance_after_deduction, api_name="challan_data")
 
-        log_user_activity(request, UserActivity.Status.SUCCESS)
+        # log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(
-            create_response(True, "Data fetched from API, comparing in background.", {
-                "count": count,
-                "datetime_list": datetime_list,
-                "datetime": api_response['data']['datetime'],
-                "data": api_response["data"]
+            create_response(True, "Real-time data fetched successfully", {
+                "count": 1,
+                "datetime_list": [ts],
+                "datetime": ts,
+                "data": data_dict[ts]
             }),
             status=status.HTTP_200_OK
         )
 
-    except Exception as e:
-        log_user_activity(request, UserActivity.Status.FAILED)
-        return Response(
-            create_response(False, f"Unexpected Error: {str(e)}", None),
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+    api_response = fetch_challan_data(vehicle_no)
+    fetch_and_store_challan.delay(vehicle_no, api_response)
+
+    with transaction.atomic():
+        if realtime_data or not is_called:
+            update_user_balance(user=user, amount=balance_after_deduction, api_name="challan_data")
+
+    # log_user_activity(request, UserActivity.Status.SUCCESS)
+    return Response(
+        create_response(True, "Data fetched from API, comparing in background.", {
+            "count": count,
+            "datetime_list": datetime_list,
+            "datetime": api_response['data']['datetime'],
+            "data": api_response["data"]
+        }),
+        status=status.HTTP_200_OK
+    )
+
+    # except Exception as e:
+    #     log_user_activity(request, UserActivity.Status.FAILED)
+    #     return Response(
+    #         create_response(False, f"Unexpected Error: {str(e)}", None),
+    #         status=status.HTTP_500_INTERNAL_SERVER_ERROR
+    #     )
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -2346,63 +2351,65 @@ def challan_full_data(request):
         if not is_called:
             balance_after_deduction = get_amount_after_api_call(api_name='challan_full_data', user=user)
             if balance_after_deduction < 0.0:
-                log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                raise InsufficientBalanceError()
+                # log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
             update_user_balance(user=user, amount=balance_after_deduction, api_name="challan_full_data")
 
-        log_user_activity(request, UserActivity.Status.SUCCESS)
+        # log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(
             create_response(True, "Full data fetched successfully", full_data),
             status=status.HTTP_200_OK
         )
 
     except ChallanReport.DoesNotExist:
-        try:
-            balance_after_deduction = get_amount_after_api_call(api_name='challan_full_data', user=user)
-            if balance_after_deduction < 0.0:
-                log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+        # try:
+        balance_after_deduction = get_amount_after_api_call(api_name='challan_full_data', user=user)
+        if balance_after_deduction < 0.0:
+            raise InsufficientBalanceError()
+            # log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
-            api_response = fetch_challan_data(vehicle_no)
-            if api_response.get('success'):
-                ts = api_response["data"].pop("datetime")
-                data_dict = {ts: api_response["data"]}
+        api_response = fetch_challan_data(vehicle_no)
+        # if api_response.get('success'):
+        ts = api_response["data"].pop("datetime")
+        data_dict = {ts: api_response["data"]}
 
-                with transaction.atomic():
-                    ChallanReport.objects.update_or_create(
-                        vehicle_no=vehicle_no,
-                        defaults={"result": [data_dict]}
-                    )
-                    update_user_balance(user=user, amount=balance_after_deduction, api_name="challan_full_data")
-
-                log_user_activity(request, UserActivity.Status.SUCCESS)
-                return Response(
-                    create_response(True, "Real-time data fetched successfully", [{
-                        "datetime": ts,
-                        "data": data_dict[ts]
-                    }]),
-                    status=status.HTTP_200_OK
-                )
-            else:
-                log_user_activity(request, UserActivity.Status.FAILED)
-                return Response(
-                    create_response(False, api_response.get("message", "Failed to fetch data"), None), 
-                    status=status.HTTP_404_NOT_FOUND
-                )
-        except Exception as e:
-            log_user_activity(request, UserActivity.Status.FAILED)
-            return Response(
-                create_response(False, str(e), None),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        with transaction.atomic():
+            ChallanReport.objects.update_or_create(
+                vehicle_no=vehicle_no,
+                defaults={"result": [data_dict]}
             )
+            update_user_balance(user=user, amount=balance_after_deduction, api_name="challan_full_data")
 
-    except Exception as e:
-        log_user_activity(request, UserActivity.Status.FAILED)
+        # log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(
-            create_response(False, str(e), None),
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            create_response(True, "Real-time data fetched successfully", [{
+                "datetime": ts,
+                "data": data_dict[ts]
+            }]),
+            status=status.HTTP_200_OK
         )
+            # else:
+            #     log_user_activity(request, UserActivity.Status.FAILED)
+            #     return Response(
+            #         create_response(False, api_response.get("message", "Failed to fetch data"), None), 
+            #         status=status.HTTP_404_NOT_FOUND
+            #     )
+        # except Exception as e:
+        #     log_user_activity(request, UserActivity.Status.FAILED)
+        #     return Response(
+        #         create_response(False, str(e), None),
+        #         status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        #     )
+
+    # except Exception as e:
+    #     log_user_activity(request, UserActivity.Status.FAILED)
+    #     return Response(
+    #         create_response(False, str(e), None),
+    #         status=status.HTTP_500_INTERNAL_SERVER_ERROR
+    #     )
 
 
 @api_view(['POST'])
@@ -2428,86 +2435,88 @@ def address_trace_data(request):
         latest_entry = None
         obj = None
 
-    try:
-        count = len(full_data)
-        datetime_list = [list(entry.keys())[0] for entry in full_data]
+    # try:
+    count = len(full_data)
+    datetime_list = [list(entry.keys())[0] for entry in full_data]
 
-        if not realtime_data:
-            if latest_entry:
-                if not is_called:
-                    balance_after_deduction = get_amount_after_api_call(api_name='address_trace_data', user=user)
-                    if balance_after_deduction < 0.0:
-                        log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                        return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
-                    update_user_balance(user=user, amount=balance_after_deduction, api_name="address_trace_data")
-
-                latest_timestamp = list(latest_entry.keys())[0]
-                log_user_activity(request, UserActivity.Status.SUCCESS)
-                return Response(
-                    create_response(True, "Data fetched from database", {
-                        "count": count,
-                        "datetime_list": datetime_list,
-                        "datetime": latest_timestamp,
-                        "data": latest_entry[latest_timestamp]
-                    }),
-                    status=status.HTTP_200_OK
-                )
-
-        # If realtime OR empty
-        balance_after_deduction = get_amount_after_api_call(api_name='address_trace_data', user=user)
-        if balance_after_deduction < 0.0:
-            log_user_activity(request=request, status=UserActivity.Status.FAILED)
-            return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
-
-        if latest_entry is None:
-            result = fetch_address_tracing_data(mobile)
-            if result.get('success'):
-                ts = result["data"].pop("datetime")
-                data_dict = {ts: result["data"]}
-
-                with transaction.atomic():
-                    AddressTraceReport.objects.update_or_create(
-                        mobile=mobile,
-                        defaults={"result": [data_dict]}
-                    )
-                    if realtime_data or not is_called:
-                        update_user_balance(user=user, amount=balance_after_deduction, api_name="address_trace_data")
-
-                log_user_activity(request, UserActivity.Status.SUCCESS)
-                return Response(
-                    create_response(True, "Real-time data fetched successfully", {
-                        "count": 1,
-                        "datetime_list": [ts],
-                        "datetime": ts,
-                        "data": data_dict[ts]
-                    }),
-                    status=status.HTTP_200_OK
-                )
-
-        api_response = fetch_address_tracing_data(mobile)
-        fetch_and_store_address_trace.delay(mobile, api_response)
-
-        with transaction.atomic():
-            if realtime_data or not is_called:
+    if not realtime_data:
+        if latest_entry:
+            if not is_called:
+                balance_after_deduction = get_amount_after_api_call(api_name='address_trace_data', user=user)
+                if balance_after_deduction < 0.0:
+                    raise InsufficientBalanceError()
+                    # log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                    # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                 update_user_balance(user=user, amount=balance_after_deduction, api_name="address_trace_data")
 
-        log_user_activity(request, UserActivity.Status.SUCCESS)
-        return Response(
-            create_response(True, "Data fetched from API, comparing in background.", {
-                "count": count,
-                "datetime_list": datetime_list,
-                "datetime": api_response['data']['datetime'],
-                "data": api_response["data"]
-            }),
-            status=status.HTTP_200_OK
-        )
+            latest_timestamp = list(latest_entry.keys())[0]
+            # log_user_activity(request, UserActivity.Status.SUCCESS)
+            return Response(
+                create_response(True, "Data fetched from database", {
+                    "count": count,
+                    "datetime_list": datetime_list,
+                    "datetime": latest_timestamp,
+                    "data": latest_entry[latest_timestamp]
+                }),
+                status=status.HTTP_200_OK
+            )
 
-    except Exception as e:
-        log_user_activity(request, UserActivity.Status.FAILED)
-        return Response(
-            create_response(False, str(e), None),
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+    # If realtime OR empty
+    balance_after_deduction = get_amount_after_api_call(api_name='address_trace_data', user=user)
+    if balance_after_deduction < 0.0:
+        raise InsufficientBalanceError()
+        # log_user_activity(request=request, status=UserActivity.Status.FAILED)
+        # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+
+    if latest_entry is None:
+        result = fetch_address_tracing_data(mobile)
+        if result.get('success'):
+            ts = result["data"].pop("datetime")
+            data_dict = {ts: result["data"]}
+
+            with transaction.atomic():
+                AddressTraceReport.objects.update_or_create(
+                    mobile=mobile,
+                    defaults={"result": [data_dict]}
+                )
+                if realtime_data or not is_called:
+                    update_user_balance(user=user, amount=balance_after_deduction, api_name="address_trace_data")
+
+            # log_user_activity(request, UserActivity.Status.SUCCESS)
+            return Response(
+                create_response(True, "Real-time data fetched successfully", {
+                    "count": 1,
+                    "datetime_list": [ts],
+                    "datetime": ts,
+                    "data": data_dict[ts]
+                }),
+                status=status.HTTP_200_OK
+            )
+
+    api_response = fetch_address_tracing_data(mobile)
+    fetch_and_store_address_trace.delay(mobile, api_response)
+
+    with transaction.atomic():
+        if realtime_data or not is_called:
+            update_user_balance(user=user, amount=balance_after_deduction, api_name="address_trace_data")
+
+    # log_user_activity(request, UserActivity.Status.SUCCESS)
+    return Response(
+        create_response(True, "Data fetched from API, comparing in background.", {
+            "count": count,
+            "datetime_list": datetime_list,
+            "datetime": api_response['data']['datetime'],
+            "data": api_response["data"]
+        }),
+        status=status.HTTP_200_OK
+    )
+
+    # except Exception as e:
+    #     log_user_activity(request, UserActivity.Status.FAILED)
+    #     return Response(
+    #         create_response(False, str(e), None),
+    #         status=status.HTTP_500_INTERNAL_SERVER_ERROR
+    #     )
 
 
 @api_view(['POST'])
@@ -2536,62 +2545,64 @@ def address_trace_full_data(request):
         if not is_called:
             balance_after_deduction = get_amount_after_api_call(api_name='address_trace_full_data', user=user)
             if balance_after_deduction < 0.0:
-                log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                raise InsufficientBalanceError()
+                # log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
             update_user_balance(user=user, amount=balance_after_deduction, api_name="address_trace_full_data")
 
-        log_user_activity(request, UserActivity.Status.SUCCESS)
+        # log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(
             create_response(True, "Full data fetched successfully", full_data),
             status=status.HTTP_200_OK
         )
 
     except AddressTraceReport.DoesNotExist:
-        try:
-            balance_after_deduction = get_amount_after_api_call(api_name='address_trace_full_data', user=user)
-            if balance_after_deduction < 0.0:
-                log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+        # try:
+        balance_after_deduction = get_amount_after_api_call(api_name='address_trace_full_data', user=user)
+        if balance_after_deduction < 0.0:
+            raise InsufficientBalanceError()
+            # log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
-            api_response = fetch_address_tracing_data(mobile)
-            if api_response.get('success'):
-                ts = api_response["data"].pop("datetime")
-                data_dict = {ts: api_response["data"]}
+        api_response = fetch_address_tracing_data(mobile)
+        # if api_response.get('success'):
+        ts = api_response["data"].pop("datetime")
+        data_dict = {ts: api_response["data"]}
 
-                with transaction.atomic():
-                    AddressTraceReport.objects.update_or_create(
-                        mobile=mobile,
-                        defaults={"result": [data_dict]}
-                    )
-                    update_user_balance(user=user, amount=balance_after_deduction, api_name="address_trace_full_data")
-
-                log_user_activity(request, UserActivity.Status.SUCCESS)
-                return Response(
-                    create_response(True, "Real-time data fetched successfully", [{
-                        "datetime": ts,
-                        "data": data_dict[ts]
-                    }]),
-                    status=status.HTTP_200_OK
-                )
-            else:
-                log_user_activity(request, UserActivity.Status.FAILED)
-                return Response(
-                    create_response(False, api_response.get("message", "Failed to fetch data"), None), 
-                    status=status.HTTP_404_NOT_FOUND
-                )
-        except Exception as e:
-            log_user_activity(request, UserActivity.Status.FAILED)
-            return Response(
-                create_response(False, str(e), None),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        with transaction.atomic():
+            AddressTraceReport.objects.update_or_create(
+                mobile=mobile,
+                defaults={"result": [data_dict]}
             )
+            update_user_balance(user=user, amount=balance_after_deduction, api_name="address_trace_full_data")
 
-    except Exception as e:
-        log_user_activity(request, UserActivity.Status.FAILED)
+        log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(
-            create_response(False, str(e), None),
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            create_response(True, "Real-time data fetched successfully", [{
+                "datetime": ts,
+                "data": data_dict[ts]
+            }]),
+            status=status.HTTP_200_OK
         )
+        # else:
+        #     log_user_activity(request, UserActivity.Status.FAILED)
+        #     return Response(
+        #         create_response(False, api_response.get("message", "Failed to fetch data"), None), 
+        #         status=status.HTTP_404_NOT_FOUND
+        #     )
+        # except Exception as e:
+        #     log_user_activity(request, UserActivity.Status.FAILED)
+        #     return Response(
+        #         create_response(False, str(e), None),
+        #         status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        #     )
+
+    # except Exception as e:
+    #     log_user_activity(request, UserActivity.Status.FAILED)
+    #     return Response(
+    #         create_response(False, str(e), None),
+    #         status=status.HTTP_500_INTERNAL_SERVER_ERROR
+    #     )
 
 
 
@@ -2618,7 +2629,7 @@ def dl_advance_data(request):
         latest_entry = None
         obj = None
     
-    try:
+    # try:
         count = len(full_data)
         datetime_list = [list(entry.keys())[0] for entry in full_data]
 
@@ -2627,12 +2638,13 @@ def dl_advance_data(request):
                 if not is_called:
                     balance_after_deduction = get_amount_after_api_call(api_name='dl_advance_data', user=user)
                     if balance_after_deduction < 0.0:
-                        log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                        return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                        raise InsufficientBalanceError()
+                        # log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                        # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
                     update_user_balance(user=user, amount=balance_after_deduction, api_name="dl_advance_data")
 
                 latest_timestamp = list(latest_entry.keys())[0]
-                log_user_activity(request, UserActivity.Status.SUCCESS)
+                # log_user_activity(request, UserActivity.Status.SUCCESS)
                 return Response(
                     create_response(True, "Data fetched from database", {
                         "count": count,
@@ -2646,33 +2658,34 @@ def dl_advance_data(request):
         # If realtime OR empty
         balance_after_deduction = get_amount_after_api_call(api_name='dl_advance_data', user=user)
         if balance_after_deduction < 0.0:
-            log_user_activity(request=request, status=UserActivity.Status.FAILED)
-            return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+            raise InsufficientBalanceError()
+            # log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
         if latest_entry is None:
             result = fetch_mobile_to_dl_advance(mobile)
-            if result.get('success'):
-                ts = result["data"].pop("datetime")
-                data_dict = {ts: result["data"]}
+            # if result.get('success'):
+            ts = result["data"].pop("datetime")
+            data_dict = {ts: result["data"]}
 
-                with transaction.atomic():
-                    MobileToDLAdvance.objects.update_or_create(
-                        mobile=mobile,
-                        defaults={"result": [data_dict]}
-                    )
-                    if realtime_data or not is_called:
-                        update_user_balance(user=user, amount=balance_after_deduction, api_name="dl_advance_data")
-
-                log_user_activity(request, UserActivity.Status.SUCCESS)
-                return Response(
-                    create_response(True, "Real-time data fetched successfully", {
-                        "count": 1,
-                        "datetime_list": [ts],
-                        "datetime": ts,
-                        "data": data_dict[ts]
-                    }),
-                    status=status.HTTP_200_OK
+            with transaction.atomic():
+                MobileToDLAdvance.objects.update_or_create(
+                    mobile=mobile,
+                    defaults={"result": [data_dict]}
                 )
+                if realtime_data or not is_called:
+                    update_user_balance(user=user, amount=balance_after_deduction, api_name="dl_advance_data")
+
+            # log_user_activity(request, UserActivity.Status.SUCCESS)
+            return Response(
+                create_response(True, "Real-time data fetched successfully", {
+                    "count": 1,
+                    "datetime_list": [ts],
+                    "datetime": ts,
+                    "data": data_dict[ts]
+                }),
+                status=status.HTTP_200_OK
+            )
 
         api_response = fetch_mobile_to_dl_advance(mobile)
         fetch_and_store_mobile_to_dl_advance.delay(mobile, api_response)
@@ -2681,7 +2694,7 @@ def dl_advance_data(request):
             if realtime_data or not is_called:
                 update_user_balance(user=user, amount=balance_after_deduction, api_name="dl_advance_data")
 
-        log_user_activity(request, UserActivity.Status.SUCCESS)
+        # log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(
             create_response(True, "Data fetched from API, comparing in background.", {
                 "count": count,
@@ -2692,12 +2705,12 @@ def dl_advance_data(request):
             status=status.HTTP_200_OK
         )
 
-    except Exception as e:
-        log_user_activity(request, UserActivity.Status.FAILED)
-        return Response(
-            create_response(False, str(e), None),
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+    # except Exception as e:
+    #     log_user_activity(request, UserActivity.Status.FAILED)
+    #     return Response(
+    #         create_response(False, str(e), None),
+    #         status=status.HTTP_500_INTERNAL_SERVER_ERROR
+    #     )
 
 
 @api_view(['POST'])
@@ -2726,8 +2739,9 @@ def dl_advance_full_data(request):
         if not is_called:
             balance_after_deduction = get_amount_after_api_call(api_name='dl_advance_full_data', user=user)
             if balance_after_deduction < 0.0:
-                log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                raise InsufficientBalanceError()
+                # log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
             update_user_balance(user=user, amount=balance_after_deduction, api_name="dl_advance_full_data")
 
         log_user_activity(request, UserActivity.Status.SUCCESS)
@@ -2737,48 +2751,49 @@ def dl_advance_full_data(request):
         )
 
     except MobileToDLAdvance.DoesNotExist:
-        try:
-            balance_after_deduction = get_amount_after_api_call(api_name='dl_advance_full_data', user=user)
-            if balance_after_deduction < 0.0:
-                log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+        # try:
+        balance_after_deduction = get_amount_after_api_call(api_name='dl_advance_full_data', user=user)
+        if balance_after_deduction < 0.0:
+            raise InsufficientBalanceError()
+            # log_user_activity(request=request, status=UserActivity.Status.FAILED)
+            # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
 
-            api_response = fetch_mobile_to_dl_advance(mobile)
-            if api_response.get('success'):
-                ts = api_response["data"].pop("datetime")
-                data_dict = {ts: api_response["data"]}
+        api_response = fetch_mobile_to_dl_advance(mobile)
+        # if api_response.get('success'):
+        ts = api_response["data"].pop("datetime")
+        data_dict = {ts: api_response["data"]}
 
-                with transaction.atomic():
-                    MobileToDLAdvance.objects.update_or_create(
-                        mobile=mobile,
-                        defaults={"result": [data_dict]}
-                    )
-                    update_user_balance(user=user, amount=balance_after_deduction, api_name="dl_advance_full_data")
-
-                log_user_activity(request, UserActivity.Status.SUCCESS)
-                return Response(
-                    create_response(True, "Real-time data fetched successfully", [{
-                        "datetime": ts,
-                        "data": data_dict[ts]
-                    }]),
-                    status=status.HTTP_200_OK
-                )
-            else:
-                log_user_activity(request, UserActivity.Status.FAILED)
-                return Response(
-                    create_response(False, api_response.get("message", "Failed to fetch data"), None), 
-                    status=status.HTTP_404_NOT_FOUND
-                )
-        except Exception as e:
-            log_user_activity(request, UserActivity.Status.FAILED)
-            return Response(
-                create_response(False, str(e), None),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        with transaction.atomic():
+            MobileToDLAdvance.objects.update_or_create(
+                mobile=mobile,
+                defaults={"result": [data_dict]}
             )
+            update_user_balance(user=user, amount=balance_after_deduction, api_name="dl_advance_full_data")
 
-    except Exception as e:
-        log_user_activity(request, UserActivity.Status.FAILED)
+        log_user_activity(request, UserActivity.Status.SUCCESS)
         return Response(
-            create_response(False, str(e), None),
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            create_response(True, "Real-time data fetched successfully", [{
+                "datetime": ts,
+                "data": data_dict[ts]
+            }]),
+            status=status.HTTP_200_OK
         )
+            # else:
+            #     log_user_activity(request, UserActivity.Status.FAILED)
+            #     return Response(
+            #         create_response(False, api_response.get("message", "Failed to fetch data"), None), 
+            #         status=status.HTTP_404_NOT_FOUND
+            #     )
+        # except Exception as e:
+        #     log_user_activity(request, UserActivity.Status.FAILED)
+        #     return Response(
+        #         create_response(False, str(e), None),
+        #         status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        #     )
+
+    # except Exception as e:
+    #     log_user_activity(request, UserActivity.Status.FAILED)
+    #     return Response(
+    #         create_response(False, str(e), None),
+    #         status=status.HTTP_500_INTERNAL_SERVER_ERROR
+    #     )

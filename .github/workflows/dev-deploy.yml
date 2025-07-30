@@ -61,7 +61,7 @@ jobs:
             pm2 delete back-app || true
             pm2 delete celery-worker || true
             pm2 start "python -m celery -A core worker --loglevel=info" --name celery-worker
-            pm2 start "python manage.py runserver 0.0.0.0:8000" --name back-app
+            pm2 start "gunicorn core.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 600" --name back-app
             pm2 save
             pm2 startup systemd -u ubuntu --hp /home/ubuntu || true
           EOF

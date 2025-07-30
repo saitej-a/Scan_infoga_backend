@@ -284,7 +284,7 @@ def uan_history_search(request):
         overall_status = status.HTTP_404_NOT_FOUND
 
     if(overall_status == status.HTTP_404_NOT_FOUND):
-        log_user_activity(request=request, status=UserActivity.Status.FAILED, error_message=f"Failed for {", ".join(failed_uans)}")
+        log_user_activity(request=request, status=UserActivity.Status.FAILED, error_message=f"Failed for {', '.join(failed_uans)}")
 
     return Response(
         create_response(True, "UAN history search completed.", results),
@@ -364,7 +364,7 @@ def uan_employment_search(request):
         overall_status = status.HTTP_404_NOT_FOUND
     
     if(overall_status != status.HTTP_200_OK):
-        log_user_activity(request=request, status=UserActivity.Status.FAILED, error_message= f"Failed for: {", ".join(failed_uans)}")
+        log_user_activity(request=request, status=UserActivity.Status.FAILED, error_message= f"Failed for: {', '.join(failed_uans)}")
 
     return Response(create_response(True, "UAN employment search completed.", results), status=overall_status)
 

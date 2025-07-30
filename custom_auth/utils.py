@@ -230,4 +230,205 @@ def fetch_location_map(lat, lng):
         }
     else:
         raise Exception(f'API request failed with status code: {response.status_code}')
+
+
+def fetch_address_lat_and_lng_gmap(address):
+    
+    api_url = os.getenv('GOOGLE_MAP_GEOENCODING_API_URL')
+    api_key = os.getenv('GOOGLE_MAP_API_AUTH_KEY')
+    
+    params = {
+        'address':address,
+        'key':api_key
+    }
+    
+    response = requests.get(api_url, params=params)
+    
+    if response.status_code == 200:
+        try:
+            data = response.json()  # Convert to dict
+            
+            lat = data['results'][0]['geometry']['location']['lat']
+            lng = data['results'][0]['geometry']['location']['lng']
+            
+            return {
+                'lat': lat,
+                'lng': lng
+            }
+        except (KeyError, IndexError, json.JSONDecodeError) as e:
+            raise Exception(f"Error parsing JSON: {e}")
+    else:
+        raise Exception(f"API request failed with  status code: {response.status_code} and response text: {response.text}")
+
+def fetch_route_data_gmap(starting_point_lat, starting_point_lng, address_lat, address_lng):
+    
+    api_url = os.getenv('GOOGLE_MAP_DIRECTION_API_URL')
+    api_key = os.getenv('GOOGLE_MAP_API_AUTH_KEY')
+    
+    params = {
+        'key':api_key
+    }
+    
+    headers = {
+        'content-type': 'application/json',
+        'X-Goog-Api-Key': api_key,
+        'Content-Type': 'application/json',
+        'X-Goog-FieldMask':'routes.distanceMeters,routes.duration,routes.routeLabels,routes.routeToken,routes.polyline.encodedPolyline'
+    }
+    
+    payload = {
+        "origin": {
+            "location": {
+                "latLng": {
+                    "latitude": starting_point_lat,
+                    "longitude": starting_point_lng
+                }
+            }
+        },
+        "destination": {
+            "location": {
+                "latLng": {
+                    "latitude": address_lat,
+                    "longitude": address_lng
+                }
+            }
+        },
+        "travelMode": "DRIVE",
+        "routingPreference": "TRAFFIC_AWARE",
+        "computeAlternativeRoutes": False,
+        "routeModifiers": {
+            "avoidTolls": False,
+            "avoidHighways": False,
+            "avoidFerries": False
+        },
+        "languageCode": "en-US",
+        "units": "METRIC"
+    }
+    
+    response = requests.post(url=api_url, params=params, headers=headers, data=json.dumps(payload))
+    if response.status_code == 200:
+        try:
+            data = response.json()
+            return data
+        except (KeyError, IndexError, json.JSONDecodeError) as e:
+            raise Exception(f"Error parsing JSON: {e}")
+    else:
+        raise Exception(f"API request failed with  status code: {response.status_code} and response text: {response.text}")
+
+
+def fetch_map_gmap(starting_point_lng, starting_point_lat, address):
+    
+    api_url = os.getenv('GOOGLE_MAP_LOCATION_API_URL')
+    api_key = os.getenv('GOOGLE_MAP_API_AUTH_KEY')
+    
+    address_lat_lng = fetch_address_lat_and_lng_gmap(address)
+    address_lat = address_lat_lng['lat']
+    address_lng = address_lat_lng['lng']
+    
+    
+    route_response = fetch_route_data_gmap(starting_point_lat, starting_point_lng, address_lat, address_lng)
+    
+    
+    total_duration_in_seconds = int(route_response['routes'][0]['duration'][:-1])
+    hours = total_duration_in_seconds // 3600
+    minutes = (total_duration_in_seconds % 3600) // 60
+    seconds = total_duration_in_seconds % 60
+    
+    if hours > 0:
+        readable_duration = f"{hours} hours {minutes} minutes"
+    elif minutes > 0:
+        readable_duration = f"{minutes} minutes"
+    else:
+        readable_duration = f"{seconds} seconds"
+    
+    distance_in_meters = route_response['routes'][0]['distanceMeters']
+    distance_in_kilo_meters = distance_in_meters / 1000
+    distance_in_mile = distance_in_kilo_meters * 0.621371
+    
+    encoded_polyline = route_response['routes'][0]['polyline']['encodedPolyline']
+    # params = [
+    #     ('size','800x600'),
+    #     ('path',f'color:green%7Cenc:{encoded_polyline}'),
+    #     ('markers',f'color:green%7Clabel:E%7C{address_lat},{address_lng}'),
+    #     ('markers',f'color:red%7Clabel:P%7C{starting_point_lat},{starting_point_lng}'),
+    #     ('key',api_key),
+    #     ('maptype','hybrid')
+    # ]
+    
+    # markers_param = (
+    #     f"color:green|label:E|{address_lat},{address_lng}"
+    #     f"&markers=color:red|label:P|{starting_point_lat},{starting_point_lng}"
+    # )
+    
+    # params = {
+    #     'size': '800x600',
+    #     'path': f'color:green|enc:{encoded_polyline}',
+    #     'markers': markers_param,
+    #     'maptype': 'hybrid',
+    #     'key': api_key
+    # }
+    
+    marker_1 = f"markers=color:green|label:E|{address_lat},{address_lng}"
+    marker_2 = f"markers=color:red|label:S|{starting_point_lat},{starting_point_lng}"
+    path = f"path=color:green|weight:0.6|enc:{encoded_polyline}"
+    
+    full_url = (
+        f"{api_url}?size=800x600&maptype=hybrid&{path}"
+        f"&{marker_1}&{marker_2}&key={api_key}"
+    )
+
+    response = requests.get(full_url)
+    
+    if response.status_code == 200:
         
+        image_base64 = base64.b64encode(response.content).decode('utf-8')
+        
+        return {
+            'success':True,
+            'data':{
+                'content_type': response.headers.get('content-type', 'image/png'),
+                'duration':{
+                    'total_duration_seconds': total_duration_in_seconds,
+                    'readable_duration': readable_duration,
+                    'hours': hours,
+                    'minutes': minutes,
+                    'seconds': seconds,
+                },
+                'distance':{
+                    'distance_meters': distance_in_meters,
+                    'distance_kilometers': distance_in_kilo_meters,
+                    'distance_miles': distance_in_mile,
+                },
+                'image':image_base64,
+            }
+        }
+
+
+def fetch_location_map_gmap(lat, lng):
+    
+    api_url = os.getenv('GOOGLE_MAP_LOCATION_API_URL')
+    api_key = os.getenv('GOOGLE_MAP_API_AUTH_KEY')
+    
+    marker = f"color:red|{lat},{lng}"
+    
+    params = {
+        'size':'800x600',
+        'zoom':17,
+        'markers':marker,
+        'maptype':'hybrid',
+        'key':api_key
+    }
+    
+    response = requests.get(api_url, params=params)
+    
+    if response.status_code == 200:
+        image_base64 = base64.b64encode(response.content).decode('utf-8')
+        return {
+            'success': True,
+            'data': {
+                'content_type': response.headers.get('content-type', 'image/png'),
+                'image':image_base64,
+            }       
+        }
+    else:
+        raise Exception(f"API request failed with  status code: {response.status_code} and response text: {response.text}")

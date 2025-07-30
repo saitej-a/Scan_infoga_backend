@@ -36,7 +36,7 @@ from django.core.cache import cache
 from datetime import datetime, timedelta
 
 
-from .utils import fetch_map, fetch_location_map
+from .utils import fetch_location_map_gmap, fetch_map, fetch_location_map, fetch_map_gmap
 from payments.utils import create_wallet
 
 
@@ -920,7 +920,7 @@ def get_user_map(request):
         )
     
     try:
-        api_response = fetch_map(
+        api_response = fetch_map_gmap(
             starting_point_lng=user_location_lng, 
             starting_point_lat=user_location_lat, 
             address=address
@@ -1121,7 +1121,7 @@ def get_user_location_map(request):
         )
 
     try:
-        api_response = fetch_location_map(
+        api_response = fetch_location_map_gmap(
             lat=lat,
             lng=lng
         )

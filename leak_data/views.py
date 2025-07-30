@@ -15,7 +15,8 @@ from core.utils import create_response, get_token_from_header, get_user_from_tok
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 
-
+# exception Handler
+from core.exception_handlers import InsufficientBalanceError
 
 # class GetPassword(APIView):
 #     def post(self, request, format=None):
@@ -181,9 +182,9 @@ def get_password(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name="leak_data_get_password", user=user)
                 if balance_after_deduction < 0.0:
-                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                    return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
-
+                    # log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                    # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                    raise InsufficientBalanceError() # raising exception for Middleware to log
                 update_user_balance(user=user, amount=balance_after_deduction, api_name="leak_data_get_password")
 
 
@@ -242,8 +243,9 @@ def get_job_seeker_data(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name="leak_data_get_job_seeker_data", user=user)
                 if balance_after_deduction < 0.0:
-                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                    return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                    # log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                    # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                    raise InsufficientBalanceError()
 
                 update_user_balance(user=user, amount=balance_after_deduction, api_name="leak_data_get_job_seeker_data")
 
@@ -303,9 +305,9 @@ def get_corporate_data(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name="leak_data_get_corporate_data", user=user)
                 if balance_after_deduction < 0.0:
-                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                    return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
-
+                    # log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                    # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                    raise InsufficientBalanceError()
                 update_user_balance(user=user, amount=balance_after_deduction, api_name="leak_data_get_corporate_data")
 
 
@@ -363,9 +365,9 @@ def get_zomato_data(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name="leak_data_get_zomato_data", user=user)
                 if balance_after_deduction < 0.0:
-                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                    return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
-
+                    # log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                    # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                    raise InsufficientBalanceError()
                 update_user_balance(user=user, amount=balance_after_deduction, api_name="leak_data_get_zomato_data")
 
 
@@ -425,9 +427,9 @@ def get_cbse_data(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name="leak_data_get_cbse_data", user=user)
                 if balance_after_deduction < 0.0:
-                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                    return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
-
+                    # log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                    # return Response(create_response(False, "Insufficient balance.", None), status=status.HTTP_402_PAYMENT_REQUIRED)
+                    raise InsufficientBalanceError()
                 update_user_balance(user=user, amount=balance_after_deduction, api_name="leak_data_get_cbse_data")
 
 
@@ -627,12 +629,12 @@ def get_olx_data(request):
             if not is_called:
                 balance_after_deduction = get_amount_after_api_call(api_name="leak_data_get_olx_data", user=user)
                 if balance_after_deduction < 0.0:
-                    log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                    return Response(
-                        create_response(False, "Insufficient balance.", None),
-                        status=status.HTTP_402_PAYMENT_REQUIRED
-                    )
-
+                    # log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                    # return Response(
+                    #     create_response(False, "Insufficient balance.", None),
+                    #     status=status.HTTP_402_PAYMENT_REQUIRED
+                    # )
+                    raise InsufficientBalanceError()
                 update_user_balance(user=user, amount=balance_after_deduction, api_name="leak_data_get_olx_data")
 
 
@@ -760,11 +762,12 @@ def process_india_mart_results(items, user, is_called, request, not_found_msg):
         if not is_called:
             balance_after = get_amount_after_api_call(api_name="leak_data_get_india_mart_data", user=user)
             if balance_after < 0.0:
-                log_user_activity(request=request, status=UserActivity.Status.FAILED)
-                return Response(
-                    create_response(False, "Insufficient balance.", None),
-                    status=status.HTTP_402_PAYMENT_REQUIRED
-                )
+                # log_user_activity(request=request, status=UserActivity.Status.FAILED)
+                # return Response(
+                #     create_response(False, "Insufficient balance.", None),
+                #     status=status.HTTP_402_PAYMENT_REQUIRED
+                # )
+                raise InsufficientBalanceError()
             update_user_balance(user=user, amount=balance_after, api_name="leak_data_get_india_mart_data")
 
         log_user_activity(request=request, status=UserActivity.Status.SUCCESS)

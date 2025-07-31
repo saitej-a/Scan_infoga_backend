@@ -104,7 +104,7 @@ class UserListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'email', 'user_type', 'date_joined', 'session_last_login',
             'first_name', 'last_name', 'company', 'domain', 'approval_status',
-            'wallet_balance', 'total_spent', 'last_session'
+            'wallet_balance', 'total_spent', 'last_session', 'is_active'
         ]
 
     # def get_first_name(self, obj):

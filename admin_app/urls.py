@@ -18,4 +18,5 @@ urlpatterns = [
     path('admin-login', views.admin_login, name='admin-login'),
     path('get-all-user-activities', views.get_user_activities, name='admin-login'),
     path('get-all-apis', views.list_all_routes, name='api-list'),
+    path('toggle-active-status', views.toggle_account_active_status, name='active-status')
 ]

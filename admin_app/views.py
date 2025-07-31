@@ -1,10 +1,10 @@
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, BasePermission
 from rest_framework.response import Response
 from decimal import Decimal
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from rest_framework_simplejwt.tokens import RefreshToken
 import json
 import hashlib
@@ -41,6 +41,13 @@ from user_activities.serializers import UserActivitySerializer
 from payments.serializers import WalletHistorySerializer, TransactionSerializer
 
 from core.utils import create_response, paginate_queryset
+
+from rest_framework.views import APIView
+from rest_framework.viewsets import ViewSetMixin
+import inspect
+from core.permissions import IsAdminUserType
+
+from core.exception_handlers import UserNotFoundException
 
 
 
@@ -273,65 +280,6 @@ def wallet_update(request):
         }),
         status=status.HTTP_200_OK
     )
-
-
-
-# @api_view(['GET'])
-# def get_user_wallet_balance(request):
-#     user_id = request.query_params.get('user_id')
-    
-#     try:
-#         user = CustomUser.objects.get(id=user_id)
-#     except CustomUser.DoesNotExist:
-#         return Response(
-#             create_response(message="User not found", status=False),
-#             status=status.HTTP_404_NOT_FOUND
-#         )
-    
-#     try:
-#         wallet = WalletBalance.objects.get(user=user)
-#         last_success_txn = Transaction.objects.filter(
-#             user=user, status=Transaction.Status.SUCCESS
-#         ).order_by('-created_at').first()
-
-#         transaction_total = transaction_total = Transaction.objects.filter(
-#     user=user, 
-#     status=Transaction.Status.SUCCESS
-# ).aggregate(total=Sum('amount'))['total'] or 0
-
-        
-#         txn_data = {
-#             "txn_id": last_success_txn.txn_id,
-#             "amount": str(last_success_txn.amount),
-#             "status": last_success_txn.status,
-#             "created_at": last_success_txn.created_at.isoformat(),
-#             "total_transaction": transaction_total
-#         } if last_success_txn else None
-        
-#         return Response(
-#             create_response(
-#                 status=True,
-#                 message="Wallet balance retrieved successfully",
-#                 data={
-#                     "balance": str(wallet.balance),
-#                     "last_successful_transaction": txn_data
-#                 }
-#             ),
-#             status=status.HTTP_200_OK
-#         )
-    
-#     except WalletBalance.DoesNotExist:
-#         return Response(
-#             create_response(
-#                 status=False,
-#                 message="Wallet balance not found for user",
-#                 data=None
-#             ),
-#             status=status.HTTP_404_NOT_FOUND
-#         )
-
-
-from django.db.models import Sum, F, ExpressionWrapper, DecimalField
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUserType])
@@ -668,8 +616,7 @@ def admin_login(request):
         )
 
     hashedPassword = hashlib.sha256(password.encode()).hexdigest()
-    user = authenticate(email=email, password=hashedPassword)
-
+    user = CustomUser.objects.get(email = email)
     if not user:
         return Response(
             create_response(
@@ -679,6 +626,28 @@ def admin_login(request):
             ),
             status=status.HTTP_401_UNAUTHORIZED
         )
+    if not user.is_active:
+        return Response(
+            create_response(
+                status=False,
+                message="Account is disabled. Cannot login",
+                data=None
+            ),
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+
+    if not user.check_password(hashedPassword):
+        print("INVALID PASSWORD", password)
+        return Response(
+            create_response(
+                status=False,
+                message="Invalid credentials",
+                data=None
+            ),
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+    # user = authenticate(email=email, password=hashedPassword)
+
     
     if user.user_type != CustomUser.UserTypeOpt.ADMIN:
         return Response(
@@ -791,70 +760,10 @@ def admin_login(request):
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-from django.db.models import Q
 from django.utils.timezone import make_aware
 from datetime import datetime, timedelta
 from user_activities.models import UserActivity
-from user_activities.serializers import UserActivitySerializer1  # you’ll need to create this
-
-
-# @api_view(['GET'])
-# def get_user_activities(request):
-#     activities = UserActivity.objects.select_related('user')
-
-#     # 🔍 Global search
-#     search = request.GET.get('search')
-#     if search:
-#         activities = activities.filter(
-#             Q(email__icontains=search) |
-#             Q(api_called__icontains=search) |
-#             Q(error_message__icontains=search) |
-#             Q(ip_address__icontains=search) |
-#             Q(device__icontains=search) |
-#             Q(browser__icontains=search)
-#         )
-
-#     # ✅ Filter by status
-#     if status_filter := request.GET.get('status'):
-#         activities = activities.filter(status=status_filter)
-
-#     # 📆 Date filters
-#     if val := request.GET.get('activity_time__gte'):
-#         try:
-#             date = make_aware(datetime.strptime(val, '%Y-%m-%d'))
-#             activities = activities.filter(activity_time__gte=date)
-#         except ValueError:
-#             pass
-
-#     if val := request.GET.get('activity_time__lte'):
-#         try:
-#             date = make_aware(datetime.strptime(val, '%Y-%m-%d') + timedelta(days=1))
-#             activities = activities.filter(activity_time__lt=date)
-#         except ValueError:
-#             pass
-
-#     # 📊 Ordering
-#     ordering = request.GET.get('ordering', '-activity_time')
-#     valid_ordering_fields = [
-#         'activity_time', 'email', 'api_called', 'status', 'ip_address', 'device', 'browser'
-#     ]
-#     if ordering.lstrip('-') in valid_ordering_fields:
-#         activities = activities.order_by(ordering)
-
-#     # 📄 Pagination
-#     paginated_data = paginate_queryset(request, activities, UserActivitySerializer1)
-
-#     return Response(
-#         create_response(
-#             status=True,
-#             message="User activities retrieved successfully",
-#             data=paginated_data
-#         ),
-#         status=status.HTTP_200_OK
-#     )
-
-
-from django.db.models import Count, Q
+from user_activities.serializers import UserActivitySerializer1
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUserType])
@@ -904,11 +813,11 @@ def get_user_activities(request):
     if ordering.lstrip('-') in valid_ordering_fields:
         activities = activities.order_by(ordering)
 
-    # ✅ Get counts BEFORE pagination
+    # Get counts BEFORE pagination
     success_count = activities.filter(status='success').count()
     failed_count = activities.filter(status='failed').count()
 
-    # 📄 Pagination
+    # Pagination
     paginated_data = paginate_queryset(request, activities, UserActivitySerializer1)
 
     return Response(
@@ -924,26 +833,61 @@ def get_user_activities(request):
         status=status.HTTP_200_OK
     )
 
+def has_auth_permission(view):
+    permission_classes = getattr(view, 'permission_classes', [])
 
-def list_urls(urlpatterns, prefix=''):
+    if callable(permission_classes):
+        permission_classes = permission_classes()
+
+    for perm in permission_classes:
+        if inspect.isclass(perm) and issubclass(perm, BasePermission):
+            if issubclass(perm, IsAuthenticated) or issubclass(perm, IsAdminUserType):
+                return True
+    return False
+
+def list_protected_urls(urlpatterns, prefix=''):
     urls = []
+
     for pattern in urlpatterns:
         if isinstance(pattern, URLPattern):
             full_path = prefix + str(pattern.pattern)
-            if full_path.startswith('api'): 
-                urls.append({
-                    'value': "/" +full_path,
-                    'label': "/" + full_path,
-                    # 'label': pattern.name,
-                })
+
+            callback = pattern.callback
+            view_class = getattr(callback, 'cls', None)  # for class-based views
+
+            if view_class and has_auth_permission(view_class):
+                if full_path.startswith('api'):
+                    urls.append({
+                        'value': "/" + full_path,
+                        'label': "/" + full_path,
+                    })
+
         elif isinstance(pattern, URLResolver):
             nested_prefix = prefix + str(pattern.pattern)
-            urls.extend(list_urls(pattern.url_patterns, prefix=nested_prefix))
+            urls.extend(list_protected_urls(pattern.url_patterns, prefix=nested_prefix))
+
     return urls
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUserType])
 def list_all_routes(request):
     resolver = get_resolver()
-    urls = list_urls(resolver.url_patterns)
+    urls = list_protected_urls(resolver.url_patterns)
     return Response(create_response(status= True, message= "APIs fetched successfully.", data=urls))
     
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdminUserType])
+def toggle_account_active_status(request):
+    user_id = request.data.get("id")
+    try:
+        user = CustomUser.objects.get(id = user_id)
+    except CustomUser.DoesNotExist:
+        raise UserNotFoundException()
+
+    user.is_active = not user.is_active
+    user.save()
+
+    return Response(
+        create_response(status= True, message= f"Activity status set to ${user.is_active}", data = None),
+        status = status.HTTP_200_OK
+    )

@@ -47,3 +47,11 @@ class InactiveAccountException(Exception):
 
     def __str__(self):
         return self.message
+
+class DataNotFoundException(Exception):
+    def __init__(self, message="No data found"):
+        self.message = message
+        super().__init__(self.message)
+
+    def __str__(self):
+        return self.message
